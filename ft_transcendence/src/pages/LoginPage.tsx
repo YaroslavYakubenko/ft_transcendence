@@ -6,7 +6,8 @@ function LoginPage() {
 	const [password, setPassword] = useState('')
 	const { login } = useAuth()
 	function handleLogin() {
-		console.log('Login:', username, password)
+		// TODO: replace with real API call
+		login('mock-token', { id: 1, username })
 	}
 	return (
 		<div style= {{
