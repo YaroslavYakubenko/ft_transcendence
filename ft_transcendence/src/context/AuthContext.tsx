@@ -1,4 +1,5 @@
-import { createContext, useContext, useState } from "react"
+import { createContext, useContext, useState, useEffect } from "react"
+import { getMe } from "../api/auth"
 
 interface User {
 	id: number
@@ -30,6 +31,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 		setToken(null)
 		setUser(null)
 	}
+	useEffect(() => {
+		if (token) {
+			getMe(token).then(user => setUser(user))
+		}
+	}, [])
 	return (
 		<AuthContext.Provider value={{
 			user,

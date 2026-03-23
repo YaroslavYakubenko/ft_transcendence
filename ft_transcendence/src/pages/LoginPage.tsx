@@ -1,13 +1,29 @@
 import { useState } from "react"
 import { useAuth } from "../context/AuthContext"
+import { login as apiLogin } from "../api/auth"
+import { Link } from "react-router-dom"
 
 function LoginPage() {
 	const [username, setUsername] = useState('')
 	const [password, setPassword] = useState('')
+	const [error, setError] = useState('')
+	const [isLoading, setIsLoading] = useState(false)
 	const { login } = useAuth()
-	function handleLogin() {
-		// TODO: replace with real API call
-		login('mock-token', { id: 1, username })
+	async function handleLogin() {
+		setError('')
+		if (!username || !password) {
+			setError('Fill in all the fields')
+			return
+		}
+		try {
+			setIsLoading(true)
+			const { token, user } = await apiLogin(username, password)
+			login(token, user)
+		} catch {
+			setError('Invalid username or password')
+		} finally {
+			setIsLoading(false)
+		}
 	}
 	return (
 		<div style= {{
@@ -48,6 +64,7 @@ function LoginPage() {
 							}}
 							value={username}
 							onChange={(e) => setUsername(e.target.value)}
+							onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
 							placeholder="username"
 						/>
 					</div>
@@ -71,6 +88,7 @@ function LoginPage() {
 							type="password"
 							value={password}
 							onChange={(e) => setPassword(e.target.value)}
+							onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
 							placeholder="••••••••"
 						/>
 					</div>
@@ -85,12 +103,25 @@ function LoginPage() {
       						padding: '10px',
       						fontSize: '14px',
       						fontWeight: 500,
-      						cursor: 'pointer',
+      						cursor: isLoading ? 'not-allowed' : 'pointer',
+							opacity: isLoading ? 0.7 : 1,
 						}}
 						onClick={handleLogin}
+						disabled={isLoading}
 					>
-						Enter
+						{isLoading ? 'Loading...' : 'Enter'}
 					</button>
+					{error && (
+						<p style={{ color: '#e25f5f', fontSize: '12px', marginTop: '8px', margin: '8px 0 0 0' }}>
+							{error}
+						</p>
+					)}
+					<p style={{ color: '#8892a4', fontSize: '12px', textAlign: 'center', marginTop: '16px' }}>
+						Don't have an account?{' '}
+						<Link to="/register" style={{ color: '#e2b96f', textDecoration: 'none' }}>
+							Register
+						</Link>
+					</p>
 				</div>
 			</div>
 		</div>
