@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react"
-import { getMe } from "../api/auth"
+import { getMe, logout as apiLogout } from "../api/auth"
 
 interface User {
 	id: number
@@ -27,6 +27,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 		setUser(user)
 	}
 	const logout = () => {
+		if (token) {
+			apiLogout(token)
+		}
 		localStorage.removeItem('token')
 		setToken(null)
 		setUser(null)

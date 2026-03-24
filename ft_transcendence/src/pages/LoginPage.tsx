@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useAuth } from "../context/AuthContext"
 import { login as apiLogin } from "../api/auth"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 
 function LoginPage() {
 	const [username, setUsername] = useState('')
@@ -9,6 +9,7 @@ function LoginPage() {
 	const [error, setError] = useState('')
 	const [isLoading, setIsLoading] = useState(false)
 	const { login } = useAuth()
+	const navigate = useNavigate()
 	async function handleLogin() {
 		setError('')
 		if (!username || !password) {
@@ -19,6 +20,7 @@ function LoginPage() {
 			setIsLoading(true)
 			const { token, user } = await apiLogin(username, password)
 			login(token, user)
+			navigate('/home')
 		} catch {
 			setError('Invalid username or password')
 		} finally {
@@ -43,7 +45,7 @@ function LoginPage() {
 			}}>
 
 				<h1 style={{ color: '#f0eeff', fontSize: '22px', fontWeight: 500, margin: 0 }}>
-					ft_transcendense
+					ft_transcendence
 				</h1>
 				<div style={{ marginTop: '1.5rem' }}>
 					<div style={{ marginBottom: '1rem' }}>
