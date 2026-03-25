@@ -8,6 +8,9 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import TermsOfServicePage from './pages/TermsOfServicePage'
 import ProfilePage from './pages/ProfilePage'
 import EditProfilePage from './pages/EditProfilePage'
+import NotFoundPage from './pages/NotFoundPage'
+import LeaderboardPage from './pages/LeaderboardPage'
+import GamePage from './pages/GamePage'
 
 function App() {
     return (
@@ -34,6 +37,17 @@ function App() {
 							<EditProfilePage/>
 						</ProtectedRoute>
 					} />
+                    <Route path="/leaderboard" element={
+                        <ProtectedRoute>
+                            <LeaderboardPage/>
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/game" element={
+                        <ProtectedRoute>
+                            <GamePage/>
+                        </ProtectedRoute>
+                    } />
+                    <Route path="*" element={<NotFoundPage/>} />
                 </Routes>
             </BrowserRouter>
         </AuthProvider>

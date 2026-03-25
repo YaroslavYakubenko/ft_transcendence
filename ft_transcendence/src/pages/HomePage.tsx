@@ -1,9 +1,11 @@
 import { useAuth } from "../context/AuthContext"
 import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
+import { useNavigate } from "react-router-dom"
 
 function HomePage() {
 	const { user } = useAuth()
+	const navigate = useNavigate()
 	const stats = { wins: 0, losses: 0, rank: '-' }
 	return (
 		<div className="bg-[#0f0f13] min-h-screen flex flex-col">
@@ -28,7 +30,10 @@ function HomePage() {
 						<div className="text-xs text-[#8892a4] mt-1">Rank</div>
 					</div>
 				</div>
-				<button className="bg-[#e2b96f] border-none rounded-[10px] px-10 py-3 text-[#0f0f13] text-[15px] font-semibold cursor-pointer">
+				<button
+				onClick={() => navigate('/game')}
+					className="bg-[#e2b96f] border-none rounded-[10px] px-10 py-3 text-[#0f0f13] text-[15px] font-semibold cursor-pointer"
+				>
 					▶ Play
 				</button>
 			</div>

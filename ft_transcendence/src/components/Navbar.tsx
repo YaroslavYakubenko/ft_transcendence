@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom"
+import { Link, NavLink, useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 
 function Navbar() {
@@ -17,12 +17,15 @@ function Navbar() {
 			<div className="flex items-center gap-6">
 				{isLoggedIn && (
 					<>
-						<Link to="/profile" className="text-[#8892a4] text-[13px] no-underline">
+						<NavLink to="/home" className={({ isActive }) => isActive ? "text-[#e2b96f] text-[13px] no-underline" : "text-[#8892a4] text-[13px] no-underline"}>
+							Home
+						</NavLink>
+						<NavLink to="/profile" className={({ isActive }) => isActive ? "text-[#e2b96f] text-[13px] no-underline" : "text-[#8892a4] text-[13px] no-underline"}>
 							Profile
-						</Link>
-						<Link to="/leaderboard" className="text-[#8892a4] text-[13px] no-underline">
+						</NavLink>
+						<NavLink to="/leaderboard" className={({ isActive }) => isActive ? "text-[#e2b96f] text-[13px] no-underline" : "text-[#8892a4] text-[13px] no-underline"}>
 							Leaderboard
-						</Link>
+						</NavLink>
 					</>
 				)}
 				{isLoggedIn ? (
