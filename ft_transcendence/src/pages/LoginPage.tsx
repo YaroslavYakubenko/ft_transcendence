@@ -2,9 +2,10 @@ import { useState } from "react"
 import { useAuth } from "../context/AuthContext"
 import { login as apiLogin } from "../api/auth"
 import { Link, useNavigate } from "react-router-dom"
+import Footer from "../components/Footer"
 
 function LoginPage() {
-	const [username, setUsername] = useState('')
+	const [email, setEmail] = useState('')
 	const [password, setPassword] = useState('')
 	const [error, setError] = useState('')
 	const [isLoading, setIsLoading] = useState(false)
@@ -12,13 +13,13 @@ function LoginPage() {
 	const navigate = useNavigate()
 	async function handleLogin() {
 		setError('')
-		if (!username || !password) {
+		if (!email || !password) {
 			setError('Fill in all the fields')
 			return
 		}
 		try {
 			setIsLoading(true)
-			const { token, user } = await apiLogin(username, password)
+			const { token, user } = await apiLogin(email, password)
 			login(token, user)
 			navigate('/home')
 		} catch {
@@ -28,104 +29,62 @@ function LoginPage() {
 		}
 	}
 	return (
-		<div style= {{
-			background: '#0f0f13',
-      		minHeight: '100vh',
-      		display: 'flex',
-      		alignItems: 'center',
-      		justifyContent: 'center',
-		}}>
-			<div style={{
-				background: '#1a1a24',
-        		border: '0.5px solid #2e2e40',
-        		borderRadius: '12px',
-        		padding: '1.5rem',
-        		width: '100%',
-        		maxWidth: '380px',
-			}}>
+		<div className="min-h-screen bg-[#0f0f13] flex flex-col">
+			<div className="flex-1 flex items-center justify-center">
+				<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl p-6 w-full max-w-sm">
+					<h1 className="text-[#f0eeff] text-[22px] font-medium m-0">
+						ft_transcendence
+					</h1>
+					<div className="mt-6">
+						<div className="mb-4">
+							<label className="block text-[#8892a4] text-xs mb-1.5">
+								Email
+							</label>
+							<input
+								className="w-full bg-[#0f0f13] border border-[#2e2e40] rounded-lg px-3 py-2.5 text-[#f0eeff] text-sm outline-none"
+								value={email}
+								onChange={(e) => setEmail(e.target.value)}
+								onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+								placeholder="email@example.com"
+							/>
+						</div>
 
-				<h1 style={{ color: '#f0eeff', fontSize: '22px', fontWeight: 500, margin: 0 }}>
-					ft_transcendence
-				</h1>
-				<div style={{ marginTop: '1.5rem' }}>
-					<div style={{ marginBottom: '1rem' }}>
-						<label style={{ display: 'block', color: '#8892a4', fontSize: '12px', marginBottom: '6px' }}>
-							Login
-						</label>
-						<input
-							style={{
-								width: '100%',
-								background: '#0f0f13',
-								border: '0.5px solid #2e2e40',
-								borderRadius: '8px',
-								padding: '10px 12px',
-								color: '#f0eeff',
-								fontSize: '14px',
-								boxSizing: 'border-box' as const,
-								outline: 'none',
-							}}
-							value={username}
-							onChange={(e) => setUsername(e.target.value)}
-							onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-							placeholder="username"
-						/>
-					</div>
+						<div className="mb-4">
+							<label className="block text-[#8892a4] text-xs mb-1.5">
+								Password
+							</label>
+							<input
+								className="w-full bg-[#0f0f13] border border-[#2e2e40] rounded-lg px-3 py-2.5 text-[#f0eeff] text-sm outline-none"
+								type="password"
+								value={password}
+								onChange={(e) => setPassword(e.target.value)}
+								onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+								placeholder="••••••••"
+							/>
+						</div>
 
-					<div style={{ marginBottom: '1rem' }}>
-						<label style={{ display: 'block', color: '#8892a4', fontSize: '12px', marginBottom: '6px' }}>
-							Password
-						</label>
-						<input
-							style={{
-								width: '100%',
-        						background: '#0f0f13',
-        						border: '0.5px solid #2e2e40',
-        						borderRadius: '8px',
-        						padding: '10px 12px',
-        						color: '#f0eeff',
-        						fontSize: '14px',
-        						boxSizing: 'border-box' as const,
-        						outline: 'none',
-							}}
-							type="password"
-							value={password}
-							onChange={(e) => setPassword(e.target.value)}
-							onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-							placeholder="••••••••"
-						/>
-					</div>
-
-					<button
-						style={{
-							width: '100%',
-      						background: '#e2b96f',
-      						color: '#0f0f13',
-      						border: 'none',
-      						borderRadius: '8px',
-      						padding: '10px',
-      						fontSize: '14px',
-      						fontWeight: 500,
-      						cursor: isLoading ? 'not-allowed' : 'pointer',
-							opacity: isLoading ? 0.7 : 1,
-						}}
-						onClick={handleLogin}
-						disabled={isLoading}
-					>
-						{isLoading ? 'Loading...' : 'Enter'}
-					</button>
-					{error && (
-						<p style={{ color: '#e25f5f', fontSize: '12px', marginTop: '8px', margin: '8px 0 0 0' }}>
-							{error}
+						<button
+							className={`w-full bg-[#e2b96f] text-[#0f0f13] border-none rounded-lg py-2.5 text-sm font-medium ${isLoading ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
+							onClick={handleLogin}
+							disabled={isLoading}
+						>
+							{isLoading ? 'Loading...' : 'Enter'}
+						</button>
+						{error && (
+							<p className="text-[#e25f5f] text-xs mt-2">
+								{error}
+							</p>
+						)}
+						<p className="text-[#8892a4] text-xs text-center mt-4">
+							Don't have an account?{' '}
+							<Link to="/register" className="text-[#e2b96f] no-underline">
+								Register
+							</Link>
 						</p>
-					)}
-					<p style={{ color: '#8892a4', fontSize: '12px', textAlign: 'center', marginTop: '16px' }}>
-						Don't have an account?{' '}
-						<Link to="/register" style={{ color: '#e2b96f', textDecoration: 'none' }}>
-							Register
-						</Link>
-					</p>
+					</div>
 				</div>
 			</div>
+			<Footer />
 		</div>
 	)
 }

@@ -3,7 +3,7 @@ import { getMe, logout as apiLogout } from "../api/auth"
 
 interface User {
 	id: number
-	username: string
+	email: string
 }
 
 interface AuthContextType {

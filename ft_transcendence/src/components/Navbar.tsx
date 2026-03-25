@@ -1,43 +1,42 @@
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 
 function Navbar() {
-	const {logout} = useAuth()
+	const {logout, isLoggedIn} = useAuth()
+	const navigate = useNavigate()
+	function handleLogout() {
+		logout()
+		navigate('/login')
+	}
 
 	return (
-		<nav style={{
-			background: '#1a1a24',
-			borderBottom: '0.5px solid #2e2e40',
-			padding: '0 1.5rem',
-			height: '52px',
-			display: 'flex',
-			alignItems: 'center',
-			justifyContent: 'space-between',
-		}}>
-			<Link to="/home" style={{ color: '#f0eeff', fontSize: '15px', fontWeight: 500, textDecoration: 'none' }}>
+		<nav className="bg-[#1a1a24] border-b border-[#2e2e40] px-6 h-[52px] flex items-center justify-between">
+			<Link to="/home" className="text-[#f0eeff] text-[15px] font-medium no-underline">
 				ft_transcendence
 			</Link>
-			<div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-				<Link to="/profile" style={{ color: '#8892a4', fontSize: '13px', textDecoration: 'none' }}>
-					Profile
-				</Link>
-				<Link to="/leaderboard" style={{ color: '#8892a4', fontSize: '13px', textDecoration: 'none' }}>
-					Leaderboard
-				</Link>
-				<button
-					onClick={logout}
-					style={{
-						background: 'transparent',
-						border: '0.5px solid #2e2e40',
-						borderRadius: '8px',
-						padding: '6px 12px',
-						color: '#8892a4',
-						fontSize: '13px',
-						cursor: 'pointer',
-					}}
-				>
-					Logout
-				</button>
+			<div className="flex items-center gap-6">
+				{isLoggedIn && (
+					<>
+						<Link to="/profile" className="text-[#8892a4] text-[13px] no-underline">
+							Profile
+						</Link>
+						<Link to="/leaderboard" className="text-[#8892a4] text-[13px] no-underline">
+							Leaderboard
+						</Link>
+					</>
+				)}
+				{isLoggedIn ? (
+					<button
+						onClick={handleLogout}
+						className="bg-transparent border border-[#2e2e40] rounded-lg px-3 py-1.5 text-[#8892a4] text-[13px] cursor-pointer"
+					>
+						Logout
+					</button>
+				) : (
+					<Link to="/login" className="bg-transparent border border-[#2e2e40] rounded-lg px-3 py-1.5 text-[#8892a4] text-[13px] no-underline">
+						Login
+					</Link>
+				)}
 			</div>
 		</nav>
 	)
