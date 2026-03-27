@@ -20,23 +20,30 @@ function Navbar() {
 						<NavLink to="/home" className={({ isActive }) => isActive ? "text-[#e2b96f] text-[13px] no-underline" : "text-[#8892a4] text-[13px] no-underline"}>
 							Home
 						</NavLink>
+						<NavLink to="/game" className={({ isActive }) => isActive ? "text-[#e2b96f] text-[13px] no-underline" : "text-[#8892a4] text-[13px] no-underline"}>
+							Game
+						</NavLink>
 						<NavLink to="/profile" className={({ isActive }) => isActive ? "text-[#e2b96f] text-[13px] no-underline" : "text-[#8892a4] text-[13px] no-underline"}>
 							Profile
+						</NavLink>
+						<NavLink to="/friends" className={({ isActive }) => isActive ? "text-[#e2b96f] text-[13px] no-underline" : "text-[#8892a4] text-[13px] no-underline"}>
+							Friends
 						</NavLink>
 						<NavLink to="/leaderboard" className={({ isActive }) => isActive ? "text-[#e2b96f] text-[13px] no-underline" : "text-[#8892a4] text-[13px] no-underline"}>
 							Leaderboard
 						</NavLink>
+
 					</>
 				)}
 				{isLoggedIn ? (
 					<button
 						onClick={handleLogout}
-						className="bg-transparent border border-[#2e2e40] rounded-lg px-3 py-1.5 text-[#8892a4] text-[13px] cursor-pointer"
+						className="bg-transparent border border-[#2e2e40] rounded-lg px-3 py-1.5 text-[#8892a4] text-[13px] cursor-pointer hover:border-[#e2b96f]"
 					>
 						Logout
 					</button>
 				) : (
-					<Link to="/login" className="bg-transparent border border-[#2e2e40] rounded-lg px-3 py-1.5 text-[#8892a4] text-[13px] no-underline">
+					<Link to="/login" className="bg-transparent border border-[#2e2e40] rounded-lg px-3 py-1.5 text-[#8892a4] text-[13px] no-underline hover:border-[#e2b96f]">
 						Login
 					</Link>
 				)}

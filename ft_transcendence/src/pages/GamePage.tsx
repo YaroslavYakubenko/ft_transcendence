@@ -4,14 +4,7 @@ import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
 
 function GamePage() {
-	const [fen] = useState("start")
-
-	function onDrop(sourceSquare: string, targetSquare: string) {
-		//TODO: send a move to backend through WebSocket
-		//ws.send(JSON.stringfy({ fom: sourceSquare, to: targetSquare }))
-		console.log(`Move: ${sourceSquare} → ${targetSquare}`)
-		return false //backend is deciding to take a move
-	}
+	const [fen] = useState("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 
 	return (
 		<div className="bg-[#0f0f13] min-h-screen flex flex-col">
@@ -20,11 +13,15 @@ function GamePage() {
 				<h1 className="text-[#f0eeff] text-2xl font-bold mb-6">Chess</h1>
 				<div className="w-full max-w-[500px]">
 					<Chessboard
-						position={fen}
-						onPieceDrop={onDrop}
-						boardWidth={500}
-						customDarkSquareStyle={{ backgroundColor: "#2e2e40" }}
-						customLightSquareStyle={{ backgroundColor: "#f0eeff" }}
+						options={{
+							position: fen,
+							darkSquareStyle: { backgroundColor: "#2e2e40" },
+							lightSquareStyle: { backgroundColor: "#f0eeff" },
+							onPieceDrop: ({ sourceSquare, targetSquare }) => {
+								console.log(`Move: ${sourceSquare} → ${targetSquare}`)
+								return false
+							},
+						}}
 					/>
 				</div>
 			</div>

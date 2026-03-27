@@ -10,7 +10,7 @@ interface LoginResponse {
 	user: User
 }
 
-export async function login(email: string, password: string): Promise<LoginResponse> {
+export async function login(email: string, _password: string): Promise<LoginResponse> {
 	
 	return {
 		token: 'mock-token-123',
@@ -18,7 +18,7 @@ export async function login(email: string, password: string): Promise<LoginRespo
 	}
 }
 
-export async function register(email: string, password: string): Promise<LoginResponse> {
+export async function register(email: string, _password: string): Promise<LoginResponse> {
 
 	return {
 		token: 'mock-token-123',
@@ -26,11 +26,11 @@ export async function register(email: string, password: string): Promise<LoginRe
 	}
 }
 
-export async function getMe(token: string): Promise<User> {
+export async function getMe(_token: string): Promise<User> {
 	
 	return {id: 1, email: 'test@test.com'}
 }
 
-export async function logout(token: string): Promise<void> {
+export async function logout(_token: string): Promise<void> {
 	
 }

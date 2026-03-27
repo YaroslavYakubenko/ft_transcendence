@@ -11,6 +11,9 @@ import EditProfilePage from './pages/EditProfilePage'
 import NotFoundPage from './pages/NotFoundPage'
 import LeaderboardPage from './pages/LeaderboardPage'
 import GamePage from './pages/GamePage'
+import UserProfilePage from './pages/UserProfilePage'
+import FriendsPage from './pages/FriendsPage'
+import ChatWidget from './components/ChatWidget'
 
 function App() {
     return (
@@ -47,8 +50,19 @@ function App() {
                             <GamePage/>
                         </ProtectedRoute>
                     } />
+                    <Route path="/users/:id" element={
+                        <ProtectedRoute>
+                            <UserProfilePage/>
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/friends" element={
+                        <ProtectedRoute>
+                            <FriendsPage/>
+                        </ProtectedRoute>
+                    } />
                     <Route path="*" element={<NotFoundPage/>} />
                 </Routes>
+                <ChatWidget />
             </BrowserRouter>
         </AuthProvider>
     )
