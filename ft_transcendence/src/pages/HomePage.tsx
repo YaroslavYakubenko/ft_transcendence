@@ -31,7 +31,7 @@ function HomePage() {
 					</div>
 				</div>
 				<button
-				onClick={() => navigate('/game')}
+				onClick={() => navigate('/lobby')}
 					className="bg-[#e2b96f] border-none rounded-[10px] px-10 py-3 text-[#0f0f13] text-[15px] font-semibold cursor-pointer"
 				>
 					▶ Play

@@ -1,14 +1,26 @@
+import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
+import { getLeaderboard } from "../api/game"
+
+type LeaderboardEntry = {
+	id: number
+	username: string
+	wins: number
+	losses: number
+	level: number
+	rank: number
+}
 
 function LeaderboardPage() {
-	const players = [
-		{ id: 1, email: "alice@mail.com", wins: 42, losses: 5 },                                                                                        
-        { id: 2, email: "bob@mail.com", wins: 35, losses: 12 },
-        { id: 3, email: "carol@mail.com", wins: 28, losses: 8 },                                                                                        
-        { id: 4, email: "dave@mail.com", wins: 21, losses: 20 },
-        { id: 5, email: "eve@mail.com", wins: 15, losses: 30 },
-	]
+	const [players, setPlayers] = useState<LeaderboardEntry[]>([])
+	const navigate = useNavigate()
+
+	useEffect(() => {
+		getLeaderboard().then(setPlayers)
+	}, [])
+
 	return (
 		<div className="bg-[#0f0f13] min-h-screen flex flex-col">
 			<Navbar />
@@ -25,10 +37,15 @@ function LeaderboardPage() {
 							</tr>
 						</thead>
 						<tbody>
-							{players.map((player, index) => (
-								<tr key={player.id} className="border-b border-[#2e2e40] last:border-0 hover:bg-[#22223a]">
-									<td className="px-6 py-4 text-[#e2b96f] font-semibold">{index + 1}</td>
-									<td className="px-6 py-4">{player.email}</td>
+							{players.map((player) => (
+								<tr
+									key={player.id}
+									className="border-b border-[#2e2e40] last:border-0 hover:bg-[#22223a] cursor-pointer"
+									onClick={() => navigate(`/users/${player.id}`)}
+								>
+									<td className="px-6 py-4 text-[#e2b96f] font-semibold">{player.rank}</td>
+									<td className="px-6 py-4">{player.username}</td>
+									<td className="px-6 py-4 text-[#8892a4]">{player.level}</td>
 									<td className="px-6 py-4 text-green-400">{player.wins}</td>
 									<td className="px-6 py-4 text-[#e25f5f]">{player.losses}</td>
 								</tr>

@@ -5,10 +5,10 @@ import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
 
 function EditProfilePage() {
-	const { user } = useAuth()
+	const { user, updateUser } = useAuth()
 	const navigate = useNavigate()
 	const [email, setEmail] = useState(user?.email || '')
-	const [username, setUsername] = useState('')
+	const [username, setUsername] = useState(user?.username || '')
 	const [password, setPassword] = useState('')
 	const [avatar, setAvatar] = useState<File | null>(null)
 	const [confirmPassword, setConfirmPassword] = useState('')
@@ -19,8 +19,17 @@ function EditProfilePage() {
 			return
 		}
 		setError('')
-		//TODO: send to backend
-		navigate('/profile')
+		if (avatar) {
+			const reader = new FileReader()
+			reader.onload = (e) => {
+				updateUser({ username, email, avatarUrl: e.target?.result as string })
+				navigate('/profile')
+			}
+			reader.readAsDataURL(avatar)
+		} else {
+			updateUser({ username, email })
+			navigate('/profile')
+		}
 	}
 
 	return (

@@ -4,6 +4,8 @@ import { getMe, logout as apiLogout } from "../api/auth"
 interface User {
 	id: number
 	email: string
+	username?: string
+	avatarUrl?: string
 }
 
 interface AuthContextType {
@@ -11,6 +13,7 @@ interface AuthContextType {
 	token: string | null
 	login: (token: string, user: User) => void
 	logout: () => void
+	updateUser: (updates: Partial<User>) => void
 	isLoggedIn: boolean
 }
 
@@ -34,6 +37,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 		setToken(null)
 		setUser(null)
 	}
+	const updateUser = (updates: Partial<User>) => {
+		setUser(prev => prev ? { ...prev, ...updates } : prev)
+	}
 	useEffect(() => {
 		if (token) {
 			getMe(token).then(user => setUser(user))
@@ -45,6 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 			token,
 			login,
 			logout,
+			updateUser,
 			isLoggedIn: !!token,
 		}}>
 			{children}

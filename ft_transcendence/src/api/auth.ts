@@ -34,3 +34,18 @@ export async function getMe(_token: string): Promise<User> {
 export async function logout(_token: string): Promise<void> {
 	
 }
+
+const REDIRECT_URI = 'http://localhost:5173/oauth/callback'
+
+export const OAUTH_URLS = {
+	github: `https://github.com/login/oauth/authorize?client_id=GITHUB_CLIENT_ID&redirect_uri=${REDIRECT_URI}&scope=user:email`,
+	42: `https://api.intra.42.fr/oauth/authorize?client_id=42_CLIENT_ID&response_type=code&redirect_uri=${REDIRECT_URI}&scope=public`,
+}
+
+export async function oauthLogin(provider: string, code: string): Promise<LoginResponse> {
+	console.log('oauthLogin', provider, code)
+	return {
+		token: 'moke-oauth-token',
+		user: { id: 3, email: `oauth-user@${provider}.com` }
+	}
+}
