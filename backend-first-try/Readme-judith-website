@@ -1,0 +1,61 @@
+
+Node.js -> runs Javascript on a server (Runtime, runs your code)
+Express -> Framework for Node.js (set of tools + rules that help you structure & build an app)
+
+What I did so far:
+- ran "npm init -y" (backend folder is now a Node project)
+- ran "npm install express" (installs the framework that lets us build routes like /auth/login)
+- ran "npm install -D nodemon" (automatically restarts your servwer when you change code, saves a 	ton of time)
+- mkdir srcs, touch server.js
+
+To run, do:
+- npm run dev
+
+also installed postgreSQL on my computer to build a database, need to containerize later
+
+
+
+
+--------------------------------------------------------------------------
+
+
+
+
+from AuthContext.tsx 
+const login = (token: string, user: User) => {
+	localStorage.setItem('token', token)
+	setToken(token)
+	setUser(user)
+}
+
+--> my /auth/login response MUST look like:
+{
+	"token": "some_jwt_token",
+	"user": {
+		"id": 1,
+		"username": "alice"
+	}
+}
+
+How login flow will work (end-to-end)
+1. user submits login form
+Frontend (LoginPage)
+fetch('/auth/login', {
+  method: 'POST',
+  body: JSON.stringify({ email, password })
+})
+
+2. backend does:
+- validate input
+- check user in DB
+- compare password (bcrypt?)
+- generate JWT token (?)
+
+3. backend returns 
+{
+  "token": "jwt_here",
+  "user": {
+    "id": 1,
+    "username": "alice"
+  }
+}
