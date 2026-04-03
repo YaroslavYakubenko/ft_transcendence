@@ -1,8 +1,11 @@
-import { createContext, useContext, useState } from "react"
+import { createContext, useContext, useState, useEffect } from "react"
+import { getMe, logout as apiLogout } from "../api/auth"
 
 interface User {
 	id: number
-	username: string
+	email: string
+	username?: string
+	avatarUrl?: string
 }
 
 interface AuthContextType {
@@ -10,6 +13,7 @@ interface AuthContextType {
 	token: string | null
 	login: (token: string, user: User) => void
 	logout: () => void
+	updateUser: (updates: Partial<User>) => void
 	isLoggedIn: boolean
 }
 
@@ -26,16 +30,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 		setUser(user)
 	}
 	const logout = () => {
+		if (token) {
+			apiLogout(token)
+		}
 		localStorage.removeItem('token')
 		setToken(null)
 		setUser(null)
 	}
+	const updateUser = (updates: Partial<User>) => {
+		setUser(prev => prev ? { ...prev, ...updates } : prev)
+	}
+	useEffect(() => {
+		if (token) {
+			getMe(token).then(user => setUser(user))
+		}
+	}, [])
 	return (
 		<AuthContext.Provider value={{
 			user,
 			token,
 			login,
 			logout,
+			updateUser,
 			isLoggedIn: !!token,
 		}}>
 			{children}
