@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { getFriends, getMessages, sendMessage, type Friend, type ChatMessage } from "../api/social"
+import { useTranslation } from "react-i18next"
 
 function ChatWidget() {
 	const [isOpen, setIsOpen] = useState(false)
@@ -8,6 +9,7 @@ function ChatWidget() {
 	const [messages, setMessages] = useState<ChatMessage[]>([])
 	const [input, setInput] = useState("")
 	const bottomRef = useRef<HTMLDivElement>(null)
+	const { t } = useTranslation()
 
 	useEffect(() => {
 		getFriends().then(setFriends)
@@ -31,24 +33,24 @@ function ChatWidget() {
 	}
 
 	return (
-		<div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+		<div className="fixed bottom-6 right-6 rtl:right-auto rtl:left-6 z-50 flex flex-col items-end rtl:items-start gap-3">
 			{isOpen && (
 				<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl w-72 h-96 flex flex-col">
 					<div className="px-4 py-3 border-b border-[#2e2e40] flex items-center justify-between">
 						{selectedFriend ? (
 							<div className="flex items-center gap-2">
-								<button onClick={() => setSelectedFriend(null)} className="text-[#8892a4] hover:text-[#f0eeff] cursor-pointer text-xs">←</button>
+								<button onClick={() => setSelectedFriend(null)} className="text-[#8892a4] hover:text-[#f0eeff] cursor-pointer text-xs rtl:rotate-180 inline-block">←</button>
 								<span className="text-[#f0eeff] font-semibold text-sm">{selectedFriend.username}</span>
 							</div>
 						) : (
-							<span className="text-[#f0eeff] font-semibold text-sm">Chat</span>
+							<span className="text-[#f0eeff] font-semibold text-sm">{t('chat.title')}</span>
 						)}
 						<button onClick={() => setIsOpen(false)} className="text-[#8892a4] hover:text-[#f0eeff] cursor-pointer">✕</button>
 					</div>
 
 					{!selectedFriend ? (
 						<div className="flex-1 overflow-y-auto">
-							{friends.length === 0 && <p className="text-[#8892a4] text-sm px-4 py-3">No friends yet.</p>}
+							{friends.length === 0 && <p className="text-[#8892a4] text-sm px-4 py-3">{t('chat.noFriends')}</p>}
 							{friends.map(friend => (
 								<div key={friend.id} onClick={() => setSelectedFriend(friend)} className="px-4 py-3 flex items-center gap-3 hover:bg-[#2e2e40] cursor-pointer">
 									<div className="w-8 h-8 rounded-full bg-[#e2b96f] flex items-center justify-center text-[#0f0f13] text-sm font-bold">
@@ -79,10 +81,10 @@ function ChatWidget() {
 									value={input}
 									onChange={e => setInput(e.target.value)}
 									onKeyDown={e => e.key === "Enter" && handleSend()}
-									placeholder="Message..."
+									placeholder={t('messagePlaceholder')}
 									className="flex-1 bg-[#0f0f13] border border-[#2e2e40] rounded-lg px-3 py-1.5 text-sm text-[#f0eeff] outline-none"
 								/>
-								<button onClick={handleSend} className="text-[#e2b96f] text-sm font-semibold cursor-pointer">Send</button>
+								<button onClick={handleSend} className="text-[#e2b96f] text-sm font-semibold cursor-pointer">{t('chat.send')}</button>
 							</div>
 						</>
 					)}

@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom"
 import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
 import { getFriends, removeFriend, type Friend } from "../api/social"
+import { useTranslation } from "react-i18next"
 
 function FriendsPage() {
 	const [friends, setFriends] = useState<Friend[]>([])
 	const navigate = useNavigate()
+	const { t } = useTranslation()
 
 	useEffect(() => {
 		getFriends().then(setFriends)
@@ -21,9 +23,9 @@ function FriendsPage() {
 		<div className="bg-[#0f0f13] min-h-screen flex flex-col">
 			<Navbar />
 			<div className="flex flex-col items-center flex-1 text-[#f0eeff] pt-16 px-4">
-				<h1 className="text-2xl font-bold mb-8">Friends</h1>
+				<h1 className="text-2xl font-bold mb-8">{t('friends.title')}</h1>
 				{friends.length === 0 && (
-					<p className="text-[#8892a4]">You have no friends yet.</p>
+					<p className="text-[#8892a4]">{t('friends.noFriends')}</p>
 				)}
 				<div className="flex flex-col gap-3 w-full max-w-md">
 					{friends.map(friend => (
@@ -34,7 +36,7 @@ function FriendsPage() {
 								</div>
 								<div>
 									<p className="font-semibold">{friend.username}</p>
-									<p className="text-xs text-[#8892a4]">{friend.isOnline ? "🟢 Online" : "⚫ Offline"}</p>
+									<p className="text-xs text-[#8892a4]">{friend.isOnline ? "🟢 " + t('friends.online') : "⚫ " + t('friends.offline')}</p>
 								</div>
 							</div>
 							<div className="flex gap-2">
@@ -42,13 +44,13 @@ function FriendsPage() {
 									onClick={() => navigate(`/users/${friend.id}`)}
 									className="text-sm px-3 py-1 border border-[#2e2e40] rounded-lg hover:border-[#e2b96f] cursor-pointer"
 								>
-									Profile
+									{t('friends.viewProfile')}
 								</button>
 								<button
 									onClick={() => handleRemove(friend.id)}
 									className="text-sm px-3 py-1 border border-[#2e2e40] rounded-lg hover:border-red-400 text-red-400 cursor-pointer"
 								>
-									Remove
+									{t('friends.remove')}
 								</button>
 							</div>
 						</div>

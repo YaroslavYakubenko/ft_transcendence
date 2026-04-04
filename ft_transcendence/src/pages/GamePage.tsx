@@ -4,6 +4,7 @@ import { Chessboard } from "react-chessboard"
 import { useAuth } from "../context/AuthContext"
 import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
+import { useTranslation } from "react-i18next"
 
 interface GameSettings {
 	opponent: 'bot' | 'live'
@@ -33,6 +34,7 @@ function GamePage() {
 	const theme = BOARD_THEMES[settings.boardTheme]
 	const [fen] = useState("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 	const [moves] = useState<string[]>([])
+	const { t } = useTranslation()
 
 	return (
 		<div className="bg-[#0f0f13] min-h-screen flex flex-col">
@@ -50,7 +52,7 @@ function GamePage() {
 									{settings.opponent == 'bot' ? 'AI' : '?'}
 								</div>
 								<span className="text-[#f0eeff] text-sm font-medium">
-									{settings.opponent === 'bot' ? `Bot (${settings.difficulty})` : 'Opponent'}
+									{settings.opponent === 'bot' ? `${t('lobby.bot')} (${t(`lobby.${settings.difficulty}`)})` : t('lobby.opponent')}
 								</span>
 							</div>
 							<span className="text-[#e2b96f] text-sm font-mono">
@@ -92,9 +94,9 @@ function GamePage() {
 					{/* Right - move history + buttons */}
 					<div className="flex flex-col gap-3 w-48">
 						<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl p-3 flex-1">
-							<p className="text-[#8896a4] text-xs mb-2 m-0">Moves</p>
+							<p className="text-[#8896a4] text-xs mb-2 m-0">{t('game.movesHistory')}</p>
 							{moves.length === 0 ? (
-								<p className="text-[#2e2e40] text-xs">Nomoves yet</p>
+								<p className="text-[#2e2e40] text-xs">{t('game.noMoves')}</p>
 							) : (
 								<div className="text-[#f0eeff] text-xs space-y-1">
 									{moves.map((move, i) => (
@@ -104,10 +106,10 @@ function GamePage() {
 							)}
 						</div>
 						<button className="w-full bg-[#0f0f13] border border-[#e25f5f] text-[#e25f5f] rounded-lg text-sm cursor-pointer hover:bg-[#e25f5f] hover:text-[#f0eeff]">
-							Resign
+							{t('game.resign')}
 						</button>
 						<button className="w-full bg-[#0f0f13] border border-[#2e2e40] text-[#8892a4] rounded-lg text-sm cursor-pointer hover:border-[#e2b96f] hover:text-[#e2b96f]">
-							Draw
+							{t('game.draw')}
 						</button>
 					</div>
 				</div>

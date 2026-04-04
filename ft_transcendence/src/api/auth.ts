@@ -49,3 +49,7 @@ export async function oauthLogin(provider: string, code: string): Promise<LoginR
 		user: { id: 3, email: `oauth-user@${provider}.com` }
 	}
 }
+
+export async function deleteAccount(_token: string): Promise<void> {
+	// stub - backend will delete user
+}

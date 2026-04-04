@@ -5,11 +5,12 @@ import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
 import { getUserStats, getMatchHistory, getAchievements } from "../api/game"
 import { type UserStats, type MatchRecord, type Achievement } from "../api/game"
+import { useTranslation } from "react-i18next"
 
 function ProfilePage() {
     const { user } = useAuth()
     const navigate = useNavigate()
-
+    const { t } = useTranslation()
     const [stats, setStats] = useState<UserStats | null>(null)
     const [matches, setMatches] = useState<MatchRecord[]>([])
     const [achievements, setAchievements] = useState<Achievement[]>([])
@@ -20,8 +21,6 @@ function ProfilePage() {
       getMatchHistory(user.id).then(setMatches)
       getAchievements(user.id).then(setAchievements)
     }, [user])
-
-    const xpPercent = stats ? Math.round((stats.xp / stats.xpToNextLevel) * 100) : 0
 
     return (
       <div className="bg-[#0f0f13] min-h-screen flex flex-col">
@@ -37,37 +36,26 @@ function ProfilePage() {
             </div>
           )}
           <p className="text-xl font-semibold mb-1">{user?.username || user?.email}</p>
-          <p className="text-sm text-[#8892a4] mb-2">Member</p>
+          <p className="text-sm text-[#8892a4] mb-2">{t('profile.member')}</p>
 
           {/* Level + XP bar */}
           {stats && (
-            <div className="w-full max-w-xs mb-8">
-              <div className="flex justify-between text-xs text-[#8892a4] mb-1">
-                <span>Level {stats.level}</span>
-                <span>{stats.xp} / {stats.xpToNextLevel} XP</span>
-              </div>
-              <div className="w-full bg-[#2e2e40] rounded-full h-2">
-                <div
-                  className="bg-[#e2b96f] h-2 rounded-full"
-                  style={{ width: `${xpPercent}%` }}
-                />
-              </div>
-            </div>
+            <p className="text-[#e2b96f] text-lg font-semibold mb-8">{t('profile.elo')}: {stats.elo}</p>
           )}
 
           {/* Stats cards */}
           <div className="flex gap-4 mb-10">
             <div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl px-8 py-6 text-center">
               <div className="text-2xl font-semibold text-green-400">{stats?.wins ?? 0}</div>
-              <div className="text-xs text-[#8892a4] mt-1">Wins</div>
+              <div className="text-xs text-[#8892a4] mt-1">{t('home.wins')}</div>
             </div>
             <div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl px-8 py-6 text-center">
               <div className="text-2xl font-semibold text-[#e25f5f]">{stats?.losses ?? 0}</div>
-              <div className="text-xs text-[#8892a4] mt-1">Losses</div>
+              <div className="text-xs text-[#8892a4] mt-1">{t('home.losses')}</div>
             </div>
             <div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl px-8 py-6 text-center">
               <div className="text-2xl font-semibold text-[#e2b96f]">#{stats?.rank ?? '-'}</div>
-              <div className="text-xs text-[#8892a4] mt-1">Rank</div>
+              <div className="text-xs text-[#8892a4] mt-1">{t('home.rank')}</div>
             </div>
           </div>
 
@@ -76,23 +64,23 @@ function ProfilePage() {
             className="mb-12 bg-[#1a1a24] border border-[#2e2e40] rounded-[10px] px-8 py-3 text-[#f0eeff] text-[15px] font-semibold cursor-pointer
   hover:border-[#e2b96f]"
           >
-            Edit Profile
+            {t('profile.editProfile')}
           </button>
 
           {/* Match history */}
           <div className="w-full max-w-2xl mb-10">
-            <h2 className="text-lg font-semibold mb-4">Match History</h2>
+            <h2 className="text-lg font-semibold mb-4">{t('profile.matchHistory')}</h2>
             <div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl overflow-hidden">
               {matches.length === 0 ? (
-                <p className="text-[#8892a4] text-sm px-6 py-4">No matches yet.</p>
+                <p className="text-[#8892a4] text-sm px-6 py-4">{t('profile.noMatches')}</p>
               ) : (
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-[#2e2e40] text-[#8892a4] text-sm">
-                      <th className="text-left px-6 py-3">Result</th>
-                      <th className="text-left px-6 py-3">Opponent</th>
-                      <th className="text-left px-6 py-3">Duration</th>
-                      <th className="text-left px-6 py-3">Date</th>
+                      <th className="text-left px-6 py-3">{t('profile.result')}</th>
+                      <th className="text-left px-6 py-3">{t('profile.opponent')}</th>
+                      <th className="text-left px-6 py-3">{t('profile.duration')}</th>
+                      <th className="text-left px-6 py-3">{t('profile.date')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -104,7 +92,7 @@ function ProfilePage() {
                             match.result === 'loss' ? 'text-[#e25f5f] font-semibold' :
                             'text-[#8892a4] font-semibold'
                           }>
-                            {match.result.toUpperCase()}
+                            {t(`profile.${match.result}`).toUpperCase()}
                           </span>
                         </td>
                         <td className="px-6 py-3">{match.opponentName}</td>
@@ -120,7 +108,7 @@ function ProfilePage() {
 
           {/* Achievements */}
           <div className="w-full max-w-2xl">
-            <h2 className="text-lg font-semibold mb-4">Achievements</h2>
+            <h2 className="text-lg font-semibold mb-4">{t('profile.achievements')}</h2>
             <div className="grid grid-cols-1 gap-3">
               {achievements.map(a => (
                 <div
@@ -133,8 +121,8 @@ function ProfilePage() {
                 >
                   <span className="text-2xl">{a.unlocked ? '🏆' : '🔒'}</span>
                   <div>
-                    <p className="font-semibold text-sm">{a.name}</p>
-                    <p className="text-xs text-[#8892a4]">{a.description}</p>
+                    <p className="font-semibold text-sm">{t(`achievements.${a.id}.name`)}</p>
+                    <p className="text-xs text-[#8892a4]">{t(`achievements.${a.id}.description`)}</p>
                   </div>
                 </div>
               ))}

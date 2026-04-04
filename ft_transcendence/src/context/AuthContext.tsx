@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react"
-import { getMe, logout as apiLogout } from "../api/auth"
+import { getMe, logout as apiLogout, deleteAccount as apiDeleteAccount } from "../api/auth"
 
 interface User {
 	id: number
@@ -14,6 +14,7 @@ interface AuthContextType {
 	login: (token: string, user: User) => void
 	logout: () => void
 	updateUser: (updates: Partial<User>) => void
+	deleteAccount: () => Promise<void>
 	isLoggedIn: boolean
 }
 
@@ -40,6 +41,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 	const updateUser = (updates: Partial<User>) => {
 		setUser(prev => prev ? { ...prev, ...updates } : prev)
 	}
+
+	const deleteAccount = async () => {
+		if (token) await apiDeleteAccount(token)
+		setUser(null)
+		setToken(null)
+		localStorage.removeItem('token')
+	}
+
 	useEffect(() => {
 		if (token) {
 			getMe(token).then(user => setUser(user))
@@ -51,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 			token,
 			login,
 			logout,
+			deleteAccount,
 			updateUser,
 			isLoggedIn: !!token,
 		}}>

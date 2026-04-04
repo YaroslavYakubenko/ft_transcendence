@@ -1,8 +1,11 @@
 import { Link } from "react-router-dom"
 import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
+import { useTranslation } from "react-i18next"
 
 function NotFoundPage() {
+	const { t } = useTranslation()
+
 	return (
 		<div className="bg-[#0f0f13] min-h-screen flex flex-col">
 			<Navbar />
@@ -11,13 +14,13 @@ function NotFoundPage() {
 					404
 				</div>
 				<p className="text-[#8892a4] text-sm mt-4 mb-8">
-					This page doesn't exist.
+					{t('common.notFound')}
 				</p>
 				<Link
 					to="/"
 					className="bg-[#e2b96f] text-[#0f0f13] rounded-[10px] px-10 py-3 text-[15px] font-semibold no-underline"
 				>
-					← Back to Home
+					← {t('common.backHome')}
 				</Link>
 			</div>
 			<Footer />
