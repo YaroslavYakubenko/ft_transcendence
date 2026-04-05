@@ -16,6 +16,7 @@ import UserProfilePage from './pages/UserProfilePage'
 import FriendsPage from './pages/FriendsPage'
 import ChatWidget from './components/ChatWidget'
 import OAuthCallbackPage from './pages/OAuthCallbackPage'
+import PublicOnlyRoute from './components/PublicOnlyRoute'
 
 function AuthentcatedWidgets() {
     const { isLoggedIn } = useAuth()
@@ -28,9 +29,9 @@ function App() {
         <AuthProvider>
             <BrowserRouter>
                 <Routes>
-                    <Route path="/" element={<LoginPage/>} />
-                    <Route path="/login" element={<LoginPage/>} />
-                    <Route path="/register" element={<RegisterPage/>} />
+                    <Route path="/" element={<PublicOnlyRoute><LoginPage/></PublicOnlyRoute>} />
+                    <Route path="/login" element={<PublicOnlyRoute><LoginPage/></PublicOnlyRoute>} />
+                    <Route path="/register" element={<PublicOnlyRoute><RegisterPage/></PublicOnlyRoute>} />
                     <Route path="/oauth/callback" element={<OAuthCallbackPage/>} />
                     <Route path="/privacy-policy" element={<PrivacyPolicyPage/>} />
                     <Route path="/terms-of-service" element={<TermsOfServicePage/>} />

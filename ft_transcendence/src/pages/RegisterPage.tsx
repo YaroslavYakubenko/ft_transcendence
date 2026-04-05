@@ -21,6 +21,14 @@ function RegisterPage() {
 			setError(t('login.fillAllFields'))
 			return
 		}
+		if (!email.includes('@') || !email.includes('.')) {
+			setError(t('login.invalidEmail'))
+			return
+		}
+		if (password.length < 8) {
+			setError(t('login.passwordTooShort'))
+			return
+		}
 		if (password !== confirmPassword) {
 			setError(t('register.passwordsDoNotMatch'))
 			return

@@ -18,6 +18,8 @@ export default {
     	register: "Registrieren",
     	orContinueWith: "oder weiter mit",
     	fillAllFields: "Bitte alle Felder ausfüllen",
+		invalidEmail: "Ungültige E-Mail-Adresse",
+		passwordTooShort: "Das Passwort muss mindestens 8 Zeichen lang sein",
 		or: "ODER",
 		loginWithGithub: "Mit GitHub anmelden",
 		loginWith42: "Mit 42 anmelden",

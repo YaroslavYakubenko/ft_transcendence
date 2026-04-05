@@ -18,6 +18,8 @@ export default {
     	register: "باسح ءاشنإ",
     	orContinueWith: "عم عبات وأ",
 		fillAllFields: "لوقحلا عيمج ءلم ىجري",
+		invalidEmail: "عنوان بريد إلكتروني غير صالح",
+		passwordTooShort: "يجب أن تكون كلمة المرور 8 أحرف على الأقل",
 		or: "وأ",
 		loginWithGithub: "ربع لوخدلا ليجست GitHub",
 		loginWith42: "42 ربع لوخدلا ليجست",

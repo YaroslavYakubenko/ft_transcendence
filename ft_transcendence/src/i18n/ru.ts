@@ -18,6 +18,8 @@ export default {
     	register: "Зарегистрироваться",
     	orContinueWith: "или войти через",
 		fillAllFields: "Заполните все поля",
+		invalidEmail: "Неверный формат email",
+		passwordTooShort: "Пароль должен быть не менее 8 символов",
 		or: "ИЛИ",
 		loginWithGithub: "Войти через GitHub",
 		loginWith42: "Войти через 42",
