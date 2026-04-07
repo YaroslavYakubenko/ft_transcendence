@@ -5,6 +5,9 @@ import de from "./de"
 import ru from "./ru"
 import ar from "./ar"
 
+const savedLang = localStorage.getItem("language") || 'en'
+document.documentElement.dir = savedLang === 'ar' ? 'rtl' : 'ltr'
+
 i18n.use(initReactI18next).init({
 	resources: {
 		en: { translation: en },
@@ -12,7 +15,7 @@ i18n.use(initReactI18next).init({
 		ru: { translation: ru },
 		ar: { translation: ar }
 	},
-	lng: localStorage.getItem("language") || 'en',
+	lng: savedLang,
 	fallbackLng: 'en',
 	interpolation: {
 		escapeValue: false,

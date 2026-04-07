@@ -67,8 +67,7 @@ function GamePage() {
 									position: fen,
 									darkSquareStyle: { backgroundColor: theme.dark },
 									lightSquareStyle: { backgroundColor: theme.light },
-									onPieceDrop: ({ sourceSquare, targetSquare }) => {
-										console.log(`Move: ${sourceSquare} → ${targetSquare}`)
+									onPieceDrop: ({ sourceSquare: _s, targetSquare: _t }) => {
 										return false
 									},
 								}}

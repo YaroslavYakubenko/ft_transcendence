@@ -34,10 +34,18 @@ export default {
     	hasAccount: "؟لعفلاب باسح كيدل",
     	login: "لوخدلا ليجست",
 		passwordsDoNotMatch: "ةقباطتم ريغ رورملا تاملك",
+		passwordsMatch: "كلمات المرور متطابقة",
 		registrationFailed: "ليجستلا لشف",
+		passwordWeak: "كلمة المرور لا تستوفي جميع المتطلبات",
+		req: {
+			minLength: "8 أحرف على الأقل",
+			uppercase: "حرف كبير واحد (A-Z)",
+			digit: "رقم واحد (0-9)",
+			special: "رمز خاص واحد (!@#$...)",
+		},
     },
     home: {
-    	welcome: "كتدوعب اًبحرم",
+    	welcome: "اًبحرم",
     	wins: "تاراصتنا",
     	losses: "رئاسخ",
     	rank: "بيترتلا",
@@ -122,6 +130,7 @@ export default {
     	loading: "ليمحتلا يراج...",
     	notFound: "ةدوجوم ريغ ةحفصلا",
     	backHome: "ةيسيئرلل ةدوعلا",
+    	userNotFound: "المستخدم غير موجود",
     },
 	footer: {                                                                                                                                                                                                                                                                                       
         privacyPolicy: "ةيصوصخلا ةسايس",                                                                                                                                                                                                                                                        

@@ -34,10 +34,18 @@ export default {
     	hasAccount: "Bereits ein Konto?",
     	login: "Anmelden",
 		passwordsDoNotMatch: "Passwörter stimmen nicht überein",
+		passwordsMatch: "Passwörter stimmen überein",
 		registrationFailed: "Registrierung fehlgeschlagen",
+		passwordWeak: "Passwort erfüllt nicht alle Anforderungen",
+		req: {
+			minLength: "Mindestens 8 Zeichen",
+			uppercase: "Ein Großbuchstabe (A-Z)",
+			digit: "Eine Ziffer (0-9)",
+			special: "Ein Sonderzeichen (!@#$...)",
+		},
     },
 	home: {
-    	welcome: "Willkommen zurück",
+    	welcome: "Willkommen",
     	wins: "Siege",
     	losses: "Niederlagen",
     	rank: "Rang",
@@ -122,6 +130,7 @@ export default {
     	loading: "Lädt...",
     	notFound: "Seite nicht gefunden",
     	backHome: "Zur Startseite",
+    	userNotFound: "Benutzer nicht gefunden",
     },
 	footer: {
 		privacyPolicy: "Datenschutzrichtlinie",

@@ -1,11 +1,14 @@
 
 
+const API = 'http://127.0.0.1:8000/api'
+
 export interface UserProfile {
 	id: number
 	email: string
 	username: string
 	wins: number
 	losses: number
+	avatarUrl: string | null
 }
 
 export interface Friend extends UserProfile {
@@ -22,36 +25,54 @@ export interface ChatMessage {
 
 // Friends API
 
-export async function getFriends(): Promise<Friend[]> {
-	return [
-		{ id: 2, email: "alice@example.com", username: "alice", wins: 5, losses: 2, isOnline: true },
-    	{ id: 3, email: "bob@example.com", username: "bob", wins: 1, losses: 8, isOnline: false },
-	]
+export async function getFriends(token: string): Promise<Friend[]> {
+	const res = await fetch(`${API}/friends/`, {
+		headers: { 'Authorization': `Token ${token}` }
+	})
+	if (!res.ok) throw new Error('Failed to fetch friends')
+	const data = await res.json()
+	return data.map((f: { id: number; email: string; username: string; avatar: string; is_online: boolean }) => ({
+		id: f.id,
+		email: f.email,
+		username: f.username,
+		wins: 0,
+		losses: 0,
+		avatarUrl: f.avatar || null,
+		isOnline: f.is_online
+	}))
 }
 
-export async function addFriend(userId: number): Promise<void> {
-	console.log("addFriend", userId)
+export async function addFriend(userId: number, token: string): Promise<void> {
+	await fetch(`${API}/friends/${userId}/`, {
+		method: 'POST',
+		headers: { 'Authorization': `Token ${token}` }
+	})
 }
 
-export async function removeFriend(userId: number): Promise<void> {
-	console.log("removeFriend", userId)
+export async function removeFriend(userId: number, token: string): Promise<void> {
+	await fetch(`${API}/friends/${userId}/remove/`, {
+		method: 'DELETE',
+		headers: { 'Authorization': `Token ${token}` }
+	})
 }
 
 // Users API
 
-export async function getUserProfile(userId: number): Promise<UserProfile> {
-	return {id: userId, email: "player@example.com", username: "player", wins: 3, losses: 3}
+export async function getUserProfile(userId: number, token: string): Promise<UserProfile> {
+	const res = await fetch(`${API}/users/${userId}/`, {
+		headers: { 'Authorization': `Token ${token}` }
+	})
+	if (!res.ok) throw new Error('User not found')
+	const data = await res.json()
+	return { ...data, wins: 0, losses: 0, avatarUrl: data.avatar || null }
 }
 
 // Chat API
 
-export async function getMessages(withUserId: number): Promise<ChatMessage[]> {
-	return [
-		{ id: 1, fromId: withUserId, toId: 1, text: "Hey!", timestamp: "10:00" },                                                                                 
-      	{ id: 2, fromId: 1, toId: withUserId, text: "Hello!", timestamp: "10:01" }, 
-	]
+export async function getMessages(_withUserId: number, _token: string): Promise<ChatMessage[]> {
+	return []
 }
 
-export async function sendMessage(toId: number, text: string): Promise<void> {
-	console.log("sendMessage to", toId, ":", text)
+export async function sendMessage(_toId: number, _text: string, _token: string): Promise<void> {
+	// chat not implemented yet
 }

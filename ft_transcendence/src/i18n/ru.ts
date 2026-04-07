@@ -34,10 +34,18 @@ export default {
     	hasAccount: "Уже есть аккаунт?",
     	login: "Войти",
 		passwordsDoNotMatch: "Пароли не совпадают",
+		passwordsMatch: "Пароли совпадают",
 		registrationFailed: "Ошибка регистрации",
+		passwordWeak: "Пароль не соответствует всем требованиям",
+		req: {
+			minLength: "Минимум 8 символов",
+			uppercase: "Одна заглавная буква (A-Z)",
+			digit: "Одна цифра (0-9)",
+			special: "Один спецсимвол (!@#$...)",
+		},
     },
 	home: {
-    	welcome: "С возвращением",
+    	welcome: "Добро пожаловать",
     	wins: "Победы",
     	losses: "Поражения",
     	rank: "Ранг",
@@ -122,6 +130,7 @@ export default {
     	loading: "Загрузка...",
     	notFound: "Страница не найдена",
     	backHome: "На главную",
+    	userNotFound: "Пользователь не найден",
     },
 	footer: {
 		privacyPolicy: "Политика конфиденциальности",

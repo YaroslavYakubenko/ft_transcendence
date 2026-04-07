@@ -1,12 +1,13 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
+import { updateMe } from "../api/auth"
 import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
 import { useTranslation } from "react-i18next"
 
 function EditProfilePage() {
-	const { user, updateUser, deleteAccount } = useAuth()
+	const { user, token, updateUser, deleteAccount } = useAuth()
 	const navigate = useNavigate()
 	const [email, setEmail] = useState(user?.email || '')
 	const [username, setUsername] = useState(user?.username || '')
@@ -16,23 +17,37 @@ function EditProfilePage() {
 	const [error, setError] = useState('')
 	const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatarUrl || null)
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+	const [showPassword, setShowPassword] = useState(false)
+	const [showConfirm, setShowConfirm] = useState(false)
 	const { t } = useTranslation()
 
-	function handleSubmit() {
-		if (password && password !== confirmPassword) {
+	const hasMinLength = password.length >= 8
+	const hasUppercase = /[A-Z]/.test(password)
+	const hasDigit = /[0-9]/.test(password)
+	const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password)
+
+	async function handleSubmit() {
+		if (password && (!hasMinLength || !hasUppercase || !hasDigit || !hasSpecial)) {
+			setError(t('register.passwordWeak'))
+			return
+		}
+		if (password.trim() && password.trim() !== confirmPassword.trim()) {
 			setError(t('register.passwordsDoNotMatch'))
 			return
 		}
 		setError('')
 		if (avatar) {
 			const reader = new FileReader()
-			reader.onload = (e) => {
-				updateUser({ username, email, avatarUrl: e.target?.result as string })
+			reader.onload = async (e) => {
+				const avatarBase64 = e.target?.result as string
+				updateUser({ username, email, avatarUrl: avatarBase64 })
+				await updateMe(token!, { username, email, avatar: avatarBase64, ...(password && { password }) })
 				navigate('/profile')
 			}
 			reader.readAsDataURL(avatar)
 		} else {
 			updateUser({ username, email })
+			await updateMe(token!, { username, email, ...(password && { password }) })
 			navigate('/profile')
 		}
 	}
@@ -86,21 +101,78 @@ function EditProfilePage() {
 						className="w-full bg-[#0f0f13] border border-[#2e2e40] rounded-lg px-4 py-2 text-[#f0eeff] text-sm outline-none mb-6"
 					/>
 					<label className="block text-sm text-[#8892a4] mb-2">{t('profile.newPassword')}</label>
-					<input
-						type="password"
-						value={password}
-						onChange={(e) => setPassword(e.target.value)}
-						placeholder={t('profile.newPasswordPlaceholder')}
-						className="w-full bg-[#0f0f13] border border-[#2e2e40] rounded-lg px-4 py-2 text-[#f0eeff] text-sm outline-none mb-6"
-					/>
+					<div className="relative">
+						<input
+							type={showPassword ? "text" : "password"}
+							value={password}
+							onChange={(e) => setPassword(e.target.value)}
+							placeholder={t('profile.newPasswordPlaceholder')}
+							className="w-full bg-[#0f0f13] border border-[#2e2e40] rounded-lg px-4 py-2 text-[#f0eeff] text-sm outline-none pr-10"
+						/>
+						<button
+							type="button"
+							onClick={() => setShowPassword(!showPassword)}
+							className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8892a4] hover:text-[#f0eeff] bg-transparent border-none cursor-pointer p-0"
+						>
+							{showPassword ? (
+								<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+									<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+									<line x1="1" y1="1" x2="23" y2="23"/>
+								</svg>
+							) : (
+								<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+									<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+									<circle cx="12" cy="12" r="3"/>
+								</svg>
+							)}
+						</button>
+					</div>
+					{password.length > 0 && (
+						<div className="mb-4">
+							{[
+								{ check: hasMinLength, label: t('register.req.minLength') },
+								{ check: hasUppercase, label: t('register.req.uppercase') },
+								{ check: hasDigit,     label: t('register.req.digit') },
+								{ check: hasSpecial,   label: t('register.req.special') },
+							].map((req, i) => (
+								<p key={i} className="text-xs m-0 mb-1" style={{ color: req.check ? '#4ade80' : '#e25f5f' }}>
+									{req.check ? '✓' : '✗'} {req.label}
+								</p>
+							))}
+						</div>
+					)}
 					<label className="block text-sm text-[#8892a4] mb-2">{t('register.confirm')}</label>
-					<input
-						type="password"
-						value={confirmPassword}
-						onChange={(e) => setConfirmPassword(e.target.value)}
-						placeholder={t('profile.confirmPasswordPlaceholder')}
-						className="w-full bg-[#0f0f13] border border-[#2e2e40] rounded-lg px-4 py-2 text-[#f0eeff] text-sm outline-none mb-6"
-					/>
+					<div className="relative mb-2">
+						<input
+							type={showConfirm ? "text" : "password"}
+							value={confirmPassword}
+							onChange={(e) => setConfirmPassword(e.target.value)}
+							placeholder={t('profile.confirmPasswordPlaceholder')}
+							className="w-full bg-[#0f0f13] border border-[#2e2e40] rounded-lg px-4 py-2 text-[#f0eeff] text-sm outline-none pr-10"
+						/>
+						<button
+							type="button"
+							onClick={() => setShowConfirm(!showConfirm)}
+							className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8892a4] hover:text-[#f0eeff] bg-transparent border-none cursor-pointer p-0"
+						>
+							{showConfirm ? (
+								<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+									<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+									<line x1="1" y1="1" x2="23" y2="23"/>
+								</svg>
+							) : (
+								<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+									<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+									<circle cx="12" cy="12" r="3"/>
+								</svg>
+							)}
+						</button>
+					</div>
+					{confirmPassword.length > 0 && (
+						<p className="text-xs mt-1 m-0" style={{ color: password === confirmPassword ? '#4ade80' : '#e25f5f' }}>
+							{password.trim() === confirmPassword.trim() ? `✓ ${t('register.passwordsMatch')}` : `✗ ${t('register.passwordsDoNotMatch')}`}
+						</p>
+					)}
 					{error && <p className="text-[#e25f5f] text-sm mb-4">{error}</p>}
 					<div className="flex gap-3">
 						<button
@@ -130,7 +202,7 @@ function EditProfilePage() {
 								<div className="flex gap-3">
 									<button
 										onClick={() => setShowDeleteConfirm(false)}
-										className="flex-1 bg-transparent border border-[#2e2e40] rounded-lg py-2 text0[#8892a4] text-sm cursor-pointer hover:border-[#e2b96f]"
+										className="flex-1 bg-transparent border border-[#2e2e40] rounded-lg py-2 text-[#8892a4] text-sm cursor-pointer hover:border-[#e2b96f]"
 									>
 										{t('profile.deleteAccountCancel')}
 									</button>

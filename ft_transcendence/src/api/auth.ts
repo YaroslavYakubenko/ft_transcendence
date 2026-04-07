@@ -1,5 +1,7 @@
 
 
+const API = 'http://127.0.0.1:8000/api'
+
 interface User {
 	id: number
 	email: string
@@ -11,45 +13,79 @@ interface LoginResponse {
 }
 
 export async function login(email: string, _password: string): Promise<LoginResponse> {
-	
-	return {
-		token: 'mock-token-123',
-		user: {id: 1, email}
-	}
+	const res = await fetch(`${API}/auth/login/`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ email, password: _password })
+	})
+	if (!res.ok) throw new Error('Invalid credentials')
+	const data = await res.json()
+	const user = await getMe(data.token)
+	return { token: data.token, user }
 }
 
 export async function register(email: string, _password: string): Promise<LoginResponse> {
-
-	return {
-		token: 'mock-token-123',
-		user: { id: 2, email }
-	}
+	const res = await fetch(`${API}/auth/register/`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ email, password: _password })
+	})
+	if (!res.ok) throw new Error('Registration failed')
+		const data = await res.json()
+		const user = await getMe(data.token)
+		return { token: data.token, user }
 }
 
 export async function getMe(_token: string): Promise<User> {
-	
-	return {id: 1, email: 'test@test.com'}
+	const res = await fetch(`${API}/auth/me/`, {
+		headers: { 'Authorization': `Token ${_token}` }
+	})
+	if (!res.ok) throw new Error('Unauthorized')
+	const data = await res.json()
+	return { ...data, avatarUrl: data.avatar || null }
 }
 
 export async function logout(_token: string): Promise<void> {
-	
+	await fetch(`${API}/auth/logout/`, {
+		method: 'POST',
+		headers: { 'Authorization': `Token ${_token}` }
+	})
 }
 
 const REDIRECT_URI = 'http://localhost:5173/oauth/callback'
 
 export const OAUTH_URLS = {
-	github: `https://github.com/login/oauth/authorize?client_id=GITHUB_CLIENT_ID&redirect_uri=${REDIRECT_URI}&scope=user:email`,
-	42: `https://api.intra.42.fr/oauth/authorize?client_id=42_CLIENT_ID&response_type=code&redirect_uri=${REDIRECT_URI}&scope=public`,
+	github: `https://github.com/login/oauth/authorize?client_id=Ov23lix1FhQAZ8i6AbWi&redirect_uri=${REDIRECT_URI}&scope=user:email`,
+	42: `https://api.intra.42.fr/oauth/authorize?client_id=u-s4t2ud-4b2f6e56651d5b86d84d654134c18c49a383f60a6faad5acb991f2e66413001c&response_type=code&redirect_uri=${REDIRECT_URI}&scope=public`,
 }
 
 export async function oauthLogin(provider: string, code: string): Promise<LoginResponse> {
-	console.log('oauthLogin', provider, code)
-	return {
-		token: 'moke-oauth-token',
-		user: { id: 3, email: `oauth-user@${provider}.com` }
-	}
+	const res = await fetch(`${API}/auth/oauth/`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ provider, code })
+	})
+	if (!res.ok) throw new Error('Oauth failed')
+		const data = await res.json()
+		const user = await getMe(data.token)
+		return { token: data.token, user }
 }
 
 export async function deleteAccount(_token: string): Promise<void> {
-	// stub - backend will delete user
+	const res = await fetch(`${API}/users/me/delete/`, {
+		method: 'DELETE',
+		headers: { 'Authorization': `Token ${_token}` }
+	})
+	if (!res.ok) throw new Error('Failed to delete account')
+}
+
+export async function updateMe(token: string, data: { username?: string; email?: string; avatar?: string; password?: string }): Promise<void> {
+	await fetch(`${API}/users/me/`, {
+		method: 'PATCH',
+		headers: {
+			'Content-Type': 'application/json',
+			'Authorization': `Token ${token}`
+		},
+		body: JSON.stringify(data)
+	})
 }

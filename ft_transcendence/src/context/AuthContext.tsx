@@ -51,7 +51,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 	useEffect(() => {
 		if (token) {
-			getMe(token).then(user => setUser(user))
+			getMe(token)
+			.then(user => setUser(user))
+			.catch(() => {
+				localStorage.removeItem('token')
+				setToken(null)
+			})
 		}
 	}, [])
 	return (

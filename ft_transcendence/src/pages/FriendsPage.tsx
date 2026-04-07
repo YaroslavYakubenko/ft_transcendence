@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { useAuth } from "../context/AuthContext"
 import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
 import { getFriends, removeFriend, type Friend } from "../api/social"
@@ -9,13 +10,14 @@ function FriendsPage() {
 	const [friends, setFriends] = useState<Friend[]>([])
 	const navigate = useNavigate()
 	const { t } = useTranslation()
+	const { token } = useAuth()
 
 	useEffect(() => {
-		getFriends().then(setFriends)
+		getFriends(token!).then(setFriends).catch(() => {})
 	}, [])
 
 	function handleRemove(userId: number) {
-		removeFriend(userId)
+		removeFriend(userId, token!)
 		setFriends(friends.filter(f => f.id !== userId))
 	}
 
@@ -32,10 +34,10 @@ function FriendsPage() {
 						<div key={friend.id} className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl px-6 py-4 flex items-center justify-between">
 							<div className="flex items-center gap-4">
 								<div className="w-10 h-10 rounded-full bg-[#e2b96f] flex items-center justify-center text-[#0f0f13] font-bold">
-									{friend.username[0].toUpperCase()}
+									{(friend.username || friend.email)[0].toUpperCase()}
 								</div>
 								<div>
-									<p className="font-semibold">{friend.username}</p>
+									<p className="font-semibold">{friend.username || friend.email}</p>
 									<p className="text-xs text-[#8892a4]">{friend.isOnline ? "🟢 " + t('friends.online') : "⚫ " + t('friends.offline')}</p>
 								</div>
 							</div>

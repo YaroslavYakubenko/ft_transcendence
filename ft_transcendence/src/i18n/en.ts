@@ -34,10 +34,18 @@ export default {
 		hasAccount: "Already have an account?",
 		login: "Sign In",
 		passwordsDoNotMatch: "Passwords do not match",
+		passwordsMatch: "Passwords match",
 		registrationFailed: "Registration failed",
+		passwordWeak: "Password does not meet all requirements",
+		req: {
+			minLength: "At least 8 characters",
+			uppercase: "One uppercase letter (A-Z)",
+			digit: "One number (0-9)",
+			special: "One special character (!@#$...)",
+		},
 	},
 	home: {
-		welcome: "Welcome back",
+		welcome: "Welcome",
 		wins: "Wins",
 		losses: "Losses",
 		rank: "Rank",
@@ -122,6 +130,7 @@ export default {
 		loading: "Loading...",
 		notFound: "Page not found",
 		backHome: "Back to Home",
+		userNotFound: "User not found",
 	},
 	footer: {
 		privacyPolicy: "Privacy Policy",
