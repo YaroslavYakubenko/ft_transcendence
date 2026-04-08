@@ -35,7 +35,7 @@ def login(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated]) #only authenticated user
 def me(request):
-	serializer = UserSerializer(request.user) # convert user to JSON
+	serializer = UserSerializer(request.user, context={'request': request})
 	return Response(serializer.data) # dictionary {id, email, username, avatar, is_online}
 
 @api_view(['POST'])
@@ -49,7 +49,10 @@ def logout(request):
 @api_view(['PATCH']) # partial update
 @permission_classes([IsAuthenticated])
 def update_me(request):
-	serializer = UserSerializer(request.user, data=request.data, partial=True) # 1. existing user, 2. new data from frontend, 3. partial update
+	data = request.data.copy()
+	if 'avatar' in request.FILES:
+		data['avatar'] = request.FILES['avatar']
+	serializer = UserSerializer(request.user, data=data, partial=True, context={'request': request}) # 1. existing user, 2. new data from frontend, 3. partial update
 	if serializer.is_valid():
 		serializer.save()
 		password = request.data.get('password')
@@ -72,14 +75,14 @@ def get_user(request, user_id): # view someone else's profile
 		user = User.objects.get(id=user_id)
 	except User.DoesNotExist:
 		return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-	serializer = UserSerializer(user)
+	serializer = UserSerializer(user, context={'request': request})
 	return Response(serializer.data)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_friends(request): # view who added whom
 	friendships = Friendship.objects.filter(from_user=request.user)
-	serializer = FriendSerializer(friendships, many=True) # many=True is a list, converts 
+	serializer = FriendSerializer(friendships, many=True, context={'request': request}) # many=True is a list, converts 
 	return Response(serializer.data)
 
 @api_view(['POST'])

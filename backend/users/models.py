@@ -21,7 +21,7 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
 	email = models.EmailField(unique=True) #check '@.' in email, unique means cannot be 2 users with the same email
 	username = models.CharField(max_length=50, blank=True) # blank=True means to not nesessary to fill out
-	avatar = models.TextField(blank=True) # TextField means string without limitation of characters
+	avatar = models.ImageField(upload_to='avatars/', blank=True)
 	is_online = models.BooleanField(default=False)
 	is_active = models.BooleanField(default=True)
 	is_staff = models.BooleanField(default=False)

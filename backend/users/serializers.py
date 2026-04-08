@@ -19,6 +19,7 @@ class RegisterSerializer(serializers.ModelSerializer): # accept and password and
 		if not re.search(r'[!@#$%^&*(),.?":{}|<>]', value):
 			raise serializers.ValidationError("Password must contain at least one special character.")
 		return value
+
 	def create(self, validated_data): #method for save data
 		return User.objects.create_user(**validated_data)
 
@@ -32,9 +33,15 @@ class FriendSerializer(serializers.ModelSerializer): # return the list of friend
 	id = serializers.IntegerField(source='to_user.id')
 	email = serializers.EmailField(source='to_user.email')
 	username = serializers.CharField(source='to_user.username')
-	avatar = serializers.CharField(source='to_user.avatar')
+	avatar = serializers.SerializerMethodField()
 	is_online = serializers.BooleanField(source='to_user.is_online')
 
 	class Meta:
 		model = Friendship
 		fields = ('id', 'email', 'username', 'avatar', 'is_online')
+
+	def get_avatar(self, obj):
+		request = self.context.get('request')
+		if obj.to_user.avatar and request:
+			return request.build_absolute_uri(obj.to_user.avatar.url)
+		return ''

@@ -79,13 +79,15 @@ export async function deleteAccount(_token: string): Promise<void> {
 	if (!res.ok) throw new Error('Failed to delete account')
 }
 
-export async function updateMe(token: string, data: { username?: string; email?: string; avatar?: string; password?: string }): Promise<void> {
+export async function updateMe(token: string, data: { username?: string; email?: string; avatar?: File | null; password?: string }): Promise<void> {
+	const formData = new FormData()
+	if (data.username !== undefined) formData.append('username', data.username)
+	if (data.email !== undefined) formData.append('email', data.email)
+	if (data.avatar) formData.append('avatar', data.avatar)
+	if (data.password) formData.append('password', data.password)
 	await fetch(`${API}/users/me/`, {
 		method: 'PATCH',
-		headers: {
-			'Content-Type': 'application/json',
-			'Authorization': `Token ${token}`
-		},
-		body: JSON.stringify(data)
+		headers: { 'Authorization': `Token ${token}` },
+		body: formData
 	})
 }

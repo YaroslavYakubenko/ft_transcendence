@@ -36,20 +36,13 @@ function EditProfilePage() {
 			return
 		}
 		setError('')
+		await updateMe(token!, { username, email, avatar, ...(password && { password }) })
 		if (avatar) {
-			const reader = new FileReader()
-			reader.onload = async (e) => {
-				const avatarBase64 = e.target?.result as string
-				updateUser({ username, email, avatarUrl: avatarBase64 })
-				await updateMe(token!, { username, email, avatar: avatarBase64, ...(password && { password }) })
-				navigate('/profile')
-			}
-			reader.readAsDataURL(avatar)
+			updateUser({ username, email, avatarUrl: URL.createObjectURL(avatar) })
 		} else {
 			updateUser({ username, email })
-			await updateMe(token!, { username, email, ...(password && { password }) })
-			navigate('/profile')
 		}
+		navigate('/profile')
 	}
 
 	return (
