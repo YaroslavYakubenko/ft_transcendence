@@ -1,6 +1,8 @@
 
 
-const API = 'http://127.0.0.1:8000/api'
+const API = import.meta.env.VITE_API_URL
+
+const REDIRECT_URI = import.meta.env.VITE_REDIRECT_URI
 
 interface User {
 	id: number
@@ -52,11 +54,10 @@ export async function logout(_token: string): Promise<void> {
 	})
 }
 
-const REDIRECT_URI = 'http://localhost:5173/oauth/callback'
 
 export const OAUTH_URLS = {
-	github: `https://github.com/login/oauth/authorize?client_id=Ov23lix1FhQAZ8i6AbWi&redirect_uri=${REDIRECT_URI}&scope=user:email`,
-	42: `https://api.intra.42.fr/oauth/authorize?client_id=u-s4t2ud-4b2f6e56651d5b86d84d654134c18c49a383f60a6faad5acb991f2e66413001c&response_type=code&redirect_uri=${REDIRECT_URI}&scope=public`,
+	github: `https://github.com/login/oauth/authorize?client_id=${import.meta.env.VITE_GITHUB_CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=user:email`,
+	42: `https://api.intra.42.fr/oauth/authorize?client_id=${import.meta.env.VITE_FORTY_TWO_CLIENT_ID}&response_type=code&redirect_uri=${REDIRECT_URI}&scope=public`,
 }
 
 export async function oauthLogin(provider: string, code: string): Promise<LoginResponse> {
