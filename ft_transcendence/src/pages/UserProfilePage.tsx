@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next"
 function UserProfilePage() {
 	const { id } = useParams()
 	const [profile, setProfile] = useState<UserProfile | null>(null)
+	const [error, setError] = useState<string | null>(null)
 	const [isFriend, setIsFriend] = useState(false)
 	const [stats, setStats] = useState<UserStats | null>(null)
 	const [notFound, setNotFound] = useState(false)
@@ -29,14 +30,18 @@ function UserProfilePage() {
 	if (notFound) return <div className="bg-[#0f0f13] min-h-screen text-[#e25f5f] flex items-center justify-center">{t('common.userNotFound')}</div>
 	if (!profile) return <div className="bg-[#0f0f13] min-h-screen text-[#f0eeff] flex items-center justify-center">{t('common.loading')}</div>
 
-	function handleFriendToggle() {
+	async function handleFriendToggle() {
 		if (!profile) return
-		if (isFriend) {
-			removeFriend(profile.id, token!)
-			setIsFriend(false)
-		} else {
-			addFriend(profile.id, token!)
-			setIsFriend(true)
+		try {
+			if (isFriend) {
+				await removeFriend(profile.id, token!)
+				setIsFriend(false)
+			} else {
+				await addFriend(profile.id, token!)
+				setIsFriend(true)
+			}
+		} catch {
+			setError(isFriend ? t('friends.removeFailed') : t('friends.addFailed'))
 		}
 	}
 
@@ -44,6 +49,7 @@ function UserProfilePage() {
 		<div className="bg-[#0f0f13] min-h-screen flex flex-col">
 			<Navbar />
 			<div className="flex flex-col items-center justify-center flex-1 text-[#f0eeff]">
+				{error && <p className="text-[#e25f5f] mb-4">{error}</p>}
 				{profile.avatarUrl ? (
 					<img src={profile.avatarUrl} alt="avatar" className="w-20 h-20 rounded-full object-cover mb-4" />
 				) : (

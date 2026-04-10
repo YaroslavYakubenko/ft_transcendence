@@ -140,8 +140,8 @@ def oauth_login(request):
 
 		# find or create user
 		user, created = User.objects.get_or_create(email=email)
-		if created or not user.avatar:
-			user.avatar = avatar_url
+		if created or not user.oauth_avatar:
+			user.oauth_avatar = avatar_url
 		user.is_online = True
 		user.save()
 		token, _ = Token.objects.get_or_create(user=user)
@@ -173,8 +173,8 @@ def oauth_login(request):
 		# find or create user
 		avatar_url = user_res.json().get('image', {}).get('link', '')
 		user, created = User.objects.get_or_create(email=email)
-		if created or not user.avatar:
-			user.avatar = avatar_url
+		if created or not user.oauth_avatar:
+			user.oauth_avatar = avatar_url
 		user.is_online = True
 		user.save()
 		token, _ = Token.objects.get_or_create(user=user)

@@ -18,7 +18,7 @@ import ChatWidget from './components/ChatWidget'
 import OAuthCallbackPage from './pages/OAuthCallbackPage'
 import PublicOnlyRoute from './components/PublicOnlyRoute'
 
-function AuthentcatedWidgets() {
+function AuthenticatedWidgets() {
     const { isLoggedIn } = useAuth()
     if (!isLoggedIn) return null
     return <ChatWidget />
@@ -77,7 +77,7 @@ function App() {
                     } />
                     <Route path="*" element={<NotFoundPage/>} />
                 </Routes>
-                <AuthentcatedWidgets />
+                <AuthenticatedWidgets />
             </BrowserRouter>
         </AuthProvider>
     )

@@ -24,10 +24,18 @@ class RegisterSerializer(serializers.ModelSerializer): # accept and password and
 		return User.objects.create_user(**validated_data)
 
 class UserSerializer(serializers.ModelSerializer): # return the current user's data
+	avatar = serializers.SerializerMethodField()
+
 	class Meta:
 		model = User
 		fields = ('id', 'email', 'username', 'avatar', 'is_online')
 		read_only_fields = ('id', 'is_online')
+
+	def get_avatar(self, obj):
+		request = self.context.get('request')
+		if obj.avatar and request:
+			return request.build_absolute_uri(obj.avatar.url)
+		return obj.oauth_avatar or ''
 
 class FriendSerializer(serializers.ModelSerializer): # return the list of friends
 	id = serializers.IntegerField(source='to_user.id')
@@ -44,4 +52,4 @@ class FriendSerializer(serializers.ModelSerializer): # return the list of friend
 		request = self.context.get('request')
 		if obj.to_user.avatar and request:
 			return request.build_absolute_uri(obj.to_user.avatar.url)
-		return ''
+		return obj.to_user.oauth_avatar or ''

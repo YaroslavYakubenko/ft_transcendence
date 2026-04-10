@@ -107,6 +107,7 @@ export default {
 		deleteAccountConfirm: "Are you sure you want to delete your account? This action cannot be undone.",
 		deleteAccountCancel: "Cancel",
 		deleteAccountConfirmBtn: "Yes, delete",
+		updateFailed: "Failed to save changes. Please try again.",
 	},
 	friends: {
 		title: "Friends",
@@ -117,6 +118,9 @@ export default {
 		addFriend: "Add Friend",
 		removeFriend: "Remove Friend",
 		noFriends: "You have no friends yet.",
+		fetchFailed: "Failed to load friends. Please try again.",
+		addFailed: "Failed to add friend. Please try again.",
+		removeFailed: "Failed to remove friend. Please try again.",
 	},
 	leaderboard: {
 		title: "Leaderboard",

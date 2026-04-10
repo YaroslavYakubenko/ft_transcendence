@@ -110,7 +110,7 @@ function RegisterPage() {
 									{ check: hasDigit, label: t('register.req.digit') },
 									{ check: hasSpecial, label: t('register.req.special') },
 								].map((req, i) => (
-									<p key={i} className="text-xs m-0 mb-1" style={{ color: req.check ? '#4ade80' : '#e24f5f' }}>
+									<p key={i} className={`text-xs m-0 mb-1 ${req.check ? "text-green-400" : "text-[#e25f5f]"}`}>
 										{req.check ? '✓' : '✗'} {req.label}
 									</p>
 								))}
@@ -147,7 +147,7 @@ function RegisterPage() {
 									</button>
 								</div>
 								{confirmPassword.length > 0 && (
-									<p className="text-xs mt-1 m-0" style={{ color: password.trim() === confirmPassword.trim() ? '#4ade80' : '#e25f5f' }}>
+									<p className={`text-xs mt-1 m-0 ${password.trim() === confirmPassword.trim() ? "text-green-400" : "text-[#e25f5f]"}`}>
 										{password.trim() === confirmPassword.trim() ? `✓ ${t('register.passwordsMatch')}` : `✗ ${t('register.passwordsDoNotMatch')}`}
 									</p>
 								)}

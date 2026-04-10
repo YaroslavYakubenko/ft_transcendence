@@ -107,6 +107,7 @@ export default {
 		deleteAccountConfirm: "Вы уверены, что хотите удалить аккаунт? Это действие нельзя отменить.",
 		deleteAccountCancel: "Отмена",
 		deleteAccountConfirmBtn: "Да, удалить",
+		updateFailed: "Не удалось сохранить изменения. Попробуйте ещё раз.",
     },
     friends: {
     	title: "Друзья",
@@ -117,6 +118,9 @@ export default {
     	addFriend: "Добавить в друзья",
     	removeFriend: "Удалить из друзей",
 		noFriends: "У вас пока нет друзей.",
+		fetchFailed: "Не удалось загрузить друзей. Попробуй ещё раз.",
+		addFailed: "Не удалось добавить друга. Попробуй ещё раз.",
+		removeFailed: "Не удалось удалить друга. Попробуй ещё раз.",
     },
     leaderboard: {
     	title: "Таблица лидеров",

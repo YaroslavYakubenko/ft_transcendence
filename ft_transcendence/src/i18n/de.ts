@@ -107,6 +107,7 @@ export default {
 		deleteAccountConfirm: "Möchten Sie Ihr Konto wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
 		deleteAccountCancel: "Abbrechen",
 		deleteAccountConfirmBtn: "Ja, löschen",
+		updateFailed: "Änderungen konnten nicht gespeichert werden. Bitte versuche es erneut.",
     },
     friends: {
     	title: "Freunde",
@@ -117,6 +118,9 @@ export default {
     	addFriend: "Freund hinzufügen",
     	removeFriend: "Freund entfernen",
 		noFriends: "Du hast noch keine Freunde.",
+		fetchFailed: "Freunde konnten nicht geladen werden. Bitte erneut versuchen.",
+		addFailed: "Freund konnte nicht hinzugefügt werden. Bitte erneut versuchen.",
+		removeFailed: "Freund konnte nicht entfernt werden. Bitte erneut versuchen.",
     },
     leaderboard: {
     	title: "Rangliste",

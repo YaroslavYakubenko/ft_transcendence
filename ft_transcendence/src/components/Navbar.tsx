@@ -56,7 +56,7 @@ function Navbar() {
 					</>
 				)}
 
-				<div style={{ position: "relative" }}>
+				<div className="relative">
 					<button
 						onClick={() => setLangOpen(!langOpen)}
 						className="px-2 py-1 text-[12px] rounded cursor-pointer border border-[#2e2e40] bg-transparent text-[#8892a4] hover:border-[#e2b96f]"

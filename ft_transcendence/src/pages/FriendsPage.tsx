@@ -8,17 +8,22 @@ import { useTranslation } from "react-i18next"
 
 function FriendsPage() {
 	const [friends, setFriends] = useState<Friend[]>([])
+	const [error, setError] = useState<string | null>(null)
 	const navigate = useNavigate()
 	const { t } = useTranslation()
 	const { token } = useAuth()
 
 	useEffect(() => {
-		getFriends(token!).then(setFriends).catch(() => {})
+		getFriends(token!).then(setFriends).catch(() => setError(t('friends.fetchFailed')))
 	}, [])
 
-	function handleRemove(userId: number) {
-		removeFriend(userId, token!)
-		setFriends(friends.filter(f => f.id !== userId))
+	async function handleRemove(userId: number) {
+		try {
+			await removeFriend(userId, token!)
+			setFriends(friends.filter(f => f.id !== userId))
+		} catch {
+			setError(t('friends.removeFailed'))
+		}
 	}
 
 	return (
@@ -26,6 +31,7 @@ function FriendsPage() {
 			<Navbar />
 			<div className="flex flex-col items-center flex-1 text-[#f0eeff] pt-16 px-4">
 				<h1 className="text-2xl font-bold mb-8">{t('friends.title')}</h1>
+				{error && <p className="text-[#e25f5f] mb-4">{error}</p>}
 				{friends.length === 0 && (
 					<p className="text-[#8892a4]">{t('friends.noFriends')}</p>
 				)}
@@ -33,9 +39,13 @@ function FriendsPage() {
 					{friends.map(friend => (
 						<div key={friend.id} className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl px-6 py-4 flex items-center justify-between">
 							<div className="flex items-center gap-4">
-								<div className="w-10 h-10 rounded-full bg-[#e2b96f] flex items-center justify-center text-[#0f0f13] font-bold">
-									{(friend.username || friend.email)[0].toUpperCase()}
-								</div>
+								{friend.avatarUrl ? (
+									<img src={friend.avatarUrl} alt="avatar" className="w-10 h-10 rounded-full object-cover" />
+								) : (
+									<div className="w-10 h-10 rounded-full bg-[#e2b96f] flex items-center justify-center text-[#0f0f13] font-bold">
+										{(friend.username || friend.email)[0].toUpperCase()}
+									</div>
+								)}
 								<div>
 									<p className="font-semibold">{friend.username || friend.email}</p>
 									<p className="text-xs text-[#8892a4]">{friend.isOnline ? "🟢 " + t('friends.online') : "⚫ " + t('friends.offline')}</p>

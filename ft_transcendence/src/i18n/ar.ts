@@ -107,6 +107,7 @@ export default {
 		deleteAccountConfirm: "هل أنت متأكد أنك تريد حذف حسابك؟ لا يمكن التراجع عن هذا الإجراء.",
 		deleteAccountCancel: "إلغاء",
 		deleteAccountConfirmBtn: "نعم، احذف",
+		updateFailed: "فشل حفظ التغييرات. يرجى المحاولة مرة أخرى.",
     },
     friends: {
     	title: "ءاقدصألا",
@@ -117,6 +118,9 @@ export default {
     	addFriend: "قيدص ةفاضإ",
     	removeFriend: "قيدصلا ةلازإ",
 		noFriends: "دعب ءاقدصأ كيدل سيل.",
+		fetchFailed: "فشل تحميل الأصدقاء. يرجى المحاولة مرة أخرى.",
+		addFailed: "فشل إضافة الصديق. يرجى المحاولة مرة أخرى.",
+		removeFailed: "فشل إزالة الصديق. يرجى المحاولة مرة أخرى.",
     },
     leaderboard: {
     	title: "نيردصتملا ةحول",

@@ -43,17 +43,19 @@ export async function getFriends(token: string): Promise<Friend[]> {
 }
 
 export async function addFriend(userId: number, token: string): Promise<void> {
-	await fetch(`${API}/friends/${userId}/`, {
+	const res = await fetch(`${API}/friends/${userId}/`, {
 		method: 'POST',
 		headers: { 'Authorization': `Token ${token}` }
 	})
+	if (!res.ok) throw new Error('Failed to add friend')
 }
 
 export async function removeFriend(userId: number, token: string): Promise<void> {
-	await fetch(`${API}/friends/${userId}/remove/`, {
+	const res = await fetch(`${API}/friends/${userId}/remove/`, {
 		method: 'DELETE',
 		headers: { 'Authorization': `Token ${token}` }
 	})
+	if (!res.ok) throw new Error('Failed to remove friend')
 }
 
 // Users API

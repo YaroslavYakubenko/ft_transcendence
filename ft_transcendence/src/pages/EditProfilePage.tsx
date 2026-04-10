@@ -27,6 +27,10 @@ function EditProfilePage() {
 	const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password)
 
 	async function handleSubmit() {
+		if (!email.trim()) {
+			setError(t('login.fillAllFields'))
+			return
+		}
 		if (password && (!hasMinLength || !hasUppercase || !hasDigit || !hasSpecial)) {
 			setError(t('register.passwordWeak'))
 			return
@@ -36,13 +40,13 @@ function EditProfilePage() {
 			return
 		}
 		setError('')
-		await updateMe(token!, { username, email, avatar, ...(password && { password }) })
-		if (avatar) {
-			updateUser({ username, email, avatarUrl: URL.createObjectURL(avatar) })
-		} else {
-			updateUser({ username, email })
+		try {
+			const updatedUser = await updateMe(token!, { username, email, avatar, ...(password && { password }) })
+			updateUser(updatedUser)
+			navigate('/profile')
+		} catch {
+			setError(t('profile.updateFailed'))
 		}
-		navigate('/profile')
 	}
 
 	return (
@@ -128,7 +132,7 @@ function EditProfilePage() {
 								{ check: hasDigit,     label: t('register.req.digit') },
 								{ check: hasSpecial,   label: t('register.req.special') },
 							].map((req, i) => (
-								<p key={i} className="text-xs m-0 mb-1" style={{ color: req.check ? '#4ade80' : '#e25f5f' }}>
+								<p key={i} className={`text-xs m-0 mb-1 ${req.check ? "text-green-400" : "text-[#e25f5f]"}`}>
 									{req.check ? '✓' : '✗'} {req.label}
 								</p>
 							))}
@@ -162,7 +166,7 @@ function EditProfilePage() {
 						</button>
 					</div>
 					{confirmPassword.length > 0 && (
-						<p className="text-xs mt-1 m-0" style={{ color: password === confirmPassword ? '#4ade80' : '#e25f5f' }}>
+						<p className={`text-xs mt-1 m-0 ${password === confirmPassword ? "text-green-400" : "text-[#e25f5f]"}`}>
 							{password.trim() === confirmPassword.trim() ? `✓ ${t('register.passwordsMatch')}` : `✗ ${t('register.passwordsDoNotMatch')}`}
 						</p>
 					)}

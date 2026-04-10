@@ -48,10 +48,11 @@ export async function getMe(_token: string): Promise<User> {
 }
 
 export async function logout(_token: string): Promise<void> {
-	await fetch(`${API}/auth/logout/`, {
+	const res = await fetch(`${API}/auth/logout/`, {
 		method: 'POST',
 		headers: { 'Authorization': `Token ${_token}` }
 	})
+	if (!res.ok) throw new Error('Logout failed')
 }
 
 
@@ -80,15 +81,18 @@ export async function deleteAccount(_token: string): Promise<void> {
 	if (!res.ok) throw new Error('Failed to delete account')
 }
 
-export async function updateMe(token: string, data: { username?: string; email?: string; avatar?: File | null; password?: string }): Promise<void> {
+export async function updateMe(token: string, data: { username?: string; email?: string; avatar?: File | null; password?: string }): Promise<User> {
 	const formData = new FormData()
 	if (data.username !== undefined) formData.append('username', data.username)
 	if (data.email !== undefined) formData.append('email', data.email)
 	if (data.avatar) formData.append('avatar', data.avatar)
 	if (data.password) formData.append('password', data.password)
-	await fetch(`${API}/users/me/`, {
+	const res = await fetch(`${API}/users/me/`, {
 		method: 'PATCH',
 		headers: { 'Authorization': `Token ${token}` },
 		body: formData
 	})
+	if (!res.ok) throw new Error('Failed to update profile')
+	const resData = await res.json()
+	return { ...resData, avatarUrl: resData.avatar || null }
 }
