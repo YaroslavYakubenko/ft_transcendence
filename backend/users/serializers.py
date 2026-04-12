@@ -5,7 +5,7 @@ from rest_framework import serializers
 from .models import User, Friendship
 
 class RegisterSerializer(serializers.ModelSerializer): # accept and password and create user
-	password = serializers.CharField(write_only=True, min_length=8)
+	password = serializers.CharField(write_only=True, min_length=8) # pass takes from frontend and never go back
 
 	class Meta: #setting of serializator
 		model = User #which model we will use
@@ -24,7 +24,7 @@ class RegisterSerializer(serializers.ModelSerializer): # accept and password and
 		return User.objects.create_user(**validated_data)
 
 class UserSerializer(serializers.ModelSerializer): # return the current user's data
-	avatar = serializers.SerializerMethodField()
+	avatar = serializers.SerializerMethodField() #return URL from file
 
 	class Meta:
 		model = User
@@ -32,7 +32,7 @@ class UserSerializer(serializers.ModelSerializer): # return the current user's d
 		read_only_fields = ('id', 'is_online')
 
 	def get_avatar(self, obj):
-		request = self.context.get('request')
+		request = self.context.get('request') # has information about current HTTP request
 		if obj.avatar and request:
 			return request.build_absolute_uri(obj.avatar.url)
 		return obj.oauth_avatar or ''

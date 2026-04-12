@@ -28,10 +28,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 	is_staff = models.BooleanField(default=False)
 	created_at = models.DateTimeField(auto_now_add=True) # time of registration
 
-	USERNAME_FIELD = 'email'
+	USERNAME_FIELD = 'email' # login via email
 	REQUIRED_FIELDS = []
 
-	objects = UserManager()
+	objects = UserManager() #our manager connects to the model
 
 class Friendship(models.Model):
 	from_user = models.ForeignKey(User, related_name='friendships_sent', on_delete=models.CASCADE) #related_name means how to approach these friendships

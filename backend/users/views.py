@@ -3,19 +3,19 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate # check email + password and return object or none
 from .models import User, Friendship
 from .serializers import RegisterSerializer, UserSerializer, FriendSerializer
 import requests #for http request to GitHub API
 from django.conf import settings #to read our settings.py
 
 @api_view(['POST']) #API endpoint takes only POST
-@permission_classes([AllowAny]) # allow any
+@permission_classes([AllowAny]) # allow any, says who can use endpoint
 def register(request):
 	serializer = RegisterSerializer(data=request.data)
 	if serializer.is_valid(): #check email and password are correct
-		user = serializer.save() # create user
-		token, _ = Token.objects.get_or_create(user=user) # create token for new user
+		user = serializer.save() # create user in DB
+		token, _ = Token.objects.get_or_create(user=user) # create token for new user or get old one
 		return Response({'token': token.key}, status=status.HTTP_201_CREATED)
 	return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -81,7 +81,7 @@ def get_user(request, user_id): # view someone else's profile
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_friends(request): # view who added whom
-	friendships = Friendship.objects.filter(from_user=request.user)
+	friendships = Friendship.objects.filter(from_user=request.user) # search all friends
 	serializer = FriendSerializer(friendships, many=True, context={'request': request}) # many=True is a list, converts 
 	return Response(serializer.data)
 
@@ -89,18 +89,18 @@ def get_friends(request): # view who added whom
 @permission_classes([IsAuthenticated])
 def add_friend(request, user_id):
 	try:
-		to_user = User.objects.get(id=user_id)
+		to_user = User.objects.get(id=user_id) # search user by id
 	except User.DoesNotExist:
 		return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 	if to_user == request.user:
 		return Response({'error': 'Cannot add yourself'}, status=status.HTTP_400_BAD_REQUEST)
-	Friendship.objects.get_or_create(from_user=request.user, to_user=to_user)
+	Friendship.objects.get_or_create(from_user=request.user, to_user=to_user) # create friendship in DB
 	return Response(status=status.HTTP_201_CREATED)
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def remove_friend(request, user_id):
-	Friendship.objects.filter(from_user=request.user, to_user__id=user_id).delete()
+	Friendship.objects.filter(from_user=request.user, to_user__id=user_id).delete() # search friend and delete
 	return Response(status=status.HTTP_204_NO_CONTENT)
 
 @api_view(['POST'])
@@ -115,7 +115,7 @@ def oauth_login(request):
 			json={
 				'client_id': settings.GITHUB_CLIENT_ID,
 				'client_secret': settings.GITHUB_CLIENT_SECRET,
-				'code': code,
+				'code': code, # one-time code
 			},
 			headers={'Accept': 'application/json'}
 		)
@@ -146,6 +146,7 @@ def oauth_login(request):
 		user.save()
 		token, _ = Token.objects.get_or_create(user=user)
 		return Response({'token': token.key})
+		
 	if provider == '42':
 		# change code to access_token
 		token_res = requests.post(

@@ -10,15 +10,15 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
-import os
+import os # for read environment variables
 
 from pathlib import Path
-from dotenv import load_dotenv
+from dotenv import load_dotenv # loads variables from .env
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-load_dotenv(BASE_DIR / '.env')
+load_dotenv(BASE_DIR / '.env') # loads .env from backend/
 
 
 
@@ -26,13 +26,13 @@ load_dotenv(BASE_DIR / '.env')
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ['SECRET_KEY']
+SECRET_KEY = os.environ['SECRET_KEY'] # secret key Django
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+DEBUG = os.environ.get('DEBUG', 'False') == 'True' # default false
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') #list of hosts there are allowed to access the server
 
 
 # Application definition
@@ -84,7 +84,7 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-if os.environ.get('DB_NAME'):
+if os.environ.get('DB_NAME'): #our DB
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -144,7 +144,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173", #list of adrresses to allow (our frontend)
 ]
 
-AUTH_USER_MODEL = 'users.User' #our custom model
+AUTH_USER_MODEL = 'users.User' # to use our custom model
 
 REST_FRAMEWORK = { #settings DRF: authorization via token
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -152,8 +152,9 @@ REST_FRAMEWORK = { #settings DRF: authorization via token
     ]
 }
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField' # This is a setting that tells Django what type to use for the automatic primary key (id) in each table.
 
+# our oauth keys
 GITHUB_CLIENT_ID = os.environ.get('GITHUB_CLIENT_ID', '')
 GITHUB_CLIENT_SECRET = os.environ.get('GITHUB_CLIENT_SECRET', '')
 
