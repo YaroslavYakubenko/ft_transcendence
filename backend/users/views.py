@@ -50,16 +50,18 @@ def logout(request):
 @permission_classes([IsAuthenticated])
 def update_me(request):
 	data = request.data.copy()
-	if 'avatar' in request.FILES:
-		data['avatar'] = request.FILES['avatar']
 	serializer = UserSerializer(request.user, data=data, partial=True, context={'request': request}) # 1. existing user, 2. new data from frontend, 3. partial update
 	if serializer.is_valid():
 		serializer.save()
+		if 'avatar' in request.FILES:
+			request.user.avatar = request.FILES['avatar']
+			request.user.save()
 		password = request.data.get('password')
 		if password:
 			request.user.set_password(password)
 			request.user.save()
-		return Response(serializer.data)
+		fresh = UserSerializer(request.user, context={'request': request})
+		return Response(fresh.data)
 	return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
