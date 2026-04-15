@@ -3,14 +3,15 @@ import pygame
 import chess
 import helpers
 import classes
+import movement
 
-board = chess.Board()
-print(board)
-print("")
-move = chess.Move.from_uci("e2e4")
-if move in board.legal_moves:
-    board.push(move)
-print(board)
+# board = chess.Board()
+# print(board)
+# print("")
+# move = chess.Move.from_uci("e2e4")
+# if move in board.legal_moves:
+#     board.push(move)
+# print(board)
 
 pygame.init()
 WIDTH = 1000
@@ -22,10 +23,6 @@ dt = 0
 player_pos = pygame.Vector2(gg.screen.get_width() / 2, gg.screen.get_height() / 2)
 # main game loop
 
-b_pawn = pygame.image.load('imgs/bp.png')
-b_pawn = pygame.transform.scale(b_pawn, (80, 80))
-
-move_piece = False
 run = True
 while run:
 
@@ -38,25 +35,11 @@ while run:
 		if event.type == pygame.MOUSEBUTTONDOWN:
 				gg.ColorTile = helpers.selectTile(gg.ColorTile, mouse_pos)
 
-		# check if you clicked on a piece
-		if event.type == pygame.MOUSEBUTTONDOWN:
-			if helpers.pointInRect(mouse_pos, pygame.Rect(player_pos.x, player_pos.y, 80, 80)):
-				print("mouse down in square")
-				move_piece = True
-		elif event.type == pygame.MOUSEBUTTONUP:
-			print("mouse up")
-			move_piece = False
-	
-		# update player position 
-		if event.type == pygame.MOUSEMOTION and move_piece == True:
-			print("mouse motion + mouse down true")
-			player_pos.x = mouse_pos.x - 40
-			player_pos.y = mouse_pos.y - 40
+		movement.move(gg, mouse_pos, player_pos, event)
 
 	gg.screen.fill(gg.Color2)
-
 	helpers.drawBoard(gg.screen, gg.Color1, gg.ColorHighlight, WIDTH, HEIGHT, gg.ColorTile)
-	gg.screen.blit(b_pawn, pygame.Rect(player_pos.x, player_pos.y, 80, 80))
+	gg.screen.blit(gg.b_piece_img["b_king"], pygame.Rect(player_pos.x, player_pos.y, 100, 100))
 	pygame.display.flip()
 	dt = clock.tick(60) / 1000
 

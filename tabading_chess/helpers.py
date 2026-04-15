@@ -26,7 +26,11 @@ def drawBoard(screen, Color1, ColorHighlight, WIDTH, HEIGHT, ColorTile):
 		y += 100
 		x = 0
 
+def drawPieces(board, selected):
+	pass
 
+# turns pix vector of mouse_pos into round down version 235 -> 200
+# gives upper left corner esentially to draw
 def selectTile(ColorTile, mouse_pos):
 	x = int (mouse_pos.x / 100) * 100
 	y = int (mouse_pos.y / 100) * 100
@@ -34,4 +38,17 @@ def selectTile(ColorTile, mouse_pos):
 	if x == ColorTile.x and y == ColorTile.y:
 		return pygame.Vector2(-1, -1)
 	return pygame.Vector2(x, y)
-	
+
+def snapIntoPlace(mouse_pos):
+	tile = selectTile(pygame.Vector2(-1, -1), mouse_pos)
+	return tile
+
+# return grid ex. (0, 0) (0 ,1) etc. that coordanites ex. (289, 689) are in
+def pixelToTile(vec_pos):
+	tile = pygame.Vector2(int (vec_pos.x / 100), int (vec_pos.y / 100))
+	return tile
+
+def givImg(path, size):
+	piece = pygame.image.load(path)
+	piece = pygame.transform.scale(piece, (size, size))
+	return piece
