@@ -14,7 +14,7 @@ WORKDIR /app
 
 # Install system dependencies (needed for psycopg2)
 RUN apt-get update \
-    && apt-get install -y gcc libpq-dev \
+    && apt-get install -y gcc libpq-dev netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for caching
