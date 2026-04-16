@@ -1,0 +1,65 @@
+name: Label MVP Module Issues
+
+on:
+  workflow_dispatch:
+
+jobs:
+  label-issues:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - name: Create labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Create "Major (+2)" label (purple)
+          gh label create "Major (+2)" \
+            --repo "$REPO" \
+            --description "Major module – counts as 2 points" \
+            --color "7B2FBE" \
+            --force
+
+          # Create "Minor (+1)" label (blue)
+          gh label create "Minor (+1)" \
+            --repo "$REPO" \
+            --description "Minor module – counts as 1 point" \
+            --color "0075CA" \
+            --force
+
+      - name: Apply Major (+2) label to major module issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Major modules (each worth +2 points):
+          # #21 - Use a framework for both frontend and backend
+          # #17 - Implement real-time features using WebSockets
+          # #10 - Standard user management and authentication
+          # #13 - Implement web-based game (Chess)
+          # #14 - Implement remote players (online multiplayer)
+          for issue in 21 17 10 13 14; do
+            gh issue edit "$issue" --repo "$REPO" --add-label "Major (+2)"
+            echo "Added 'Major (+2)' to issue #$issue"
+          done
+
+      - name: Apply Minor (+1) label to minor module issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Minor modules (each worth +1 point):
+          # #20 - Use a frontend framework (SPA)
+          # #19 - Use an ORM for the database
+          # #11 - Implement remote authentication with OAuth 2.0
+          # #12 - Implement a complete 2FA system
+          # #15 - Game statistics and match history
+          # #16 - Implement a tournament system
+          # #18 - Support for additional browsers
+          # #22 - Support for multiple languages (i18n)
+          for issue in 20 19 11 12 15 16 18 22; do
+            gh issue edit "$issue" --repo "$REPO" --add-label "Minor (+1)"
+            echo "Added 'Minor (+1)' to issue #$issue"
+          done
