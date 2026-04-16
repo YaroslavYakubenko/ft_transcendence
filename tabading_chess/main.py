@@ -31,15 +31,18 @@ while run:
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
 			run = False
-		# get tile that was clicked on
-		if event.type == pygame.MOUSEBUTTONDOWN:
-				gg.ColorTile = helpers.selectTile(gg.ColorTile, mouse_pos)
+		# get tile that was clicked on + pieceInfo
+		# if event.type == pygame.MOUSEBUTTONDOWN:
+		# 		gg.ColorTile = helpers.selectTile(gg.ColorTile, mouse_pos)
+		# 		helpers.getPieceInfo(gg, gg.ColorTile)
+		# 		print(f'type {gg.pp.type}, prev pos {gg.pp.prevTile}')
 
 		movement.move(gg, mouse_pos, player_pos, event)
 
 	gg.screen.fill(gg.Color2)
 	helpers.drawBoard(gg.screen, gg.Color1, gg.ColorHighlight, WIDTH, HEIGHT, gg.ColorTile)
-	gg.screen.blit(gg.b_piece_img["b_king"], pygame.Rect(player_pos.x, player_pos.y, 100, 100))
+	helpers.drawPieces(gg)
+	# gg.screen.blit(gg.piece_img["K"], pygame.Rect(player_pos.x, player_pos.y, 100, 100))
 	pygame.display.flip()
 	dt = clock.tick(60) / 1000
 
