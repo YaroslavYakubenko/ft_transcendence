@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# This script is the entry point for the Django application. It waits for the PostgreSQL database to be ready (if DB_HOST is set), applies database migrations, collects static files, and starts the Django development server.
+# This script is the entry point for the Django application. 
+# It waits for the PostgreSQL database to be ready (if DB_HOST is set), applies database migrations, collects static files, and starts the Django development server.
 
 # Exit immediately if a command exits with a non-zero status
 set -e
