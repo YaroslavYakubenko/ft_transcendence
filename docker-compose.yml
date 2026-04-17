@@ -1,0 +1,51 @@
+# defines Docker services for the Django backend and PostgreSQL(db)
+
+services:
+  db:
+    image: postgres:16
+    container_name: transcendence_db
+    restart: unless-stopped
+
+    # DB credentials used by PostgreSQL container (must match Django env)
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+
+    # Persist database data across container restarts
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    # Expose DB port (optional, mainly for local debugging)
+    ports:
+      - "5432:5432"
+
+  backend:
+    build:
+      context: ./backend
+    container_name: transcendence_backend
+    restart: unless-stopped
+
+    # Load Django environment variables
+    env_file:
+      - ./backend/.env
+
+    volumes:
+      # Mount backend code for live development
+      - ./backend:/app
+
+      # Persist uploaded media (avatars, etc.)
+      - media_data:/app/media
+
+    # Expose Django app
+    ports:
+      - "8000:8000"
+
+    # Ensure DB container starts first (entrypoint still waits for readiness)
+    depends_on:
+      - db
+
+# Named volumes for persistence
+volumes:
+  postgres_data:
+  media_data:
