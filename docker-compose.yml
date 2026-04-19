@@ -19,6 +19,14 @@ services:
     # Expose DB port (optional, mainly for local debugging)
     ports:
       - "5432:5432"
+    
+    # health check
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   backend:
     build:
@@ -43,7 +51,15 @@ services:
 
     # Ensure DB container starts first (entrypoint still waits for readiness)
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health/')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
 # Named volumes for persistence
 volumes:
