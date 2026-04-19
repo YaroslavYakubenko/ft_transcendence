@@ -39,6 +39,7 @@ Django is configured to trust the proxy via:
 
 ```python
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+```
 
 # Local Development Setup Documentation
 
@@ -49,20 +50,20 @@ Self-signed certificates are used for development:
 - `nginx/certs/local.crt`
 - `nginx/certs/local.key`
 
-⚠️ **Note:** Browsers will show a security warning — this is expected when using self-signed certificates.
+Note: Browsers will show a security warning for self-signed certificates in local development.
 
 ---
 
 ## Media (Avatars)
 
 User-uploaded files are stored in:
-    /app/media/avatars
+`/app/media/avatars`
 
 
 ### Persistence
 
 Media files are backed by a Docker volume:
-    media_data
+`media_data`
 
 
 Files persist across:
@@ -87,7 +88,7 @@ The services include built-in health checks:
 ### Restart Policy
 
 All services use:
-    restart: unless stopped
+`restart: unless-stopped`
 
 
 ---
@@ -105,14 +106,24 @@ All services use:
 
 ```bash
 docker compose ps
+```
 
-###Test HTTPS Endpoint
-    curl -k https://localhost:8443/api/health/
+### Test HTTPS Endpoint
 
-###Test HTTP -> HTTPS Redirect
-    curl -I http://localhost:8080/api/health/
+```bash
+curl -k https://localhost:8443/api/health/
+```
 
-###Test Restart Reliability
-    docker compose restart db
-    docker compose restart backend
-    docker compose ps
+### Test HTTP -> HTTPS Redirect
+
+```bash
+curl -I http://localhost:8080/api/health/
+```
+
+### Test Restart Reliability
+
+```bash
+docker compose restart db
+docker compose restart backend
+docker compose ps
+```
