@@ -91,6 +91,36 @@ services:
       retries: 5
       start_period: 10s
 
+  frontend:
+    build:
+      context: ./ft_transcendence
+    container_name: transcendence_frontend
+    restart: unless-stopped
+    
+    # Load frontend environment variables
+    env_file:
+      - ./ft_transcendence/.env
+
+    volumes:
+      # Mount frontend code for live development
+      - ./ft_transcendence:/app
+      - /app/node_modules # Persist node_modules to avoid re-installing on every change
+
+    # Expose Vite dev server
+    ports:
+      - "5173:5173"
+    
+    depends_on:
+      backend:
+        condition: service_healthy
+    
+    healthcheck:
+      test: ["CMD-SHELL", "ps | grep -q '[v]ite' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
 # Named volumes for persistence
 volumes:
   postgres_data:
