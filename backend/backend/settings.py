@@ -146,6 +146,10 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173"
 ]
 
+# Reverse proxy / HTTPS handling (Nginx)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = False  # keep False for now in dev, set to True in production with proper certs
+
 AUTH_USER_MODEL = 'users.User' # to use our custom model
 
 REST_FRAMEWORK = { #settings DRF: authorization via token

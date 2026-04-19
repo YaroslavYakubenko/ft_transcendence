@@ -1,32 +1,40 @@
-## Backend (Docker)
+# ft_transcendence (Docker setup)
 
-| File               | Job                 |
-| ------------------ | ------------------- |
-| docker-compose.yml | run everything      |
-| Dockerfile         | build backend       |
-| requirements.txt   | install Python deps |
-| entrypoint.sh      | control startup     |
-| .env               | config              |
-| settings.py        | apply config        |
+This project uses Docker to run the Django backend, PostgreSQL database, and Nginx reverse proxy together in a reproducible development environment.
 
-### Setup
+---
+
+## Overview
+
+The application runs as a multi-container setup:
+
+- **backend** → Django API  
+- **db** → PostgreSQL database  
+- **nginx** → reverse proxy with HTTPS  
+
+All services are orchestrated using Docker Compose.
+
+---
+
+## Project structure (relevant parts)
+
+| File / Folder            | Purpose                          |
+|--------------------------|----------------------------------|
+| docker-compose.yml       | Defines all services             |
+| backend/Dockerfile       | Builds Django container          |
+| backend/entrypoint.sh    | Handles startup logic            |
+| backend/requirements.txt | Python dependencies              |
+| backend/.env             | Django configuration             |
+| .env                     | Docker Compose configuration     |
+| nginx/                   | Reverse proxy config + TLS       |
+
+---
+
+## Setup
+
+Clone the repository and create environment files & launch
 
 ```bash
 cp .env.example .env
 cp backend/.env.example backend/.env
 docker compose up --build
-
-## Health checks and restart behavior
-
-The Docker setup includes health checks for the backend and PostgreSQL services.
-
-- **PostgreSQL** uses `pg_isready` to report healthy status.
-- **Backend** uses the `/api/health/` endpoint to report healthy status.
-- The backend depends on the database being healthy before startup.
-- Both services use `restart: unless-stopped` for better reliability during development.
-
-### Verification
-
-docker compose restart db
-docker compose restart backend
-docker compose ps
