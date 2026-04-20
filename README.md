@@ -17,7 +17,7 @@ This repository uses three separate environment files on purpose:
 
 - .env: Docker Compose interpolation and shared local database defaults
 - backend/.env: Django runtime settings, database connection, and OAuth secrets
-- ft_transcendence/.env: Frontend-only Vite variables exposed to the browser
+- frontend/.env: Frontend-only Vite variables exposed to the browser
 
 Rules of thumb:
 
@@ -29,7 +29,7 @@ Rules of thumb:
 ## Relevant Directories
 
 - backend: Django project incl. API
-- ft_transcendence: React frontend
+- frontend: React frontend
 - nginx: Nginx configuration and TLS certificates
 - docker-compose.yml: Service definitions
 
@@ -45,7 +45,7 @@ Rules of thumb:
 ```bash
 cp .env.example .env
 cp backend/.env.example backend/.env
-cp ft_transcendence/.env.example ft_transcendence/.env
+cp frontend/.env.example frontend/.env
 ```
 
 2. Build and start the stack.
@@ -108,8 +108,8 @@ Areas that are currently incomplete:
 ## Troubleshooting
 
 - Port already in use: check available ports and stop processes if needed.
-- Frontend cannot reach API: check ft_transcendence/.env and VITE_API_URL.
-- OAuth not working: verify client IDs and secrets in backend/.env and ft_transcendence/.env.
+- Frontend cannot reach API: check frontend/.env and VITE_API_URL.
+- OAuth not working: verify client IDs and secrets in backend/.env and frontend/.env.
 - HTTPS warning in browser: normal for local self-signed certificates.
 
 ## Security

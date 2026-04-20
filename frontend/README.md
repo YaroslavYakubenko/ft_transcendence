@@ -1,6 +1,6 @@
-# Frontend (transcendence)
+# Frontend (ft_transcendence)
 
-React frontend for the transcendence application based on Vite, TypeScript, React Router, and i18next.
+React frontend for the ft_transcendence application based on Vite, TypeScript, React Router, and i18next.
 
 ## Configuration Strategy
 
