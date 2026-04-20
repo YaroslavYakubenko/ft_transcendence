@@ -17,6 +17,7 @@ def draw_board(game):
 				# even row even square
 				pygame.draw.rect(game.screen, game.colors.lighter, pygame.Rect(*sq_p, game.sq_dim, game.sq_dim))
 			sq_p.x += game.sq_dim
+		# draw menu
 		pygame.draw.rect(game.screen, game.colors.menu, pygame.Rect(*sq_p, game.WIDTH - sq_p.x, game.sq_dim))
 		sq_p.y += game.sq_dim
 		sq_p.x = 0
@@ -71,7 +72,6 @@ def get_selected_tile_info(c_tile_inf, pix_vec, board, sq_dim):
 	# print(f'type {c_tile_inf.type}')
 	# print(f'occ {c_tile_inf.occ}')
 
-	
 
 def get_piece_moves(board, square):
     return [
@@ -83,3 +83,60 @@ def givImg(path, size):
 	piece = pygame.image.load(path)
 	piece = pygame.transform.scale(piece, (size, size))
 	return piece
+
+
+def game_over(game):
+
+	outcome = game.board.outcome()
+	res = get_res(game, outcome)
+	draw_game_over_menu(game, res, outcome)
+
+def get_res(game, outcome):
+	res = ''
+	if outcome is not None:
+		if outcome.winner is True:
+			print("White wins")
+			res = "White wins"
+		elif outcome.winner is False:
+			print("Black wins")
+			res = "Black wins"
+		else:
+			print("Draw")
+			res = "Draw"
+		# returns a string in chess notation: "1-0" → White wins, "0-1" → Black wins, "1/2-1/2" → Draw
+		print(outcome.result())
+	return res
+
+
+def draw_text(game, size, cx, cy, color, stri):
+	font = pygame.font.SysFont(None, size)
+	center_point = (cx, cy)
+	text_surface = font.render(stri, True, color)
+	text_rect = text_surface.get_rect(center=center_point)
+	game.screen.blit(text_surface, text_rect)
+
+# pygame.Rect(x pos, y pos, width, height), radius)
+# res = string
+def draw_game_over_menu(game, res, outcome):
+
+	boarder = 10
+	# make base bigger -> x & y + boarder
+	base = pygame.Rect(100 - boarder, 200 - boarder, 600 + (boarder * 2), 400 + (boarder * 2))
+	pygame.draw.rect(game.screen, game.colors.menu, base)
+
+	# to display win / lose message
+	upper_display = pygame.Rect(100 + boarder, 200 + (boarder * 2), 600 - (boarder * 2), 150 - boarder)
+	
+	# button 1
+	pygame.draw.rect(game.screen, game.colors.highlight, 	pygame.Rect(100 + boarder, 400 - (boarder * 2), 600 - (boarder * 2), 100 + boarder), border_radius=25)
+
+	pygame.draw.rect(game.screen, game.colors.menu_button, 	pygame.Rect(100 + boarder, 500 + boarder, 300 - (boarder * 2), 100 - (boarder * 2)), border_radius=20)
+	pygame.draw.rect(game.screen, game.colors.menu_button, 	pygame.Rect(400 + boarder, 500 + boarder, 300 - (boarder * 2), 100 - (boarder * 2)), border_radius=20)
+
+	# draw_text(game, 100, base.x + 310, base.y + 80, "white", res)
+	# draw_text(game, 50, base.x + 310, base.y + 80 + 50, "gray60", outcome.termination.name.replace("_", " ").title())
+
+
+
+
+

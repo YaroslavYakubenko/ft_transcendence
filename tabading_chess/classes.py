@@ -73,4 +73,5 @@ class Colors():
 		self.base = (115, 149, 82)
 		self.highlight = "coral"
 		self.menu = 'grey22'
+		self.menu_button = 'grey30'
 		self.lmoves = 'coral'
