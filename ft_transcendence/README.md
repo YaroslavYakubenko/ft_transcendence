@@ -1,20 +1,20 @@
 # Frontend (ft_transcendence)
 
-React-Frontend der ft_transcendence-Anwendung auf Basis von Vite, TypeScript, React Router und i18next.
+React frontend for the ft_transcendence application based on Vite, TypeScript, React Router, and i18next.
 
-## Voraussetzungen
+## Requirements
 
 - Node.js 22+
 - npm
 
-## Entwicklung
+## Development
 
 ```bash
 npm install
 npm run dev
 ```
 
-Standard-URL im Dev-Modus: http://localhost:5173
+Default URL in dev mode: http://localhost:5173
 
 ## Build
 
@@ -29,16 +29,16 @@ npm run preview
 npm run lint
 ```
 
-## Wichtige Umgebungsvariablen
+## Important Environment Variables
 
-Konfiguration in ft_transcendence/.env:
+Configuration in ft_transcendence/.env:
 
-- VITE_API_URL: Backend-API-Basis (z. B. https://localhost:8443/api)
-- VITE_REDIRECT_URI: OAuth-Callback-URL
-- VITE_GITHUB_CLIENT_ID: GitHub OAuth Client-ID
-- VITE_FORTY_TWO_CLIENT_ID: 42 OAuth Client-ID
+- VITE_API_URL: Backend API base (e.g., https://localhost:8443/api)
+- VITE_REDIRECT_URI: OAuth callback URL
+- VITE_GITHUB_CLIENT_ID: GitHub OAuth Client ID
+- VITE_FORTY_TWO_CLIENT_ID: 42 OAuth Client ID
 
-## Routing-Überblick
+## Routing Overview
 
 - /login
 - /register
@@ -52,14 +52,14 @@ Konfiguration in ft_transcendence/.env:
 - /users/:id
 - /oauth/callback
 
-## Architekturhinweise
+## Architecture Notes
 
-- Auth-Kontext verwaltet Token + Userzustand.
-- API-Layer liegt unter src/api.
-- Mehrsprachigkeit über i18next in src/i18n.
+- Auth context manages token and user state.
+- API layer is located under src/api.
+- Internationalization via i18next in src/i18n.
 
-## Bekannte Limitierungen
+## Known Limitations
 
-- Chat ist im Frontend derzeit als Platzhalter angelegt.
-- Spielstatistiken/Leaderboard nutzen aktuell Mock-Daten.
-- Für produktiven Betrieb sind zusätzliche Hardening-Schritte erforderlich.
+- Chat is currently a placeholder in the frontend.
+- Game statistics/leaderboard currently use mock data.
+- Additional hardening steps are required for production deployment.
