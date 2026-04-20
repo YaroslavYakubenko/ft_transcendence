@@ -11,6 +11,21 @@ Multi-container setup with Django backend, PostgreSQL, React frontend (Vite), an
 
 Orchestration is managed via Docker Compose.
 
+## Configuration Strategy
+
+This repository uses three separate environment files on purpose:
+
+- .env: Docker Compose interpolation and shared local database defaults
+- backend/.env: Django runtime settings, database connection, and OAuth secrets
+- ft_transcendence/.env: Frontend-only Vite variables exposed to the browser
+
+Rules of thumb:
+
+- Keep secrets out of the frontend env file because Vite variables are bundled into client-side code.
+- Keep backend secrets and server-only settings in backend/.env.
+- Keep the root .env limited to values Docker Compose needs before containers start.
+- Use localhost HTTPS URLs in development so the frontend talks to Nginx, not directly to Django.
+
 ## Relevant Directories
 
 - backend: Django project incl. API
@@ -101,3 +116,13 @@ Areas that are currently incomplete:
 
 - Never commit production secrets.
 - The provided certificates are only suitable for local development.
+
+## Why This Stack
+
+- Django provides a mature auth, ORM, and admin foundation for user- and profile-heavy applications.
+- Django REST Framework keeps the API layer straightforward while staying close to Django's data model.
+- PostgreSQL fits the relational data model for accounts, friendships, tokens, and game-related records.
+- React with TypeScript gives a maintainable UI layer with explicit types for API and state handling.
+- Vite keeps frontend development fast with a lightweight dev server and quick rebuilds.
+- Nginx centralizes HTTPS termination and reverse proxying so the browser sees one stable entry point.
+- Docker Compose makes the backend, frontend, database, and proxy reproducible across local machines.
