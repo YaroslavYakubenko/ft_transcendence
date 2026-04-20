@@ -93,17 +93,17 @@ services:
 
   frontend:
     build:
-      context: ./ft_transcendence
+      context: ./frontend
     container_name: transcendence_frontend
     restart: unless-stopped
     
     # Load frontend environment variables
     env_file:
-      - ./ft_transcendence/.env
+      - ./frontend/.env
 
     volumes:
       # Mount frontend code for live development
-      - ./ft_transcendence:/app
+      - ./frontend:/app
       - /app/node_modules # Persist node_modules to avoid re-installing on every change
 
     # Expose Vite dev server

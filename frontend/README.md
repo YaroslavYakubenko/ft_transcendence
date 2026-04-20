@@ -1,10 +1,10 @@
-# Frontend (ft_transcendence)
+# Frontend (transcendence)
 
-React frontend for the ft_transcendence application based on Vite, TypeScript, React Router, and i18next.
+React frontend for the transcendence application based on Vite, TypeScript, React Router, and i18next.
 
 ## Configuration Strategy
 
-Frontend configuration lives in ft_transcendence/.env and is intentionally limited to VITE_-prefixed variables. Vite injects those values into the client bundle at build time, so this file must never contain secrets.
+Frontend configuration lives in frontend/.env and is intentionally limited to VITE_-prefixed variables. Vite injects those values into the client bundle at build time, so this file must never contain secrets.
 
 - VITE_API_URL should point at the public HTTPS endpoint exposed by Nginx in local development.
 - VITE_REDIRECT_URI should match the OAuth callback route served by the frontend.
@@ -41,7 +41,7 @@ npm run lint
 
 ## Important Environment Variables
 
-Configuration in ft_transcendence/.env:
+Configuration in frontend/.env:
 
 - VITE_API_URL: Backend API base (e.g., https://localhost:8443/api)
 - VITE_REDIRECT_URI: OAuth callback URL
