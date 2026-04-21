@@ -74,17 +74,24 @@ def logout(request):
 @api_view(['PATCH']) # partial update
 @permission_classes([IsAuthenticated])
 def update_me(request):
-	data = request.data.copy()
+	# Prepare data for serializer (exclude avatar file, handle separately)
+	data = {
+		'username': request.data.get('username', request.user.username),
+		'email': request.data.get('email', request.user.email),
+	}
 	serializer = UserSerializer(request.user, data=data, partial=True, context={'request': request}) # 1. existing user, 2. new data from frontend, 3. partial update
 	if serializer.is_valid():
 		serializer.save()
+		# Handle avatar file upload separately (SerializerMethodField is read-only)
 		if 'avatar' in request.FILES:
 			request.user.avatar = request.FILES['avatar']
-			request.user.save()
+		# Handle password update
 		password = request.data.get('password')
 		if password:
 			request.user.set_password(password)
-			request.user.save()
+		# Save all changes
+		request.user.save()
+		# Return fresh user data
 		fresh = UserSerializer(request.user, context={'request': request})
 		return Response(fresh.data)
 	return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -32,9 +32,9 @@ class UserSerializer(serializers.ModelSerializer): # return the current user's d
 		read_only_fields = ('id', 'is_online')
 
 	def get_avatar(self, obj):
-		request = self.context.get('request') # has information about current HTTP request
-		if obj.avatar and request:
-			return request.build_absolute_uri(obj.avatar.url)
+		# Return relative URL so frontend can use Vite proxy
+		if obj.avatar:
+			return obj.avatar.url
 		return obj.oauth_avatar or ''
 
 class FriendSerializer(serializers.ModelSerializer): # return the list of friends
