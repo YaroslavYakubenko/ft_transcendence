@@ -2,7 +2,7 @@ import pygame
 import chess
 import helpers
 
-class game:
+class game():
 	def __init__(self, WIDTH, HEIGHT, sq_size):
 		#  ---- constant for now ----------------------
 		self.WIDTH = WIDTH
@@ -44,7 +44,7 @@ class game:
 		self.destP = SelectedTileInfo()
 
 
-class PieceInfo:
+class PieceInfo():
 	def __init__(self):
 		self.type = ''
 		# check if white or black move in fen -> only move if true

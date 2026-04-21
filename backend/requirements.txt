@@ -18,3 +18,6 @@ psycopg2-binary
 
 # Required Django Imagefield / avatar uploads
 Pillow
+
+# Required chess logic
+python-chess

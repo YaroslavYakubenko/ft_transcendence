@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken', # module of tokens
     'corsheaders', # can talk frontend (port: 5173) to backend (port: 8000)
     'users', #our folder, which we created
+	'chess_app', #our folder, which we created 
 ]
 
 MIDDLEWARE = [
