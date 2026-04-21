@@ -88,6 +88,7 @@ Currently implemented endpoints:
 - POST /api/auth/login/
 - GET /api/auth/me/
 - POST /api/auth/logout/
+- GET /api/auth/oauth/state/?provider=github|42
 - POST /api/auth/oauth/
 - PATCH /api/users/me/
 - DELETE /api/users/me/delete/
@@ -96,6 +97,57 @@ Currently implemented endpoints:
 - POST /api/friends/<id>/
 - DELETE /api/friends/<id>/remove/
 - GET /api/health/
+
+## OAuth Flow (GitHub + 42)
+
+This project uses a backend-managed OAuth flow with state validation to prevent CSRF/login swapping.
+
+### Required Environment Variables
+
+backend/.env:
+
+- GITHUB_CLIENT_ID
+- GITHUB_CLIENT_SECRET
+- FORTY_TWO_CLIENT_ID
+- FORTY_TWO_CLIENT_SECRET
+- OAUTH_REDIRECT_URI (example: http://localhost:5173/oauth/callback)
+
+frontend/.env:
+
+- VITE_API_URL (example: /api in local dev with Vite proxy)
+- VITE_REDIRECT_URI (must match OAUTH_REDIRECT_URI)
+- VITE_GITHUB_CLIENT_ID
+- VITE_FORTY_TWO_CLIENT_ID
+
+Important:
+
+- The redirect URI configured in GitHub and 42 developer consoles must exactly match OAUTH_REDIRECT_URI.
+- Frontend VITE_REDIRECT_URI must match backend OAUTH_REDIRECT_URI.
+
+### End-to-End Sequence
+
+1. User clicks "Login with GitHub" or "Login with 42" on /login.
+2. Frontend calls GET /api/auth/oauth/state/?provider=<provider> with credentials included.
+3. Backend stores a one-time state value in session and returns it.
+4. Frontend redirects user to provider authorize URL with that state.
+5. Provider redirects to /oauth/callback with code + state.
+6. Frontend sends provider, code, and state to POST /api/auth/oauth/ with credentials included.
+7. Backend validates state from session, exchanges code for access token, fetches user profile/email, creates/updates local user, then returns DRF auth token.
+8. Frontend stores token and fetches /api/auth/me/.
+
+### Security Notes
+
+- OAuth state is one-time and session-bound.
+- GitHub login only accepts verified primary email.
+- Token/profile requests to providers use timeouts and status checks.
+- Cookie policy is DEBUG-aware for local HTTP dev, and hardened for non-DEBUG environments.
+
+### Quick Troubleshooting
+
+- OAuth callback fails immediately: check VITE_REDIRECT_URI and OAUTH_REDIRECT_URI for exact match.
+- Provider returns redirect_uri mismatch: update callback URL in provider dashboard to match OAUTH_REDIRECT_URI.
+- State validation fails: ensure frontend requests /api/auth/oauth/state/ first and sends credentials on both state and oauth calls.
+- Backend cannot reach provider: inspect backend logs with docker compose logs -f backend.
 
 ## Project Status
 

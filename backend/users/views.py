@@ -7,8 +7,32 @@ from django.contrib.auth import authenticate # check email + password and return
 from .models import User, Friendship
 from .serializers import RegisterSerializer, UserSerializer, FriendSerializer
 import requests #for http request to GitHub API
+import secrets
+import logging
 from django.conf import settings #to read our settings.py
 from django.http import JsonResponse # for docker health check
+
+
+logger = logging.getLogger(__name__)
+
+
+def _provider_error_message(response, fallback_message):
+	try:
+		data = response.json()
+		error = data.get('error')
+		description = data.get('error_description')
+		if error and description:
+			return f'{fallback_message}: {error} - {description}'
+		if error:
+			return f'{fallback_message}: {error}'
+		if description:
+			return f'{fallback_message}: {description}'
+	except ValueError:
+		pass
+	text = (response.text or '').strip()
+	if text:
+		return f'{fallback_message}: {text[:200]}'
+	return fallback_message
 
 @api_view(['POST']) #API endpoint takes only POST
 @permission_classes([AllowAny]) # allow any, says who can use endpoint
@@ -111,35 +135,71 @@ def remove_friend(request, user_id):
 def oauth_login(request):
 	provider = request.data.get('provider')
 	code = request.data.get('code')
+	state = request.data.get('state')
+	redirect_uri = request.data.get('redirect_uri') or settings.OAUTH_REDIRECT_URI
+
+	if provider not in ('github', '42'):
+		return Response({'error': 'Unsupported provider'}, status=status.HTTP_400_BAD_REQUEST)
+	if not code or not state:
+		return Response({'error': 'Missing OAuth data'}, status=status.HTTP_400_BAD_REQUEST)
+
+	expected_state = request.session.get(f'oauth_state_{provider}')
+	if (not expected_state) or (not state.startswith(f'{provider}:')) or (not secrets.compare_digest(state, expected_state)):
+		logger.warning('OAuth state validation failed for provider=%s', provider)
+		return Response({'error': 'Invalid OAuth state'}, status=status.HTTP_400_BAD_REQUEST)
+
+	# one-time use state to prevent replay in the same browser session
+	request.session.pop(f'oauth_state_{provider}', None)
+
 	if provider == 'github':
-		# change code to access_token
-		token_res = requests.post(
-			'https://github.com/login/oauth/access_token',
-			json={
-				'client_id': settings.GITHUB_CLIENT_ID,
-				'client_secret': settings.GITHUB_CLIENT_SECRET,
-				'code': code, # one-time code
-			},
-			headers={'Accept': 'application/json'}
-		)
-		access_token = token_res.json().get('access_token')
+		try:
+			# change code to access_token
+			token_res = requests.post(
+				'https://github.com/login/oauth/access_token',
+				data={
+					'client_id': settings.GITHUB_CLIENT_ID,
+					'client_secret': settings.GITHUB_CLIENT_SECRET,
+					'code': code, # one-time code
+					'redirect_uri': redirect_uri,
+				},
+				headers={'Accept': 'application/json'},
+				timeout=10,
+			)
+			token_res.raise_for_status()
+			access_token = token_res.json().get('access_token')
+		except (requests.RequestException, ValueError):
+			logger.warning('GitHub token exchange failed for redirect_uri=%s', redirect_uri)
+			return Response({'error': 'GitHub token request failed'}, status=status.HTTP_400_BAD_REQUEST)
+
 		if not access_token:
 			return Response({'error': 'GitHub auth failed'}, status=status.HTTP_400_BAD_REQUEST)
-		# get user's data from GitHub
-		user_res = requests.get(
-			'https://api.github.com/user/emails',
-			headers={'Authorization': f'token {access_token}'}
-		)
-		emails = user_res.json()
-		email = next((e['email'] for e in emails if e['primary']), None)
-		if not email:
-			return Response({'error': 'No email from GitHub'}, status=status.HTTP_400_BAD_REQUEST)
 
-		profile_res = requests.get(
-			'https://api.github.com/user',
-			headers={'Authorization': f'token {access_token}'}
-		)
-		avatar_url = profile_res.json().get('avatar_url', '')
+		try:
+			# get user's data from GitHub
+			user_res = requests.get(
+				'https://api.github.com/user/emails',
+				headers={'Authorization': f'token {access_token}'},
+				timeout=10,
+			)
+			user_res.raise_for_status()
+			emails = user_res.json()
+		except (requests.RequestException, ValueError):
+			return Response({'error': 'GitHub email request failed'}, status=status.HTTP_400_BAD_REQUEST)
+
+		email = next((e.get('email') for e in emails if e.get('primary') and e.get('verified')), None)
+		if not email:
+			return Response({'error': 'No verified primary email from GitHub'}, status=status.HTTP_400_BAD_REQUEST)
+
+		try:
+			profile_res = requests.get(
+				'https://api.github.com/user',
+				headers={'Authorization': f'token {access_token}'},
+				timeout=10,
+			)
+			profile_res.raise_for_status()
+			avatar_url = profile_res.json().get('avatar_url', '')
+		except (requests.RequestException, ValueError):
+			avatar_url = ''
 
 		# find or create user
 		user, created = User.objects.get_or_create(email=email)
@@ -151,31 +211,52 @@ def oauth_login(request):
 		return Response({'token': token.key})
 		
 	if provider == '42':
-		# change code to access_token
-		token_res = requests.post(
-			'https://api.intra.42.fr/oauth/token',
-			json={
-				'grant_type': 'authorization_code',
-				'client_id': settings.FORTY_TWO_CLIENT_ID,
-				'client_secret': settings.FORTY_TWO_CLIENT_SECRET,
-				'code': code,
-				'redirect_uri': 'http://localhost:5173/oauth/callback',
-			}
-		)
-		access_token = token_res.json().get('access_token')
+		try:
+			# change code to access_token
+			token_res = requests.post(
+				'https://api.intra.42.fr/oauth/token',
+				data={
+					'grant_type': 'authorization_code',
+					'client_id': settings.FORTY_TWO_CLIENT_ID,
+					'client_secret': settings.FORTY_TWO_CLIENT_SECRET,
+					'code': code,
+					'redirect_uri': redirect_uri,
+				},
+				headers={'Accept': 'application/json'},
+				timeout=10,
+			)
+
+			if token_res.status_code >= 400:
+				message = _provider_error_message(token_res, '42 token request failed')
+				logger.warning('42 token exchange failed: %s | redirect_uri=%s', message, redirect_uri)
+				return Response({'error': message}, status=status.HTTP_400_BAD_REQUEST)
+
+			access_token = token_res.json().get('access_token')
+		except (requests.RequestException, ValueError):
+			logger.warning('42 token request exception for redirect_uri=%s', redirect_uri)
+			return Response({'error': '42 token request failed'}, status=status.HTTP_400_BAD_REQUEST)
+
 		if not access_token:
 			return Response({'error': '42 auth failed'}, status=status.HTTP_400_BAD_REQUEST)
-		# get user's data from 42
-		user_res = requests.get(
-			'https://api.intra.42.fr/v2/me',
-			headers={'Authorization': f'Bearer {access_token}'}
-		)
-		email = user_res.json().get('email')
+
+		try:
+			# get user's data from 42
+			user_res = requests.get(
+				'https://api.intra.42.fr/v2/me',
+				headers={'Authorization': f'Bearer {access_token}'},
+				timeout=10,
+			)
+			user_res.raise_for_status()
+			user_data = user_res.json()
+		except (requests.RequestException, ValueError):
+			return Response({'error': '42 user request failed'}, status=status.HTTP_400_BAD_REQUEST)
+
+		email = user_data.get('email')
 		if not email:
 			return Response({'error': 'No email from 42'}, status=status.HTTP_400_BAD_REQUEST)
 
 		# find or create user
-		avatar_url = user_res.json().get('image', {}).get('link', '')
+		avatar_url = user_data.get('image', {}).get('link', '')
 		user, created = User.objects.get_or_create(email=email)
 		if created or not user.oauth_avatar:
 			user.oauth_avatar = avatar_url
@@ -183,7 +264,20 @@ def oauth_login(request):
 		user.save()
 		token, _ = Token.objects.get_or_create(user=user)
 		return Response({'token': token.key})
-	return Response({'error': 'Unsupported provider'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def oauth_state(request):
+	provider = request.query_params.get('provider')
+	if provider not in ('github', '42'):
+		return Response({'error': 'Unsupported provider'}, status=status.HTTP_400_BAD_REQUEST)
+
+	nonce = secrets.token_urlsafe(24)
+	state = f'{provider}:{nonce}'
+	request.session[f'oauth_state_{provider}'] = state
+	request.session.modified = True
+	return Response({'state': state})
 
 @api_view(['GET']) # docker health check
 @permission_classes([AllowAny])

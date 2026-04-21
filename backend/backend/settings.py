@@ -145,6 +145,13 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173", #list of adrresses to allow (our frontend)
     "http://127.0.0.1:5173"
 ]
+CORS_ALLOW_CREDENTIALS = True
+# In local dev (DEBUG=True) we typically run frontend + backend on plain HTTP localhost.
+# Keep cookies usable for OAuth state in that setup, and harden automatically outside DEBUG.
+SESSION_COOKIE_SAMESITE = 'Lax' if DEBUG else 'None'
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SAMESITE = 'Lax' if DEBUG else 'None'
+CSRF_COOKIE_SECURE = not DEBUG
 
 # Reverse proxy / HTTPS handling (Nginx)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -166,6 +173,7 @@ GITHUB_CLIENT_SECRET = os.environ.get('GITHUB_CLIENT_SECRET', '')
 
 FORTY_TWO_CLIENT_ID = os.environ.get('FORTY_TWO_CLIENT_ID', '')
 FORTY_TWO_CLIENT_SECRET = os.environ.get('FORTY_TWO_CLIENT_SECRET', '')
+OAUTH_REDIRECT_URI = os.environ.get('OAUTH_REDIRECT_URI', 'http://localhost:5173/oauth/callback')
 
 # User uploaded files
 MEDIA_URL = '/media/'
