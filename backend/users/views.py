@@ -8,6 +8,7 @@ from .models import User, Friendship
 from .serializers import RegisterSerializer, UserSerializer, FriendSerializer
 import requests #for http request to GitHub API
 from django.conf import settings #to read our settings.py
+from django.http import JsonResponse # for docker health check
 
 @api_view(['POST']) #API endpoint takes only POST
 @permission_classes([AllowAny]) # allow any, says who can use endpoint
@@ -183,3 +184,8 @@ def oauth_login(request):
 		token, _ = Token.objects.get_or_create(user=user)
 		return Response({'token': token.key})
 	return Response({'error': 'Unsupported provider'}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET']) # docker health check
+@permission_classes([AllowAny])
+def health_check(request):
+	return Response({'status': 'ok'}, status=status.HTTP_200_OK)

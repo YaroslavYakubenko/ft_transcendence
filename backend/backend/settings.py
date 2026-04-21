@@ -138,11 +138,17 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173", #list of adrresses to allow (our frontend)
+    "http://127.0.0.1:5173"
 ]
+
+# Reverse proxy / HTTPS handling (Nginx)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = False  # keep False for now in dev, set to True in production with proper certs
 
 AUTH_USER_MODEL = 'users.User' # to use our custom model
 
@@ -161,5 +167,6 @@ GITHUB_CLIENT_SECRET = os.environ.get('GITHUB_CLIENT_SECRET', '')
 FORTY_TWO_CLIENT_ID = os.environ.get('FORTY_TWO_CLIENT_ID', '')
 FORTY_TWO_CLIENT_SECRET = os.environ.get('FORTY_TWO_CLIENT_SECRET', '')
 
+# User uploaded files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
