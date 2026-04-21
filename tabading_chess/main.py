@@ -16,10 +16,6 @@ running = True
 playing = True
 while running:
 
-	for event in pygame.event.get():
-		if event.type == pygame.QUIT:
-			running = False
-	
 	# main game loop
 	while playing:
 
@@ -44,4 +40,16 @@ while running:
 		pygame.display.flip()
 		dt = clock.tick(60) / 1000
 
+
+	mouse_pos = pygame.Vector2(pygame.mouse.get_pos())
+
+	for event in pygame.event.get():
+		if event.type == pygame.QUIT:
+			running = False
+		if event.type == pygame.MOUSEBUTTONDOWN:
+			helpers.check_menu_click(game, game.gameover_menu, mouse_pos)
+
+
 pygame.quit()
+
+

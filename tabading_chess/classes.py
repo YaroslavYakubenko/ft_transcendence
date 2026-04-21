@@ -11,6 +11,8 @@ class game:
 		
 		self.screen = pygame.display.set_mode([WIDTH, HEIGHT])
 		self.colors = Colors()
+		self.gameover_menu = GameoverMenu()
+
 		# 0 == click click | 1 == drag'n drop
 		self.movementType = 0
 
@@ -75,3 +77,12 @@ class Colors():
 		self.menu = 'grey22'
 		self.menu_button = 'grey30'
 		self.lmoves = 'coral'
+
+class GameoverMenu():
+	def __init__(self, border=10):
+		self.base =				pygame.Rect(100 - border, 200 - border		, 600 + (border * 2), 400 + (border * 2))
+		self.upper_display =	pygame.Rect(100 + border, 200 + (border * 2), 600 - (border * 2), 150 - border)
+		self.high_button = 		pygame.Rect(100 + border, 400 - (border * 2), 600 - (border * 2), 100 + border)
+		self.l_button =			pygame.Rect(100 + border, 500 + border		, 300 - (border * 2), 100 - (border * 2))
+		self.r_button =			pygame.Rect(400 + border, 500 + border		, 300 - (border * 2), 100 - (border * 2))
+		

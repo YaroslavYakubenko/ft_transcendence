@@ -107,36 +107,51 @@ def get_res(game, outcome):
 		print(outcome.result())
 	return res
 
-
-def draw_text(game, size, cx, cy, color, stri):
+def draw_text(game, size, cx, cy, color, stri, op):
 	font = pygame.font.SysFont(None, size)
 	center_point = (cx, cy)
 	text_surface = font.render(stri, True, color)
-	text_rect = text_surface.get_rect(center=center_point)
+	if op == 0:
+		text_rect = text_surface.get_rect(center=center_point)
+	else:
+		text_rect = text_surface.get_rect(midtop=center_point)
+
 	game.screen.blit(text_surface, text_rect)
 
 # pygame.Rect(x pos, y pos, width, height), radius)
 # res = string
 def draw_game_over_menu(game, res, outcome):
 
-	boarder = 10
-	# make base bigger -> x & y + boarder
-	base = pygame.Rect(100 - boarder, 200 - boarder, 600 + (boarder * 2), 400 + (boarder * 2))
-	pygame.draw.rect(game.screen, game.colors.menu, base)
+	menu = game.gameover_menu
+	# draw base
+	pygame.draw.rect(game.screen, game.colors.menu, menu.base)
 
 	# to display win / lose message
-	upper_display = pygame.Rect(100 + boarder, 200 + (boarder * 2), 600 - (boarder * 2), 150 - boarder)
+	# pygame.draw.rect(game.screen, game.colors.highlight, menu.upper_display, border_radius=25)
 	
 	# button 1
-	pygame.draw.rect(game.screen, game.colors.highlight, 	pygame.Rect(100 + boarder, 400 - (boarder * 2), 600 - (boarder * 2), 100 + boarder), border_radius=25)
+	pygame.draw.rect(game.screen, game.colors.highlight, menu.high_button, border_radius=25)
+	# button 2
+	pygame.draw.rect(game.screen, game.colors.menu_button, menu.l_button, border_radius=20)
+	# button 3
+	pygame.draw.rect(game.screen, game.colors.menu_button, menu.r_button, border_radius=20)
 
-	pygame.draw.rect(game.screen, game.colors.menu_button, 	pygame.Rect(100 + boarder, 500 + boarder, 300 - (boarder * 2), 100 - (boarder * 2)), border_radius=20)
-	pygame.draw.rect(game.screen, game.colors.menu_button, 	pygame.Rect(400 + boarder, 500 + boarder, 300 - (boarder * 2), 100 - (boarder * 2)), border_radius=20)
+	# draw_text(game, 100, menu.base.x + 310, menu.base.y + 80, "white", res)
+	draw_text(game, 100, menu.upper_display.x + menu.upper_display.width / 2, menu.upper_display.y, "white", res, 1)
+	draw_text(game, 50, menu.upper_display.x + menu.upper_display.width / 2, menu.upper_display.y + 50 + 20, "gray60", outcome.termination.name.replace("_", " ").title(), 1)
 
-	# draw_text(game, 100, base.x + 310, base.y + 80, "white", res)
-	# draw_text(game, 50, base.x + 310, base.y + 80 + 50, "gray60", outcome.termination.name.replace("_", " ").title())
+	# draw button text / leaderboard, new game, rematch
+	draw_text(game, 80, menu.high_button.x + menu.high_button.width / 2, menu.high_button.y + menu.high_button.height / 2, "white", "Leaderboard", 0)
+	draw_text(game, 40, menu.l_button.x + menu.l_button.width / 2, menu.l_button.y + menu.l_button.height / 2, "gray60", "New Game", 0)
+	draw_text(game, 40, menu.r_button.x + menu.r_button.width / 2, menu.r_button.y + menu.r_button.height / 2, "gray60", "Rematch", 0)
 
 
 
-
-
+def check_menu_click(game, menu, mouse_pos):
+	if menu.high_button.collidepoint(mouse_pos):
+		print("clicked leaderboard button")
+	elif menu.l_button.collidepoint(mouse_pos):
+		print("clicked new game button")
+	elif menu.r_button.collidepoint(mouse_pos):
+		print("clicked rematch button")
+	
