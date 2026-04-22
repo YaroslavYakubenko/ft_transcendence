@@ -17,4 +17,5 @@ urlpatterns = [
 	path('friends/<int:user_id>/', views.add_friend),
 	path('friends/<int:user_id>/remove/', views.remove_friend),
     path('health/', views.health_check),
+	path('status/', views.status_check),
 ]

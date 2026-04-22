@@ -2,6 +2,12 @@
 # Django backend 
 # PostgreSQL(db)
 # NginX (reverse proxy with SSL termination)
+# Vite frontend (dev server)
+# Prometheus (monitoring)
+# Grafana (visualization)
+# Node Exporter (host metrics)
+# cAdvisor (container metrics)
+# Each service has health checks and depends_on to ensure proper startup order.
 
 services:
   db:
@@ -121,7 +127,81 @@ services:
       retries: 5
       start_period: 20s
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: transcendence_prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+    ports:
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:9090 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: transcendence_grafana
+    restart: unless-stopped
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  node_exporter:
+    image: prom/node-exporter:latest
+    container_name: transcendence_node_exporter
+    restart: unless-stopped
+    command:
+    - '--path.rootfs=/host'
+    volumes:
+    - /:/host:ro,rslave
+    ports:
+    - "9100:9100"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:9100 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+  
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: transcendence_cadvisor
+    privileged: true
+    restart: unless-stopped
+    ports:
+    - "8081:8080"
+    volumes:
+    - /:/rootfs:ro
+    - /sys:/sys:ro
+    - /var/lib/docker:/var/lib/docker:ro
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - /dev/disk:/dev/disk:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
 # Named volumes for persistence
 volumes:
   postgres_data:
   media_data:
+  prometheus_data:
+  grafana_data:

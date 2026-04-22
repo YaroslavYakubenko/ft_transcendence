@@ -11,6 +11,7 @@ import secrets
 import logging
 from django.conf import settings #to read our settings.py
 from django.http import JsonResponse # for docker health check
+from django.db import connection
 
 
 logger = logging.getLogger(__name__)
@@ -290,3 +291,27 @@ def oauth_state(request):
 @permission_classes([AllowAny])
 def health_check(request):
 	return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+
+@api_view(['GET']) # database health check
+@permission_classes([AllowAny])
+def status_check(request):
+        try:
+                with connection.cursor() as cursor:
+                        cursor.execute("SELECT 1")
+                        cursor.fetchone()
+
+                return Response(
+                        {
+                                "status": "ok",
+                                "database": "ok",
+                        },
+                        status=status.HTTP_200_OK,
+                )
+        except Exception:
+                return Response(
+                        {
+                                "status": "error",
+                                "database": "unavailable",
+                        },
+                        status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )

@@ -178,3 +178,36 @@ Areas that are currently incomplete:
 - Vite keeps frontend development fast with a lightweight dev server and quick rebuilds.
 - Nginx centralizes HTTPS termination and reverse proxying so the browser sees one stable entry point.
 - Docker Compose makes the backend, frontend, database, and proxy reproducible across local machines.
+
+## Database backup and restore
+
+Create/restore a backup:
+
+```bash
+./scripts/backup_db.sh
+./scripts/restore_db.sh backups/<backup-file>.sql
+curl -k https://localhost:8443/api/status/
+
+## Monitoring
+
+The project includes a monitoring stack using Prometheus, Grafana, and Node Exporter.
+
+
+### Services
+- Prometheus: `http://localhost:9090`
+- Grafana: `http://localhost:3000`
+- Node Exporter: `http://localhost:9100`
+
+### Metrics
+Prometheus scrapes:
+- Prometheus itself
+- Node Exporter host/system metrics
+
+### Grafana
+Grafana is configured to use Prometheus as a data source.
+
+The first dashboard includes:
+- CPU usage
+- memory usage
+- disk usage
+- system uptime
