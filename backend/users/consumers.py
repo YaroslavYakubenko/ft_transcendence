@@ -63,3 +63,37 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'message': event['message'],
             'username': event['username'],
         }))
+
+# this consumer doesn't handle chat - it just tracks online / offline status
+# when a user opens this WS connection, they're "online"; when it closes, they're "offline"
+class OnlineStatusConsumer(AsyncWebsocketConsumer):
+
+    async def connect(self):
+        self.user = self.scope['user']
+
+        if not self.user.is_authenticated:
+            await self.close()
+            return
+
+        # database_sync_to_async = adapter between async world and sync Django ORM
+        # Django's ORM (database queries) is blocking / synchronus
+        # but we're in an async function - calling sync code directly would freeze everything
+        # this wrapper runs the sync function in a thread pool, like offloading blocking I/O to a worker thread
+        from channels.db import database_sync_to_async
+        await database_sync_to_async(self._set_online)(True)    # mark online before accepting
+
+        await self.accept()
+
+    async def disconnect (self, close_code):
+        # regardless of why they disconnected (browser closed, network dropped, etc.), mark them offline
+        from channels.db import database_sync_to_async
+        await database_sync_to_async(self._set_online)(False)
+    
+    async def receive (self, text_data):
+        pass    # we don't expect any messages on this connection - client just holds it open
+
+    def _set_online(self, status):
+        # regular synchronus method - no asynch here because database_sync_to_async handles that
+        # update_fields = only write these specific columns to DB, more efficient than saving the whole object
+        self.user.is_online = status
+        self.user.save(update_fields=['is_online']) 

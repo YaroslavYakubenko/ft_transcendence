@@ -7,6 +7,10 @@ websocket_urlpatterns = [
     # (? P<room_name>\w+) = named capture group, like sscanf with a named variable
     re_path(r'ws/chat/(?P<room_name>\w+)/$', consumers.ChatConsumer.as_asgi()),
 
+    # ws://host/ws/game/42/ -> GameConsumer handles it
+     # (?P<game_id>\w+) = captures the game ID from the URL, like "42" or "abc123"
+    re_path(r'ws/game/(?P<game_id>\w+)/$', consumers.GameConsumer.as_asgi()),
+
     # ws://host/ws/status/ -> OnlineStatusConsumer handles it
     re_path(r'ws/status/$', consumers.OnlineStatusConsumer.as_asgi()),
 
@@ -14,3 +18,10 @@ websocket_urlpatterns = [
 
 
 # re_path 
+# r'ws/chat/(?P<room_name>\w+)/$'
+#      │         │         │  │ │
+#      │         │         │  │ └── $ = end of string (like \0 in C string matching)
+#      │         │         │  └──── + = one or more characters
+#      │         │         └─────── \w = any word character [a-zA-Z0-9_]
+#      │         └───────────────── ?P<room_name> = name this capture "room_name"
+#      └─────────────────────────── literal path prefix
