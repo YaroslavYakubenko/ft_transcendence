@@ -21,5 +21,6 @@ from django.conf.urls.static import static #function for distributing media file
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('users.urls')) # pass everything to users.urls
+    path('api/', include('users.urls')), # pass everything to users.urls
+    path('', include('django_prometheus.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) # dustribute downloaded files by URL

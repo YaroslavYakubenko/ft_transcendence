@@ -7,6 +7,9 @@ djangorestframework
 # Handle CORS between frontend and backend
 django-cors-headers
 
+# Prometheus metrics exporter for Django
+django-prometheus
+
 # Load environment variables from .env
 python-dotenv
 

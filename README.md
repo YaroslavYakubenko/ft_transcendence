@@ -31,6 +31,8 @@ Rules of thumb:
 - backend: Django project incl. API
 - frontend: React frontend
 - nginx: Nginx configuration and TLS certificates
+- prometheus: Prometheus scrape config and alert rules
+- grafana: Grafana provisioning and dashboards
 - docker-compose.yml: Service definitions
 
 ## Requirements
@@ -166,7 +168,7 @@ Implemented and working in codebase:
 - Profile operations (get/update/delete) and avatar support.
 - Friends system (list/add/remove) with online status tracking.
 - Health endpoints (`/api/health/` and `/api/status/`).
-- Monitoring stack is configured in Compose (Prometheus, Grafana, Node Exporter, cAdvisor).
+- Monitoring stack is configured in Compose and provisioned in Grafana (Prometheus, Grafana, Node Exporter, cAdvisor).
 
 Missing or still in-progress:
 
@@ -216,24 +218,43 @@ curl -k https://localhost:8443/api/status/
 
 The project includes a monitoring stack using Prometheus, Grafana, Node Exporter, and cAdvisor.
 
-
-### Services
-- Prometheus: `http://localhost:9090`
-- Grafana: `http://localhost:3000`
-- Node Exporter: `http://localhost:9100`
-- cAdvisor: `http://localhost:8081`
-
-### Metrics
 Prometheus scrapes:
+- backend metrics at `/metrics`
 - Prometheus itself
+- Nginx exporter metrics
 - Node Exporter host/system metrics
 - cAdvisor container metrics
 
+
+### Services
+- Prometheus: `http://localhost:9090` (loopback only)
+- Grafana: `http://localhost:3000` (loopback only)
+- Node Exporter: `http://localhost:9100`
+- cAdvisor: `http://localhost:8081`
+
 ### Grafana
-Grafana is configured to use Prometheus as a data source.
+Grafana is provisioned automatically with a Prometheus data source and a starter dashboard.
+
+Access:
+- Open `http://localhost:3000`
+- Fresh volumes start with `admin` / `admin`
+- If the persisted password is unknown, reset it with `docker compose exec grafana grafana cli admin reset-admin-password <new-password>`
+- Grafana is bound to `127.0.0.1`, so it is only reachable from the local machine.
+
+Provisioning files:
+- grafana/provisioning/datasources/prometheus.yml
+- grafana/provisioning/dashboards/dashboards.yml
+- grafana/dashboards/monitoring-overview.json
 
 The first dashboard includes:
 - CPU usage
 - memory usage
 - disk usage
 - system uptime
+
+### Prometheus
+Prometheus uses [prometheus/prometheus.yml](prometheus/prometheus.yml) for scrape targets and [prometheus/alerts.yml](prometheus/alerts.yml) for alert rules.
+
+To add a new scrape target, add a new `job_name` block in [prometheus/prometheus.yml](prometheus/prometheus.yml) and restart Prometheus.
+
+Prometheus is also bound to `127.0.0.1`, so it is not exposed to the LAN or internet.
