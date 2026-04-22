@@ -36,7 +36,7 @@ Rules of thumb:
 ## Requirements
 
 - Docker + Docker Compose
-- Available ports: 5173, 8000, 8080, 8443, 5432
+- Available ports: 3000, 5173, 5432, 8000, 8080, 8081, 8443, 9090, 9100
 
 ## Quick Start
 
@@ -97,6 +97,7 @@ Currently implemented endpoints:
 - POST /api/friends/<id>/
 - DELETE /api/friends/<id>/remove/
 - GET /api/health/
+- GET /api/status/
 
 ## OAuth Flow (GitHub + 42)
 
@@ -151,11 +152,33 @@ Important:
 
 ## Project Status
 
-Areas that are currently incomplete:
+Checked on: 2026-04-22
 
-- Chat backend is not yet implemented.
-- Game statistics and leaderboard currently use mock data in the frontend.
-- Test coverage is still being built.
+Current repo/runtime state:
+
+- Git working tree is clean (`git status --short` returned no changes).
+- No Docker services are currently running (`docker compose ps` returned no active services).
+
+Implemented and working in codebase:
+
+- User auth (register/login/logout/me) with token auth.
+- OAuth login (GitHub + 42) with server-side state validation.
+- Profile operations (get/update/delete) and avatar support.
+- Friends system (list/add/remove) with online status tracking.
+- Health endpoints (`/api/health/` and `/api/status/`).
+- Monitoring stack is configured in Compose (Prometheus, Grafana, Node Exporter, cAdvisor).
+
+Missing or still in-progress:
+
+- Real chat backend and persistence (current chat API in frontend is a placeholder).
+- Real-time messaging/game transport (no WebSocket pipeline implemented yet).
+- Chess gameplay logic is incomplete in UI (board renders, but move handling is blocked).
+- Backend game domain is missing (matches, stats, leaderboard, achievements storage/APIs).
+- Frontend game stats, match history, and leaderboard are still mock/static data.
+- Online multiplayer/matchmaking flow is not implemented.
+- Tournament system is not implemented.
+- 2FA is not implemented.
+- Automated testing exists mainly for `users` backend endpoints; broader backend/frontend/e2e coverage is still missing.
 
 ## Troubleshooting
 
@@ -187,21 +210,24 @@ Create/restore a backup:
 ./scripts/backup_db.sh
 ./scripts/restore_db.sh backups/<backup-file>.sql
 curl -k https://localhost:8443/api/status/
+```
 
 ## Monitoring
 
-The project includes a monitoring stack using Prometheus, Grafana, and Node Exporter.
+The project includes a monitoring stack using Prometheus, Grafana, Node Exporter, and cAdvisor.
 
 
 ### Services
 - Prometheus: `http://localhost:9090`
 - Grafana: `http://localhost:3000`
 - Node Exporter: `http://localhost:9100`
+- cAdvisor: `http://localhost:8081`
 
 ### Metrics
 Prometheus scrapes:
 - Prometheus itself
 - Node Exporter host/system metrics
+- cAdvisor container metrics
 
 ### Grafana
 Grafana is configured to use Prometheus as a data source.
