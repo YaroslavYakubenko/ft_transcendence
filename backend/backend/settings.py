@@ -38,6 +38,7 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(','
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -47,6 +48,7 @@ INSTALLED_APPS = [
     'rest_framework', # library for creating API
     'rest_framework.authtoken', # module of tokens
     'corsheaders', # can talk frontend (port: 5173) to backend (port: 8000)
+    'channels',
     'users', #our folder, which we created
 ]
 

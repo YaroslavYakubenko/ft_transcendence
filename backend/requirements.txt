@@ -18,3 +18,7 @@ psycopg2-binary
 
 # Required Django Imagefield / avatar uploads
 Pillow
+
+channels==4.2.2
+
+daphne
