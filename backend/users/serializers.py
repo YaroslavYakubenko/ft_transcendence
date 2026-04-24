@@ -3,6 +3,7 @@
 import re
 from rest_framework import serializers
 from .models import User, Friendship
+import os
 
 class RegisterSerializer(serializers.ModelSerializer): # accept and password and create user
 	password = serializers.CharField(write_only=True, min_length=8) # pass takes from frontend and never go back
@@ -33,7 +34,7 @@ class UserSerializer(serializers.ModelSerializer): # return the current user's d
 
 	def get_avatar(self, obj):
 		request = self.context.get('request') # has information about current HTTP request
-		if obj.avatar and request:
+		if obj.avatar and request and os.path.exists(obj.avatar.path ):
 			return request.build_absolute_uri(obj.avatar.url)
 		return obj.oauth_avatar or ''
 
