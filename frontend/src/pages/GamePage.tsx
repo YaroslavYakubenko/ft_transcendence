@@ -1,21 +1,77 @@
-import { useState, useRef } from 'react';
-import { Chessboard } from "react-chessboard"
+import { useState} from 'react';
+import { Chessboard } from "react-chessboard";
 
+async function make_move(fen: string, from: string, to: string) {
+  const res = await fetch("http://localhost:8000/make-move/", {
+	method: "POST",
+	headers: {
+	  "Content-Type": "application/json",
+	},
+	body: JSON.stringify({
+	  fen,
+	  from,
+	  to,
+	}),
+  });
+
+  const data = await res.json();
+
+  if (data.error) {
+	console.error(data.error);
+	return null; // fallback: no update
+  }
+
+  return data;
+}
 
 function GamePage() {
 
 	const [fen, setFen] = useState("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+	const [result, setRes] = useState<string>("ongoing")
 	const chessboardOptions =
 	{
 		// your config options here
 		position: fen,
-		onPieceDrop: ({ sourceSquare: _s, targetSquare: _t }) => {
-			setFen("rnbqkbnr/1ppppppp/p7/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
-			return false
-			},
+		onPieceDrop: ({ sourceSquare, targetSquare }) => {
+			if (!sourceSquare || !targetSquare) return false;
+
+			make_move(fen, sourceSquare, targetSquare).then((data) => {
+				if (!data) 
+					return;
+
+				setFen(data.fen);
+				setRes(data.result);
+	   		});
+
+		  return false; // prevent local move, backend is source of truth
+		},
 	};
 
-  return <Chessboard options={chessboardOptions} />;
+	return (
+		<div style={{ position: "relative" }}>
+		
+			<Chessboard options={chessboardOptions} />
+
+	{result !== "ongoing" && (
+		<div style={{
+			position: "absolute",
+			top: 0,
+			left: 0,
+			right: 0,
+			bottom: 0,
+			background: "rgba(0,0,0,0.6)",
+			color: "white",
+			display: "flex",
+			alignItems: "center",
+			justifyContent: "center",
+			fontSize: "32px",
+			fontWeight: "bold"
+		}}>
+			Game Over: {result}
+		</div>
+	)}
+	</div>
+	);
 }
 
 export default GamePage

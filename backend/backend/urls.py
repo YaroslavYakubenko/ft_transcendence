@@ -18,8 +18,11 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings # access to settings (MEDIA_URL, MEDIA_ROOT)
 from django.conf.urls.static import static #function for distributing media files
+from chess_app.views import make_move
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('users.urls')) # pass everything to users.urls
+    path('api/', include('users.urls')), # pass everything to users.urls
+    path('make-move/', make_move, name='make_move'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) # dustribute downloaded files by URL
+
