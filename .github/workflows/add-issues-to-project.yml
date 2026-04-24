@@ -1,0 +1,64 @@
+name: Add Issues To Project
+
+on:
+  issues:
+    types: [opened, reopened]
+  workflow_dispatch:
+    inputs:
+      issue_numbers:
+        description: "Comma-separated issue numbers to add (for example: 1,2,3,4)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  add_issue_from_event:
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate token secret
+        env:
+          PROJECT_TOKEN: ${{ secrets.PROJECT_V2_TOKEN }}
+        run: |
+          if [ -z "$PROJECT_TOKEN" ]; then
+            echo "Missing secret PROJECT_V2_TOKEN"
+            exit 1
+          fi
+
+      - name: Add issue to project
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_V2_TOKEN }}
+        run: |
+          gh project item-add 6 --owner jastomme --url "${{ github.event.issue.html_url }}"
+
+  add_issues_from_manual_input:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.issue_numbers != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate token secret
+        env:
+          PROJECT_TOKEN: ${{ secrets.PROJECT_V2_TOKEN }}
+        run: |
+          if [ -z "$PROJECT_TOKEN" ]; then
+            echo "Missing secret PROJECT_V2_TOKEN"
+            exit 1
+          fi
+
+      - name: Add listed issues to project
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_V2_TOKEN }}
+          ISSUE_NUMBERS: ${{ github.event.inputs.issue_numbers }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -e
+          IFS=',' read -r -a numbers <<< "$ISSUE_NUMBERS"
+          for raw in "${numbers[@]}"; do
+            issue_number="$(echo "$raw" | xargs)"
+            if [ -z "$issue_number" ]; then
+              continue
+            fi
+            gh project item-add 6 --owner jastomme --url "https://github.com/$REPO/issues/$issue_number"
+          done

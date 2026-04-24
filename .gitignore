@@ -1,0 +1,8 @@
+# Root env (used by docker-compose)
+.env
+
+# Python cache
+__pycache__
+
+# Local SQLite fallback
+backend/db.sqlite3
