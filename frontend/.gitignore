@@ -1,3 +1,7 @@
+# Local environment variables (DO NOT COMMIT THIS FILE)
+.env
+*.local
+
 # Logs
 logs
 *.log
