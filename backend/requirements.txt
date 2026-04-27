@@ -1,20 +1,13 @@
-# Core Django framework
-Django==6.0.3
-
-# Django REST API support
-djangorestframework
-
-# Handle CORS between frontend and backend
-django-cors-headers
-
-# Load environment variables from .env
-python-dotenv
-
-# HTTP requests (used for OAuth flows)
-requests
-
-# PostgreSQL database adapter
-psycopg2-binary
-
-# Required Django Imagefield / avatar uploads
-Pillow
+asgiref==3.11.1
+certifi==2026.2.25
+charset-normalizer==3.4.7
+Django==6.0.4
+django-cors-headers==4.9.0
+djangorestframework==3.17.1
+idna==3.11
+pillow==12.2.0
+psycopg2-binary==2.9.10
+python-dotenv==1.2.2
+requests==2.33.1
+sqlparse==0.5.5
+urllib3==2.6.3
