@@ -46,6 +46,9 @@ def make_move(request):
 
 	if not fen or not _s or not _t:
 		return Response({"error": "missing data"}, status=400)
+	
+	if _s == _t:
+		return Response({"log": "piece not moved"})
 
 	board = chess.Board(fen)
 	move = chess.Move.from_uci(_s + _t)
@@ -58,7 +61,7 @@ def make_move(request):
 		})
 
 	if move not in board.legal_moves:
-		return Response({"error": "illegal move"}, status=400)
+		return Response({"log": "illegal move"})
 
 	board.push(move)
 	res = check_gameover(board)
@@ -87,7 +90,7 @@ def do_promotion(request):
 	move = chess.Move.from_uci(_move + key)
 	print(move)
 	if move not in board.legal_moves:
-		return Response({"error": "illegal move"}, status=400)
+		return Response({"log": "illegal move"})
 
 	board.push(move)
 	print(board)
@@ -114,4 +117,5 @@ def legal_moves(request):
 		to = chess.square_name(m.to_square)
 		moves.setdefault(frm, []).append(to)
 
+	# print(moves['h2'])
 	return Response({"moves": moves})

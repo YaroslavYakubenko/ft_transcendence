@@ -1,59 +1,3 @@
-// import { useState} from 'react';
-// import { Chessboard } from "react-chessboard";
-
-// function GamePage() {
-
-// 	const [fen, setFen] = useState("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
-// 	const [result, setRes] = useState<string>("ongoing")
-// 	const chessboardOptions =
-// 	{
-// 		// your config options here
-// 		position: fen,
-// 		onPieceDrop: ({ sourceSquare, targetSquare }) => {
-// 			if (!sourceSquare || !targetSquare) return false;
-
-// 			make_move(fen, sourceSquare, targetSquare).then((data) => {
-// 				if (!data) 
-// 					return;
-
-// 				setFen(data.fen);
-// 				setRes(data.result);
-// 		 		});
-
-// 			return false; // prevent local move, backend is source of truth
-// 		},
-// 	};
-
-// 	return (
-// 		<div style={{ position: "relative" }}>
-		
-// 			<Chessboard options={chessboardOptions} />
-
-// 	{result !== "ongoing" && (
-// 		<div style={{
-// 			position: "absolute",
-// 			top: 0,
-// 			left: 0,
-// 			right: 0,
-// 			bottom: 0,
-// 			background: "rgba(0,0,0,0.6)",
-// 			color: "white",
-// 			display: "flex",
-// 			alignItems: "center",
-// 			justifyContent: "center",
-// 			fontSize: "32px",
-// 			fontWeight: "bold"
-// 		}}>
-// 			Game Over: {result}
-// 		</div>
-// 	)}
-// 	</div>
-// 	);
-// }
-
-// export default GamePage
-
-
 import { useState } from "react"
 import { useMemo } from "react";
 import { useLocation } from "react-router-dom"
@@ -80,8 +24,12 @@ async function make_move(fen: string, from: string, to: string) {
 	const data = await res.json();
 
 	if (data.error) {
-	console.error(data.error);
-	return null; // fallback: no update
+		console.error(data.error);
+		return null; // fallback: no update
+	}
+	if (data.log) {
+		console.log("LOG:" ,data.log)
+		return null; // fallback: no update
 	}
 
 	return data;
@@ -102,11 +50,15 @@ async function do_promotion(fen: string, move: string, key: string) {
 
 	const data = await res.json();
 
-	console.log(data);
+	// console.log(data);
 
 	if (data.error) {
-	console.error(data.error);
-	return null; // fallback: no update
+		console.error(data.error);
+		return null; // fallback: no update
+	}
+	if (data.log) {
+		console.log("LOG:" ,data.log)
+		return null; // fallback: no update
 	}
 
 	return data;
@@ -125,7 +77,7 @@ async function legal_moves(fen: string) {
 
 	const data = await res.json();
 
-	console.log(data);
+	// console.log(data);
 
 	if (data.error) {
 		console.error(data.error);
@@ -133,9 +85,6 @@ async function legal_moves(fen: string) {
 	}
 	return data;
 }
-
-
-
 
 interface GameSettings {
 	opponent: 'bot' | 'live'
@@ -190,27 +139,30 @@ function GamePage() {
 		darkSquareStyle: { backgroundColor: theme.dark },
 		lightSquareStyle: { backgroundColor: theme.light },
 
-		onSquareClick: (sourceSquare) => {
-
-			if (!sourceSquare) return;
-
+		onPieceDrag: ({ isSparePiece, piece, square }) => {
+			console.debug("DEBUG: DRAG BEGIN:", isSparePiece, piece, square);
+			if (!square)
+			{
+				setHighlightSquares([]);
+				return;
+			}
 			const currentFen = fen;
 			legal_moves(currentFen).then((data) => {
-				if (!data) return;
-				console.log("SOURCE:", sourceSquare);
-				console.log("HIGHLIGHT KEYS:", Object.keys(data.moves));
-				setHighlightSquares(data.moves[sourceSquare] || []);
-				console.log(highlightSquares);
+				if (!piece)
+					return;
+				console.debug("DEBUG: SOURCE:", square);
+				console.debug("DEBUG: HIGHLIGHT KEYS:", Object.keys(data.moves));
+				const newhigh = data.moves[square] || [];
+				setHighlightSquares(newhigh);
+				console.debug('DEBUG: HIGHLIGHT SQUARES:', newhigh);
 			});
-
 		},
 
-
 		onPieceDrop: ({ sourceSquare, targetSquare }) => {
-			if (!sourceSquare || !targetSquare) return false;
-
+			if (!sourceSquare || !targetSquare)
+				return false;
 			make_move(fen, sourceSquare, targetSquare).then((data) => {
-				if (!data) 
+				if (!data)
 					return;
 				if (data.promotion !== '') {
 					setPro(data.promotion)
@@ -219,12 +171,10 @@ function GamePage() {
 				setFen(data.fen);
 				setRes(data.result);
 				setPro(data.promotion)
-		 		});
-
+			});
+			setHighlightSquares([]);
 			return false; // prevent local move, backend is source of truth
 		},
-
-		
 	};
 	
 	const [moves] = useState<string[]>([])
@@ -255,9 +205,11 @@ function GamePage() {
 						</div>
 
 						{/* Board */}
-						<div className="w-[500px]">
+						<div 
+							className="w-[500px]" 
+							// onMouseDown={(e) => console.log("DOWN", e.clientX, e.clientY) }
+							>
 							<Chessboard 
-							key={fen + highlightSquares.join(",")}
 							options={{
 								...chessboardOptions,
 								squareStyles: customSquareStyles,
