@@ -37,3 +37,7 @@ Pillow
 # urllib3==2.6.3
 # Required chess logic
 python-chess
+
+# ASGI / WebSocket server and channels
+channels==4.2.2
+daphne
