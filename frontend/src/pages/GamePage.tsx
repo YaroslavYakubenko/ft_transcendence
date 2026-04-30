@@ -117,6 +117,7 @@ function GamePage() {
 	const [result, setRes] = useState<string>("ongoing")
 	const [promotion, setPro] = useState<string>("")
 	const [highlightSquares, setHighlightSquares] = useState<string[]>([]);
+	const [highlightSquares2, setHighlightSquares2] = useState<string[]>([]);
 
 
 	const customSquareStyles = useMemo(() => {
@@ -129,8 +130,15 @@ function GamePage() {
 		};
 		});
 
+		highlightSquares2.forEach((sq) => {
+		styles[sq] = {
+			background:
+			"radial-gradient(circle, transparent 20%, rgba(244, 201, 148, 0.9) 20%, rgba(244, 201, 148, 0.9) 40%, transparent 40%)",
+		};
+		});
+
 		return styles;
-	}, [highlightSquares]);
+	}, [highlightSquares, highlightSquares2]);
 
 	const chessboardOptions =
 	{
@@ -144,6 +152,7 @@ function GamePage() {
 			if (!square)
 			{
 				setHighlightSquares([]);
+				setHighlightSquares2([]);
 				return;
 			}
 			const currentFen = fen;
@@ -154,7 +163,10 @@ function GamePage() {
 				console.debug("DEBUG: HIGHLIGHT KEYS:", Object.keys(data.moves));
 				const newhigh = data.moves[square] || [];
 				setHighlightSquares(newhigh);
+				const newhigh2 = data.moves2[square] || [];
+				setHighlightSquares2(newhigh2);
 				console.debug('DEBUG: HIGHLIGHT SQUARES:', newhigh);
+				console.debug('DEBUG: HIGHLIGHT SQUARES:', newhigh2);
 			});
 		},
 
@@ -173,6 +185,7 @@ function GamePage() {
 				setPro(data.promotion)
 			});
 			setHighlightSquares([]);
+			setHighlightSquares2([]);
 			return false; // prevent local move, backend is source of truth
 		},
 	};
@@ -318,3 +331,4 @@ function GamePage() {
 export default GamePage
 
 // tabading@example.com Hello1295!
+// different highlight for occupied

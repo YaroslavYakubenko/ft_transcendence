@@ -111,11 +111,20 @@ def legal_moves(request):
 
 	board = chess.Board(fen)
 	moves = {}
+	moves2 = {}
 
 	for m in board.legal_moves:
 		frm = chess.square_name(m.from_square)
 		to = chess.square_name(m.to_square)
-		moves.setdefault(frm, []).append(to)
+		if board.piece_at(m.to_square):
+			moves2.setdefault(frm, []).append(to)
+		else:
+			moves.setdefault(frm, []).append(to)
 
 	# print(moves['h2'])
-	return Response({"moves": moves})
+	return Response({
+		"moves": moves,
+		"moves2": moves2,
+		})
+
+# return 2, 1 not occupied, 1 occupied 
