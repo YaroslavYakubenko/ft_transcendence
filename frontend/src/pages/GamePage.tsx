@@ -1,10 +1,90 @@
 import { useState } from "react"
+import { useMemo } from "react";
 import { useLocation } from "react-router-dom"
 import { Chessboard } from "react-chessboard"
 import { useAuth } from "../context/AuthContext"
 import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
 import { useTranslation } from "react-i18next"
+
+
+async function make_move(fen: string, from: string, to: string) {
+	const res = await fetch("http://localhost:8000/make-move/", {
+	method: "POST",
+	headers: {
+		"Content-Type": "application/json",
+	},
+	body: JSON.stringify({
+		fen,
+		from,
+		to,
+	}),
+	});
+
+	const data = await res.json();
+
+	if (data.error) {
+		console.error(data.error);
+		return null; // fallback: no update
+	}
+	if (data.log) {
+		console.log("LOG:" ,data.log)
+		return null; // fallback: no update
+	}
+
+	return data;
+}
+
+async function do_promotion(fen: string, move: string, key: string) {
+	const res = await fetch("http://localhost:8000/do-promotion/", {
+	method: "POST",
+	headers: {
+		"Content-Type": "application/json",
+	},
+	body: JSON.stringify({
+		fen,
+		move,
+		key,
+	}),
+	});
+
+	const data = await res.json();
+
+	// console.log(data);
+
+	if (data.error) {
+		console.error(data.error);
+		return null; // fallback: no update
+	}
+	if (data.log) {
+		console.log("LOG:" ,data.log)
+		return null; // fallback: no update
+	}
+
+	return data;
+}
+
+async function legal_moves(fen: string) {
+	const res = await fetch("http://localhost:8000/legal-moves/", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			fen,
+		}),
+	});
+
+	const data = await res.json();
+
+	// console.log(data);
+
+	if (data.error) {
+		console.error(data.error);
+		return null; // fallback: no update
+	}
+	return data;
+}
 
 interface GameSettings {
 	opponent: 'bot' | 'live'
@@ -32,7 +112,71 @@ function GamePage() {
 		boardTheme: 'default'
 	}
 	const theme = BOARD_THEMES[settings.boardTheme]
-	const [fen] = useState("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+
+	const [fen, setFen] = useState("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+	const [result, setRes] = useState<string>("ongoing")
+	const [promotion, setPro] = useState<string>("")
+	const [highlightSquares, setHighlightSquares] = useState<string[]>([]);
+
+
+	const customSquareStyles = useMemo(() => {
+		const styles: Record<string, React.CSSProperties> = {};
+
+		highlightSquares.forEach((sq) => {
+		styles[sq] = {
+			background:
+			"radial-gradient(circle, rgba(244, 201, 148, 0.9) 25%, transparent 25%)",
+		};
+		});
+
+		return styles;
+	}, [highlightSquares]);
+
+	const chessboardOptions =
+	{
+		// your config options here
+		position: fen,
+		darkSquareStyle: { backgroundColor: theme.dark },
+		lightSquareStyle: { backgroundColor: theme.light },
+
+		onPieceDrag: ({ isSparePiece, piece, square }) => {
+			console.debug("DEBUG: DRAG BEGIN:", isSparePiece, piece, square);
+			if (!square)
+			{
+				setHighlightSquares([]);
+				return;
+			}
+			const currentFen = fen;
+			legal_moves(currentFen).then((data) => {
+				if (!piece)
+					return;
+				console.debug("DEBUG: SOURCE:", square);
+				console.debug("DEBUG: HIGHLIGHT KEYS:", Object.keys(data.moves));
+				const newhigh = data.moves[square] || [];
+				setHighlightSquares(newhigh);
+				console.debug('DEBUG: HIGHLIGHT SQUARES:', newhigh);
+			});
+		},
+
+		onPieceDrop: ({ sourceSquare, targetSquare }) => {
+			if (!sourceSquare || !targetSquare)
+				return false;
+			make_move(fen, sourceSquare, targetSquare).then((data) => {
+				if (!data)
+					return;
+				if (data.promotion !== '') {
+					setPro(data.promotion)
+					return;
+				}
+				setFen(data.fen);
+				setRes(data.result);
+				setPro(data.promotion)
+			});
+			setHighlightSquares([]);
+			return false; // prevent local move, backend is source of truth
+		},
+	};
+	
 	const [moves] = useState<string[]>([])
 	const { t } = useTranslation()
 
@@ -61,17 +205,15 @@ function GamePage() {
 						</div>
 
 						{/* Board */}
-						<div className="w-[500px]">
-							<Chessboard
-								options={{
-									position: fen,
-									darkSquareStyle: { backgroundColor: theme.dark },
-									lightSquareStyle: { backgroundColor: theme.light },
-									onPieceDrop: ({ sourceSquare: _s, targetSquare: _t }) => {
-										return false
-									},
-								}}
-							/>
+						<div 
+							className="w-[500px]" 
+							// onMouseDown={(e) => console.log("DOWN", e.clientX, e.clientY) }
+							>
+							<Chessboard 
+							options={{
+								...chessboardOptions,
+								squareStyles: customSquareStyles,
+							}} />
 						</div>
 
 						{/* Player panel */}
@@ -111,6 +253,61 @@ function GamePage() {
 							{t('game.draw')}
 						</button>
 					</div>
+
+					{/* promotion */}
+					{promotion && (
+						<div
+						style={{
+							position: "absolute",
+							top: "50%",
+							left: "50%",
+							transform: "translate(-50%, -50%)",
+							zIndex: 9999,
+							background: "#ffffff",
+							padding: "12px",
+							borderRadius: "10px",
+							display: "flex",
+							gap: "10px",
+						}} >
+
+						{["q", "r", "b", "n"].map((p) => (
+							<button
+								key={p}
+								onClick={() => {
+								do_promotion(fen, promotion, p).then((data) => {
+									if (!data) return;
+
+									setFen(data.fen);
+									setRes(data.result);
+									setPro(""); // IMPORTANT: clear UI
+								});
+							}}
+							>
+						{p.toUpperCase()}
+							</button>
+						))}
+						</div>
+					)}
+
+					{/* gameover	*/}
+					{result !== "ongoing" && (
+						<div style={{
+							position: "absolute",
+							top: 0,
+							left: 0,
+							right: 0,
+							bottom: 0,
+							background: "rgba(0,0,0,0.6)",
+							color: "white",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							fontSize: "32px",
+							fontWeight: "bold"
+						}}>
+							Game Over: {result}
+						</div>
+					)}
 				</div>
 			</div>
 			<Footer />
@@ -119,3 +316,5 @@ function GamePage() {
 }
 
 export default GamePage
+
+// tabading@example.com Hello1295!

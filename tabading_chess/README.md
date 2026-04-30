@@ -18,21 +18,27 @@ Building the chess game with python-chess and pygame.
 
 - open game window
 - display a chess board with extra space to the right
-- click on a square to highlight it 
+- click on corect color piece highlights square
 	- only one can be selected
 	- clicking selected deselects it
+	- legal moves of that piece are displayed
+- can move pieces to legal spaces 
+	- if your in check you can't be an idiot 
+
 
 ## seperate features not implemented correctly yet
 
-- placing pieces 
-	-> can display one but not confined to board 
-- drag'n drop that piece
-	-> doesn't snap into board squares 
-
+- when in check getting out of it is the only legal action
+which makes losing kinda hard
 
 # Instructions
 
 - enter folder 
+- either download chess and pygame or create a venv
+	- python -m venv venv
+	- .\venv\Scripts\Activate.ps1
+	- pip install pygame
+	- pip install chess
 - python3 main.py
 
 # Roadmap
@@ -54,19 +60,20 @@ Building the chess game with python-chess and pygame.
 				- movement 							[]
 
 - Pieces 
-	- Place in correct square to start				[]
-	- enable click-click							[]
+	- Place in correct square to start				[✅]
+	- enable click-click							[✅]
 	- enable drag'n drop							[]
 		- snap into board square					[]
 
 - logic
-	- clicking piece recognizes type				[]
-		- highlight legal moves 					[]
+	- clicking piece recognizes type				[✅]
+		- highlight legal moves 					[✅]
 			- turn on/off							[]
-	- check occupied destination					[]
-		- same color reset to prior position		[]
-		- other color delete taken pieces 			[]
-	- allow only legal moves 						[]
+	- check occupied destination
+		- same color not allowed					[✅]
+		- other color delete taken pieces 			[✅]
+	- allow only legal moves 						[✅]
+	- allow to miss check							[]
 	- check / check mate							[]
 	- castling										[]
 	- promotion 									[]
