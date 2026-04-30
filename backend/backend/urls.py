@@ -26,5 +26,6 @@ urlpatterns = [
     path('make-move/', make_move, name='make_move'),
     path('do-promotion/', do_promotion, name='do_promotion'),
     path('legal-moves/', legal_moves, name='legal_moves'),
+    path('', include('django_prometheus.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) # dustribute downloaded files by URL
 

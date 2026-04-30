@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useAuth } from "../context/AuthContext"
-import { login as apiLogin, OAUTH_URLS } from "../api/auth"
+import { buildOAuthUrl, getOAuthState, login as apiLogin, type OAuthProvider } from "../api/auth"
 import { Link, useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import Navbar from "../components/Navbar"
@@ -35,10 +35,28 @@ function LoginPage() {
 			const { token, user } = await apiLogin(email, password)
 			login(token, user)
 			navigate('/home')
-		} catch {
-			setError(t('login.invalidCredentials'))
+		} catch (err) {
+			if (err instanceof Error && err.message) {
+				setError(err.message)
+			} else {
+				setError(t('login.invalidCredentials'))
+			}
 		} finally {
 			setIsLoading(false)
+		}
+	}
+
+	async function handleOAuth(provider: OAuthProvider) {
+		setError('')
+		try {
+			const state = await getOAuthState(provider)
+			window.location.href = buildOAuthUrl(provider, state)
+		} catch (err) {
+			if (err instanceof Error && err.message) {
+				setError(err.message)
+			} else {
+				setError('Failed to start OAuth flow. Please try again.')
+			}
 		}
 	}
 	return (
@@ -114,7 +132,7 @@ function LoginPage() {
 								<div className="flex-1 h-px bg-[#2e2e40]" />
 							</div>
 							<button
-								onClick={() => window.location.href = OAUTH_URLS.github + '&state=github'}
+								onClick={() => handleOAuth('github')}
 								className="w-full bg-[#0f0f13] border border-[#2e2e40] rounded-lg py-2.5 text-sm text-[#f0eeff] cursor-pointer hover:border-[#e2b96f] mb-2 flex items-center justify-center gap-2"
 							>
 								<svg width="18" height="18" viewBox="0 0 98 96" fill="currentColor">                                                                                          
@@ -127,7 +145,7 @@ function LoginPage() {
 								</svg> {t('login.loginWithGithub')}
 							</button>
 							<button
-								onClick={() => window.location.href = OAUTH_URLS['42'] + '&state=42'}
+								onClick={() => handleOAuth('42')}
 								className="w-full bg-[#0f0f13] border border-[#2e2e40] rounded-lg py-2.5 text-sm text-[#f0eeff] cursor-pointer hover:border-[#e2b96f] mb-2 flex items-center justify-center gap-2"
 							>
 								<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">                                                                                          

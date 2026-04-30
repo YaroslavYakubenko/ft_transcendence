@@ -10,6 +10,17 @@ class HealthCheckTests(APITestCase):
 		self.assertEqual(response.status_code, status.HTTP_200_OK)
 		self.assertEqual(response.data, {"status": "ok"})
 
+class StatusCheckTests(APITestCase):
+        def test_status_endpoint_returns_ok(self):
+                response = self.client.get("/api/status/")
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertEqual(
+                        response.data,
+                        {
+                                "status": "ok",
+                                "database": "ok",
+                        },
+                )
 
 class AuthFlowTests(APITestCase):
 	def test_register_then_me(self):

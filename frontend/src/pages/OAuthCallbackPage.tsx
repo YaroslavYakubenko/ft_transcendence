@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
-import { oauthLogin } from "../api/auth"
+import { oauthLogin, type OAuthProvider } from "../api/auth"
 import { useAuth } from "../context/AuthContext"
 
 function OAuthCallbackPage() {
@@ -12,21 +12,33 @@ function OAuthCallbackPage() {
 
 	useEffect(() => {
 		const code = searchParams.get('code')
-		const provider = searchParams.get('state')
+		const state = searchParams.get('state')
+		const provider = state?.split(':', 1)[0] as OAuthProvider | undefined
 
 		if (hasRun.current) return
 		hasRun.current = true
-		if (!code || !provider) {
+		if (!code || !state || (provider !== 'github' && provider !== '42')) {
 			setError('Invalid OAuth callback: missing code or provider.')
 			return
 		}
 
-		oauthLogin(provider, code)
+		const handledKey = `oauth_handled_${provider}_${code}`
+		if (sessionStorage.getItem(handledKey)) {
+			return
+		}
+		sessionStorage.setItem(handledKey, '1')
+
+		oauthLogin(provider, code, state)
 			.then(({ token, user }) => {
 				login(token, user)
 				navigate('/home')
 			})
-			.catch(() => {
+			.catch((err) => {
+				sessionStorage.removeItem(handledKey)
+				if (err instanceof Error && err.message) {
+					setError(err.message)
+					return
+				}
 				setError('OAuth login failed. Please try again.')
 			})
 	}, [])
