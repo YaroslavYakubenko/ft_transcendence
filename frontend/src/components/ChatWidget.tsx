@@ -39,7 +39,7 @@ function ChatWidget() {
 		if (!selectedFriend || !token || !user) return
 
 		// room name is sorted by ID so both users always join the same room
-		const roomName = `dm_${Math.min(user.id, selectedFriend.id)}` // smallest ID as room name
+    	const roomName = `dm_${Math.min(user.id, selectedFriend.id)}_${Math.max(user.id, selectedFriend.id)}`
 		const ws = new WebSocket(`wss://localhost:8443/ws/chat/${roomName}/?token=${token}`)
 
 		ws.onopen = () => {
@@ -73,9 +73,9 @@ function ChatWidget() {
 
 
 	function handleSend() {
-		if (!input.trim() || !selectedFriend) return
-		sendMessage(selectedFriend.id, input, token!)
-		setMessages([...messages, { id: Date.now(), fromId: user?.id ?? 0, toId: selectedFriend.id, text: input, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }])
+		if (!input.trim() || !selectedFriend || || !wsRef.current) 
+			return
+		wsRef.current.send(JSON.stringify({ message: input }))
 		setInput("")
 	}
 
