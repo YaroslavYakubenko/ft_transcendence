@@ -73,7 +73,7 @@ function ChatWidget() {
 
 
 	function handleSend() {
-		if (!input.trim() || !selectedFriend || || !wsRef.current) 
+		if (!input.trim() || !selectedFriend || !wsRef.current) 
 			return
 		wsRef.current.send(JSON.stringify({ message: input }))
 		setInput("")
