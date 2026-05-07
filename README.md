@@ -31,12 +31,14 @@ Rules of thumb:
 - backend: Django project incl. API
 - frontend: React frontend
 - nginx: Nginx configuration and TLS certificates
+- prometheus: Prometheus scrape config and alert rules
+- grafana: Grafana provisioning and dashboards
 - docker-compose.yml: Service definitions
 
 ## Requirements
 
 - Docker + Docker Compose
-- Available ports: 5173, 8000, 8080, 8443, 5432
+- Available ports: 3000, 5173, 5432, 8000, 8080, 8081, 8443, 9090, 9100
 
 ## Quick Start
 
@@ -88,6 +90,7 @@ Currently implemented endpoints:
 - POST /api/auth/login/
 - GET /api/auth/me/
 - POST /api/auth/logout/
+- GET /api/auth/oauth/state/?provider=github|42
 - POST /api/auth/oauth/
 - PATCH /api/users/me/
 - DELETE /api/users/me/delete/
@@ -96,14 +99,88 @@ Currently implemented endpoints:
 - POST /api/friends/<id>/
 - DELETE /api/friends/<id>/remove/
 - GET /api/health/
+- GET /api/status/
+
+## OAuth Flow (GitHub + 42)
+
+This project uses a backend-managed OAuth flow with state validation to prevent CSRF/login swapping.
+
+### Required Environment Variables
+
+backend/.env:
+
+- GITHUB_CLIENT_ID
+- GITHUB_CLIENT_SECRET
+- FORTY_TWO_CLIENT_ID
+- FORTY_TWO_CLIENT_SECRET
+- OAUTH_REDIRECT_URI (example: http://localhost:5173/oauth/callback)
+
+frontend/.env:
+
+- VITE_API_URL (example: /api in local dev with Vite proxy)
+- VITE_REDIRECT_URI (must match OAUTH_REDIRECT_URI)
+- VITE_GITHUB_CLIENT_ID
+- VITE_FORTY_TWO_CLIENT_ID
+
+Important:
+
+- The redirect URI configured in GitHub and 42 developer consoles must exactly match OAUTH_REDIRECT_URI.
+- Frontend VITE_REDIRECT_URI must match backend OAUTH_REDIRECT_URI.
+
+### End-to-End Sequence
+
+1. User clicks "Login with GitHub" or "Login with 42" on /login.
+2. Frontend calls GET /api/auth/oauth/state/?provider=<provider> with credentials included.
+3. Backend stores a one-time state value in session and returns it.
+4. Frontend redirects user to provider authorize URL with that state.
+5. Provider redirects to /oauth/callback with code + state.
+6. Frontend sends provider, code, and state to POST /api/auth/oauth/ with credentials included.
+7. Backend validates state from session, exchanges code for access token, fetches user profile/email, creates/updates local user, then returns DRF auth token.
+8. Frontend stores token and fetches /api/auth/me/.
+
+### Security Notes
+
+- OAuth state is one-time and session-bound.
+- GitHub login only accepts verified primary email.
+- Token/profile requests to providers use timeouts and status checks.
+- Cookie policy is DEBUG-aware for local HTTP dev, and hardened for non-DEBUG environments.
+
+### Quick Troubleshooting
+
+- OAuth callback fails immediately: check VITE_REDIRECT_URI and OAUTH_REDIRECT_URI for exact match.
+- Provider returns redirect_uri mismatch: update callback URL in provider dashboard to match OAUTH_REDIRECT_URI.
+- State validation fails: ensure frontend requests /api/auth/oauth/state/ first and sends credentials on both state and oauth calls.
+- Backend cannot reach provider: inspect backend logs with docker compose logs -f backend.
 
 ## Project Status
 
-Areas that are currently incomplete:
+Checked on: 2026-04-22
 
-- Chat backend is not yet implemented.
-- Game statistics and leaderboard currently use mock data in the frontend.
-- Test coverage is still being built.
+Current repo/runtime state:
+
+- Git working tree is clean (`git status --short` returned no changes).
+- No Docker services are currently running (`docker compose ps` returned no active services).
+
+Implemented and working in codebase:
+
+- User auth (register/login/logout/me) with token auth.
+- OAuth login (GitHub + 42) with server-side state validation.
+- Profile operations (get/update/delete) and avatar support.
+- Friends system (list/add/remove) with online status tracking.
+- Health endpoints (`/api/health/` and `/api/status/`).
+- Monitoring stack is configured in Compose and provisioned in Grafana (Prometheus, Grafana, Node Exporter, cAdvisor).
+
+Missing or still in-progress:
+
+- Real chat backend and persistence (current chat API in frontend is a placeholder).
+- Real-time messaging/game transport (no WebSocket pipeline implemented yet).
+- Chess gameplay logic is incomplete in UI (board renders, but move handling is blocked).
+- Backend game domain is missing (matches, stats, leaderboard, achievements storage/APIs).
+- Frontend game stats, match history, and leaderboard are still mock/static data.
+- Online multiplayer/matchmaking flow is not implemented.
+- Tournament system is not implemented.
+- 2FA is not implemented.
+- Automated testing exists mainly for `users` backend endpoints; broader backend/frontend/e2e coverage is still missing.
 
 ## Troubleshooting
 
@@ -126,3 +203,58 @@ Areas that are currently incomplete:
 - Vite keeps frontend development fast with a lightweight dev server and quick rebuilds.
 - Nginx centralizes HTTPS termination and reverse proxying so the browser sees one stable entry point.
 - Docker Compose makes the backend, frontend, database, and proxy reproducible across local machines.
+
+## Database backup and restore
+
+Create/restore a backup:
+
+```bash
+./scripts/backup_db.sh
+./scripts/restore_db.sh backups/<backup-file>.sql
+curl -k https://localhost:8443/api/status/
+```
+
+## Monitoring
+
+The project includes a monitoring stack using Prometheus, Grafana, Node Exporter, and cAdvisor.
+
+Prometheus scrapes:
+- backend metrics at `/metrics`
+- Prometheus itself
+- Nginx exporter metrics
+- Node Exporter host/system metrics
+- cAdvisor container metrics
+
+
+### Services
+- Prometheus: `http://localhost:9090` (loopback only)
+- Grafana: `http://localhost:3000` (loopback only)
+- Node Exporter: `http://localhost:9100`
+- cAdvisor: `http://localhost:8081`
+
+### Grafana
+Grafana is provisioned automatically with a Prometheus data source and a starter dashboard.
+
+Access:
+- Open `http://localhost:3000`
+- Fresh volumes start with `admin` / `admin`
+- If the persisted password is unknown, reset it with `docker compose exec grafana grafana cli admin reset-admin-password <new-password>`
+- Grafana is bound to `127.0.0.1`, so it is only reachable from the local machine.
+
+Provisioning files:
+- grafana/provisioning/datasources/prometheus.yml
+- grafana/provisioning/dashboards/dashboards.yml
+- grafana/dashboards/monitoring-overview.json
+
+The first dashboard includes:
+- CPU usage
+- memory usage
+- disk usage
+- system uptime
+
+### Prometheus
+Prometheus uses [prometheus/prometheus.yml](prometheus/prometheus.yml) for scrape targets and [prometheus/alerts.yml](prometheus/alerts.yml) for alert rules.
+
+To add a new scrape target, add a new `job_name` block in [prometheus/prometheus.yml](prometheus/prometheus.yml) and restart Prometheus.
+
+Prometheus is also bound to `127.0.0.1`, so it is not exposed to the LAN or internet.

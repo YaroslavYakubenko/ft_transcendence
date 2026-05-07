@@ -81,3 +81,14 @@ Configuration in frontend/.env:
 - TypeScript helps keep API contracts, auth state, and page props explicit.
 - React Router matches the app's multi-page flow without forcing a full meta-framework.
 - i18next supports the multilingual UI requirements with a clear translation structure.
+
+## Frontend TypeScript / Vite typing troubleshooting
+
+If the editor reports missing `vite/client` typings:
+
+1. Make sure the project is opened from the correct repository root.
+2. Confirm `frontend/tsconfig.app.json` contains:
+
+```json
+"types": ["vite/client"]
+

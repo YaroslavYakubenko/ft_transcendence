@@ -38,6 +38,8 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(','
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
+    'django_prometheus',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -47,11 +49,13 @@ INSTALLED_APPS = [
     'rest_framework', # library for creating API
     'rest_framework.authtoken', # module of tokens
     'corsheaders', # can talk frontend (port: 5173) to backend (port: 8000)
+    'channels',
     'users', #our folder, which we created
 	'chess_app', #our folder, which we created 
 ]
 
 MIDDLEWARE = [
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware', #handler chain
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -60,6 +64,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -79,7 +84,15 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'backend.wsgi.application'
+#WSGI_APPLICATION = 'backend.wsgi.application'   # still needed?
+
+ASGI_APPLICATION = 'backend.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
 
 
 # Database
@@ -146,6 +159,13 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173", #list of adrresses to allow (our frontend)
     "http://127.0.0.1:5173"
 ]
+CORS_ALLOW_CREDENTIALS = True
+# In local dev (DEBUG=True) we typically run frontend + backend on plain HTTP localhost.
+# Keep cookies usable for OAuth state in that setup, and harden automatically outside DEBUG.
+SESSION_COOKIE_SAMESITE = 'Lax' if DEBUG else 'None'
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SAMESITE = 'Lax' if DEBUG else 'None'
+CSRF_COOKIE_SECURE = not DEBUG
 
 # Reverse proxy / HTTPS handling (Nginx)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -167,6 +187,7 @@ GITHUB_CLIENT_SECRET = os.environ.get('GITHUB_CLIENT_SECRET', '')
 
 FORTY_TWO_CLIENT_ID = os.environ.get('FORTY_TWO_CLIENT_ID', '')
 FORTY_TWO_CLIENT_SECRET = os.environ.get('FORTY_TWO_CLIENT_SECRET', '')
+OAUTH_REDIRECT_URI = os.environ.get('OAUTH_REDIRECT_URI', 'http://localhost:5173/oauth/callback')
 
 # User uploaded files
 MEDIA_URL = '/media/'
