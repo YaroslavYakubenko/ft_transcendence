@@ -11,6 +11,7 @@ function LobbyPage() {
 	const [timer, setTimer] = useState<'none' | '3' | '5' | '10'>('none')
 	const [pieceColor, setPieceColor] = useState<'white' | 'black' | 'random'>('random')
 	const [boardTheme, setBoardTheme] = useState<'default' | 'green' | 'blue' | 'brown'>('default')
+	const [pieceTheme, setPieceTheme] = useState<'default' | 'simple'>('default')
 	const { t } = useTranslation()
 
 	return (
@@ -110,8 +111,32 @@ function LobbyPage() {
 								))}
 						</div>
 					</div>
+
+
+
+					<div className="mb-6">
+						<p className="text-[#8892a4] text-xs mb-2">{t('lobby.pieceTheme')}</p>
+						<div className="flex gap-3">
+								{([
+									{ value: 'default', label: `♚ ${t('lobby.default')}` },
+									{ value: 'simple', label: `♔ ${t('lobby.simple')}` },
+								] as const).map((opt) => (
+									<button
+										key={opt.value}
+										onClick={() => setPieceTheme(opt.value)}
+										className={`flex-1 py-2 rounded-lg text-sm border cursor-pointer ${pieceTheme === opt.value ? 'bg-[#e2b96f] text-[#0f0f13] border-[#e2b96f] font-medium' : 'bg-[#0f0f13] text-[#f0eeff] border-[#2e2e40]'}`}
+									>
+										{opt.label}
+									</button>
+								))}
+						</div>
+					</div>
+
+
+
+
 					<button
-						onClick={() => navigate('/game', { state: { opponent, difficulty, timer, pieceColor, boardTheme } })}
+						onClick={() => navigate('/game', { state: { opponent, difficulty, timer, pieceColor, boardTheme, pieceTheme } })}
 						className="w-full bg-[#e2b96f] text-[#0f0f13] border-none rounded-lg py-2.5 text-sm font-medium cursor-pointer mt-2"
 					>
 						▶ {t('lobby.startGame')}

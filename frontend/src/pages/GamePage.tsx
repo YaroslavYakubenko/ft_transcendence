@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useMemo } from "react";
 import { useLocation } from "react-router-dom"
-import { Chessboard } from "react-chessboard"
+import { Chessboard, defaultPieces} from "react-chessboard"
 import { useAuth } from "../context/AuthContext"
 import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
@@ -94,7 +94,7 @@ interface GameSettings {
 	timer: 'none' | '3' | '5' | '10'
 	pieceColor: 'white' | 'black' | 'random'
 	boardTheme: 'default' | 'green' | 'blue' | 'brown'
-	pieceTheme: 'default'
+	pieceTheme: 'default' | 'simple'
 }
 
 const pieceStyle: React.CSSProperties = {
@@ -105,6 +105,10 @@ const pieceStyle: React.CSSProperties = {
 
 const PIECE_THEMES = {
 	default: {
+		 ...defaultPieces
+	},
+
+	simple: {
 		wP: () => <img src="/imgs/wp.png" style={pieceStyle} />,
 		wN: () => <img src="/imgs/wn.png"  style={pieceStyle} />,
 		wB: () => <img src="/imgs/wb.png"  style={pieceStyle} />,
@@ -119,7 +123,6 @@ const PIECE_THEMES = {
 		bQ: () => <img src="/imgs/bq.png"  style={pieceStyle} />,
 		bK: () => <img src="/imgs/bk.png"  style={pieceStyle} />,
 	},
-
 }
 
 const ppieces = ["Q", "R", "B", "N"] as const
@@ -144,7 +147,7 @@ function GamePage() {
 		pieceTheme: 'default',
 	}
 	const theme = BOARD_THEMES[settings.boardTheme]
-	const pieces = PIECE_THEMES[settings.pieceTheme] ?? PIECE_THEMES.default
+	const pieces = PIECE_THEMES[settings.pieceTheme]
 
 	const getPromotionOptions = (prefix: "w" | "b") =>
 		ppieces.map((p) => ({
@@ -186,13 +189,15 @@ function GamePage() {
 	}, [highlightSquares, highlightSquares2]);
 
 
+	// const customPieces: 
+
 	const chessboardOptions =
 	{
 		// your config options here
 		position: fen,
 		darkSquareStyle: { backgroundColor: theme.dark },
 		lightSquareStyle: { backgroundColor: theme.light },
-		customPieces: pieces,
+		pieces: pieces,
 
 		onPieceDrag: ({ isSparePiece, piece, square }: PieceHandlerArgs) => {
 			console.debug("DEBUG: DRAG BEGIN:", isSparePiece, piece, square);
@@ -285,7 +290,6 @@ function GamePage() {
 						{/* Board */}
 						<div 
 							className="relative w-[500px]" 
-							// onMouseDown={(e) => console.log("DOWN", e.clientX, e.clientY) }
 							>
 							<Chessboard 
 							options={{
