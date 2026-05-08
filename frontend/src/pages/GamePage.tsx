@@ -6,6 +6,8 @@ import { useAuth } from "../context/AuthContext"
 import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
 import { useTranslation } from "react-i18next"
+import type { PieceHandlerArgs } from "react-chessboard"
+import type { PieceDropHandlerArgs } from "react-chessboard"
 
 
 async function make_move(fen: string, from: string, to: string) {
@@ -92,7 +94,36 @@ interface GameSettings {
 	timer: 'none' | '3' | '5' | '10'
 	pieceColor: 'white' | 'black' | 'random'
 	boardTheme: 'default' | 'green' | 'blue' | 'brown'
+	pieceTheme: 'default'
 }
+
+const pieceStyle: React.CSSProperties = {
+  width: "100%",
+  height: "100%",
+  objectFit: "contain",
+}
+
+const PIECE_THEMES = {
+	default: {
+		wP: () => <img src="/imgs/wp.png" style={pieceStyle} />,
+		wN: () => <img src="/imgs/wn.png"  style={pieceStyle} />,
+		wB: () => <img src="/imgs/wb.png"  style={pieceStyle} />,
+		wR: () => <img src="/imgs/wr.png"  style={pieceStyle} />,
+		wQ: () => <img src="/imgs/wq.png"  style={pieceStyle} />,
+		wK: () => <img src="/imgs/wk.png"  style={pieceStyle} />,
+
+		bP: () => <img src="/imgs/bp.png"  style={pieceStyle} />,
+		bN: () => <img src="/imgs/bn.png"  style={pieceStyle} />,
+		bB: () => <img src="/imgs/bb.png"  style={pieceStyle} />,
+		bR: () => <img src="/imgs/br.png"  style={pieceStyle} />,
+		bQ: () => <img src="/imgs/bq.png"  style={pieceStyle} />,
+		bK: () => <img src="/imgs/bk.png"  style={pieceStyle} />,
+	},
+
+}
+
+const ppieces = ["Q", "R", "B", "N"] as const
+
 
 const BOARD_THEMES = {
 	default: { light: '#f0eeff', dark: '#2e2e40' },
@@ -109,13 +140,27 @@ function GamePage() {
 		difficulty: 'medium',
 		timer: 'none',
 		pieceColor: 'random',
-		boardTheme: 'default'
+		boardTheme: 'default',
+		pieceTheme: 'default',
 	}
 	const theme = BOARD_THEMES[settings.boardTheme]
+	const pieces = PIECE_THEMES[settings.pieceTheme] ?? PIECE_THEMES.default
+
+	const getPromotionOptions = (prefix: "w" | "b") =>
+		ppieces.map((p) => ({
+		piece: `${prefix}${p}` as keyof typeof pieces,
+		promo: p.toLowerCase(),
+	}))
 
 	const [fen, setFen] = useState("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 	const [result, setRes] = useState<string>("ongoing")
-	const [promotion, setPro] = useState<string>("")
+	const [promotion, setPro] = useState({
+		move: "",
+		x: -1,
+		y: -1, 
+		pre: "" 
+	})
+
 	const [highlightSquares, setHighlightSquares] = useState<string[]>([]);
 	const [highlightSquares2, setHighlightSquares2] = useState<string[]>([]);
 
@@ -133,12 +178,13 @@ function GamePage() {
 		highlightSquares2.forEach((sq) => {
 		styles[sq] = {
 			background:
-			"radial-gradient(circle, transparent 20%, rgba(244, 201, 148, 0.9) 20%, rgba(244, 201, 148, 0.9) 40%, transparent 40%)",
+			"radial-gradient(circle, transparent 50%, rgba(244, 201, 148, 0.9) 50%, rgba(244, 201, 148, 0.9) 60%, transparent 60%)",
 		};
 		});
 
 		return styles;
 	}, [highlightSquares, highlightSquares2]);
+
 
 	const chessboardOptions =
 	{
@@ -146,8 +192,9 @@ function GamePage() {
 		position: fen,
 		darkSquareStyle: { backgroundColor: theme.dark },
 		lightSquareStyle: { backgroundColor: theme.light },
+		customPieces: pieces,
 
-		onPieceDrag: ({ isSparePiece, piece, square }) => {
+		onPieceDrag: ({ isSparePiece, piece, square }: PieceHandlerArgs) => {
 			console.debug("DEBUG: DRAG BEGIN:", isSparePiece, piece, square);
 			if (!square)
 			{
@@ -170,24 +217,42 @@ function GamePage() {
 			});
 		},
 
-		onPieceDrop: ({ sourceSquare, targetSquare }) => {
+		onPieceDrop: ({ sourceSquare, targetSquare }: PieceDropHandlerArgs) => {
 			if (!sourceSquare || !targetSquare)
 				return false;
 			make_move(fen, sourceSquare, targetSquare).then((data) => {
 				if (!data)
 					return;
 				if (data.promotion !== '') {
-					setPro(data.promotion)
+					const squareSize = 500 / 8; // 62.5px
+					const file = targetSquare[0].charCodeAt(0) - 97
+					const rank = 8 - Number(targetSquare[1])
+					const offset = squareSize / 2 + 8
+
+					const x = file * squareSize + squareSize / 2
+					const centerY = rank * squareSize + squareSize / 2
+					if (fen.split(" ")[1] === "w")
+					{
+						const y = centerY + offset
+						setPro({move: data.promotion, x: x , y: y, pre: 'w'})
+					}
+					else
+					{
+						const y = centerY - offset - 280
+						setPro({move: data.promotion, x: x , y: y, pre: 'b'})
+					}
+
 					return;
 				}
 				setFen(data.fen);
 				setRes(data.result);
-				setPro(data.promotion)
+				setPro({move: data.promotion, x: -1, y: -1, pre: ''})
 			});
 			setHighlightSquares([]);
 			setHighlightSquares2([]);
 			return false; // prevent local move, backend is source of truth
 		},
+
 	};
 	
 	const [moves] = useState<string[]>([])
@@ -219,7 +284,7 @@ function GamePage() {
 
 						{/* Board */}
 						<div 
-							className="w-[500px]" 
+							className="relative w-[500px]" 
 							// onMouseDown={(e) => console.log("DOWN", e.clientX, e.clientY) }
 							>
 							<Chessboard 
@@ -227,6 +292,49 @@ function GamePage() {
 								...chessboardOptions,
 								squareStyles: customSquareStyles,
 							}} />
+
+							{/* promotion */}
+							{promotion.move && (
+								<div			
+									style={{
+										position: "absolute",
+										width: 80,
+										height: 280,
+										left: promotion.x,
+										top: promotion.y,
+										transform: "translateX(-50%)",
+										zIndex: 9999,
+										background: "#ffffff",
+										padding: "12px",
+										borderRadius: "10px",
+										display: "flex",
+										flexDirection: "column",
+										gap: "10px",
+									}} >
+
+
+									{getPromotionOptions(promotion.pre as "w" | "b").map(( {piece, promo} ) => {
+										const Piece = pieces[piece]
+									
+										return (
+										<button
+											key={promo}
+											onClick={() => {
+												console.log(getPromotionOptions(promotion.pre as "w" | "b"))
+												do_promotion(fen, promotion.move, promo).then((data) => {
+													if (!data) return;
+													setFen(data.fen);
+													setRes(data.result);
+													setPro({move: "", x: -1, y: -1, pre: ''}); // IMPORTANT: clear UI
+												});
+											}} >
+									{Piece()}
+									{/* {'hello'} */}
+										</button>
+									)})}
+								</div>
+							)}
+
 						</div>
 
 						{/* Player panel */}
@@ -267,42 +375,7 @@ function GamePage() {
 						</button>
 					</div>
 
-					{/* promotion */}
-					{promotion && (
-						<div
-						style={{
-							position: "absolute",
-							top: "50%",
-							left: "50%",
-							transform: "translate(-50%, -50%)",
-							zIndex: 9999,
-							background: "#ffffff",
-							padding: "12px",
-							borderRadius: "10px",
-							display: "flex",
-							gap: "10px",
-						}} >
-
-						{["q", "r", "b", "n"].map((p) => (
-							<button
-								key={p}
-								onClick={() => {
-								do_promotion(fen, promotion, p).then((data) => {
-									if (!data) return;
-
-									setFen(data.fen);
-									setRes(data.result);
-									setPro(""); // IMPORTANT: clear UI
-								});
-							}}
-							>
-						{p.toUpperCase()}
-							</button>
-						))}
-						</div>
-					)}
-
-					{/* gameover	*/}
+					{/* gameover	make better with rematch option and stuff*/}
 					{result !== "ongoing" && (
 						<div style={{
 							position: "absolute",
@@ -331,4 +404,4 @@ function GamePage() {
 export default GamePage
 
 // tabading@example.com Hello1295!
-// different highlight for occupied
+// 
