@@ -117,6 +117,68 @@ async function resign_game(gameId: number | null, token: string | null) {
 	return data;
 }
 
+// Scholar's Mate sequence: e4 e5, Qh5 Nc6, Bc4 Nf6?, Qxf7#
+const SCHOLARS_MATE_MOVES = [
+	{ from: "e2", to: "e4", name: "e4" },       // 1. e4
+	{ from: "e7", to: "e5", name: "e5" },       // 1... e5
+	{ from: "d1", to: "h5", name: "Qh5" },      // 2. Qh5
+	{ from: "b8", to: "c6", name: "Nc6" },      // 2... Nc6
+	{ from: "f1", to: "c4", name: "Bc4" },      // 3. Bc4
+	{ from: "g8", to: "f6", name: "Nf6" },      // 3... Nf6?
+	{ from: "h5", to: "f7", name: "Qxf7#" },    // 4. Qxf7# Checkmate
+];
+
+async function playScholarsMate(
+	currentFen: string,
+	gameId: number | null,
+	setFen: (fen: string) => void,
+	setRes: (result: string) => void,
+	setMoves: (updater: (prev: { white: string; black?: string }[]) => { white: string; black?: string }[]) => void
+) {
+	let fen = currentFen;
+	
+	for (let i = 0; i < SCHOLARS_MATE_MOVES.length; i++) {
+		const { from, to, name } = SCHOLARS_MATE_MOVES[i];
+		const data = await make_move(fen, from, to, gameId);
+		
+		if (!data) {
+			console.error(`Scholar's Mate move ${i + 1} failed: ${name}`);
+			return;
+		}
+		
+		fen = data.fen;
+		setFen(fen);
+		
+		// Add move to history
+		const isWhiteMove = i % 2 === 0;
+		setMoves(prevMoves => {
+			const newMoves = [...prevMoves];
+			const moveNum = Math.floor(i / 2) + 1;
+			
+			if (isWhiteMove) {
+				if (newMoves.length < moveNum) {
+					newMoves.push({ white: name });
+				} else {
+					newMoves[moveNum - 1].white = name;
+				}
+			} else {
+				if (newMoves.length < moveNum) {
+					newMoves.push({ white: "", black: name });
+				} else {
+					newMoves[moveNum - 1].black = name;
+				}
+			}
+			return newMoves;
+		});
+		
+		// Add small delay between moves for visibility
+		await new Promise(resolve => setTimeout(resolve, 500));
+	}
+	
+	// Set final result
+	setRes("checkmate");
+}
+
 interface GameSettings {
 	opponent: 'bot' | 'live'
 	difficulty: 'easy' | 'medium' | 'hard'
@@ -205,6 +267,7 @@ function GamePage() {
 	const [moves, setMoves] = useState<{ white: string; black?: string }[]>([]);
 	const [resignError, setResignError] = useState<string>("");
 	const [isResigning, setIsResigning] = useState(false);
+	const [isPlayingScholarsMate, setIsPlayingScholarsMate] = useState(false);
 
 	const handleResign = async () => {
 		setResignError("");
@@ -229,6 +292,17 @@ function GamePage() {
 		}
 
 		setRes(data.result);
+	}
+
+	const handleScholarsMate = async () => {
+		if (result !== "ongoing") {
+			console.log("Game is not ongoing");
+			return;
+		}
+
+		setIsPlayingScholarsMate(true);
+		await playScholarsMate(fen, gameId, setFen, setRes, setMoves);
+		setIsPlayingScholarsMate(false);
 	}
 
 
@@ -486,8 +560,12 @@ function GamePage() {
 						>
 							{isResigning ? 'Resigning...' : t('game.resign')}
 						</button>
-						<button className="w-full bg-[#0f0f13] border border-[#2e2e40] text-[#8892a4] rounded-lg text-sm cursor-pointer hover:border-[#e2b96f] hover:text-[#e2b96f]">
-							{t('game.draw')}
+					<button 
+						onClick={handleScholarsMate}
+						disabled={isPlayingScholarsMate || result !== "ongoing"}
+						className="w-full bg-[#0f0f13] border border-[#2e2e40] text-[#8892a4] rounded-lg text-sm cursor-pointer hover:border-[#e2b96f] hover:text-[#e2b96f] disabled:opacity-50 disabled:cursor-not-allowed"
+					>
+						{isPlayingScholarsMate ? 'Scholar\'s Mate...' : t('game.draw')}
 						</button>
 						{resignError && (
 							<p className="text-[#e25f5f] text-xs m-0">{resignError}</p>
