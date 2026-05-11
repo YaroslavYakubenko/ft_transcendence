@@ -68,6 +68,33 @@ async function do_promotion(fen: string, move: string, key: string) {
 
 async function legal_moves(fen: string) {
 	const res = await fetch("http://localhost:8000/legal-moves/", {
+		async function resign_game(gameId: number | null, token: string | null) {
+			if (!gameId || !token) {
+				console.error("Game ID or token missing");
+				return null;
+			}
+
+			const res = await fetch("http://localhost:8000/resign/", {
+				method: "POST",
+				headers: {
+					"Authorization": `Token ${token}`,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					game_id: gameId,
+				}),
+			});
+
+			const data = await res.json();
+
+			if (data.error) {
+				console.error(data.error);
+				return null;
+			}
+
+			return data;
+		}
+
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
@@ -149,6 +176,9 @@ function GamePage() {
 	const theme = BOARD_THEMES[settings.boardTheme]
 	const pieces = PIECE_THEMES[settings.pieceTheme]
 
+	// Get game_id from location state (could be null for bot games)
+	const gameId = (location.state as any)?.game_id || null
+
 	const getPromotionOptions = (prefix: "w" | "b") =>
 		ppieces.map((p) => ({
 		piece: `${prefix}${p}` as keyof typeof pieces,
@@ -166,6 +196,7 @@ function GamePage() {
 
 	const [highlightSquares, setHighlightSquares] = useState<string[]>([]);
 	const [highlightSquares2, setHighlightSquares2] = useState<string[]>([]);
+	const [moves, setMoves] = useState<{ white: string; black?: string }[]>([]);
 
 
 	const customSquareStyles = useMemo(() => {
@@ -249,6 +280,28 @@ function GamePage() {
 
 					return;
 				}
+				
+				// Add move to history
+				const moveNotation = `${sourceSquare}-${targetSquare}`;
+				const isWhiteMove = fen.split(" ")[1] === "w";
+				
+				setMoves(prevMoves => {
+					const newMoves = [...prevMoves];
+					if (isWhiteMove) {
+						// White just moved
+						newMoves.push({ white: moveNotation });
+					} else {
+						// Black just moved, add to last white move
+						if (newMoves.length > 0) {
+							newMoves[newMoves.length - 1].black = moveNotation;
+						} else {
+							// Shouldn't happen, but handle it
+							newMoves.push({ white: "", black: moveNotation });
+						}
+					}
+					return newMoves;
+				});
+				
 				setFen(data.fen);
 				setRes(data.result);
 				setPro({move: data.promotion, x: -1, y: -1, pre: ''})
@@ -260,7 +313,6 @@ function GamePage() {
 
 	};
 	
-	const [moves] = useState<string[]>([])
 	const { t } = useTranslation()
 
 	return (
@@ -327,6 +379,25 @@ function GamePage() {
 												console.log(getPromotionOptions(promotion.pre as "w" | "b"))
 												do_promotion(fen, promotion.move, promo).then((data) => {
 													if (!data) return;
+													
+													// Add promotion move to history
+													const moveNotation = `${promotion.move}-${promo.toUpperCase()}`;
+													const isWhiteMove = fen.split(" ")[1] === "w";
+													
+													setMoves(prevMoves => {
+														const newMoves = [...prevMoves];
+														if (isWhiteMove) {
+															newMoves.push({ white: moveNotation });
+														} else {
+															if (newMoves.length > 0) {
+																newMoves[newMoves.length - 1].black = moveNotation;
+															} else {
+																newMoves.push({ white: "", black: moveNotation });
+															}
+														}
+														return newMoves;
+													});
+													
 													setFen(data.fen);
 													setRes(data.result);
 													setPro({move: "", x: -1, y: -1, pre: ''}); // IMPORTANT: clear UI
@@ -359,19 +430,34 @@ function GamePage() {
 
 					{/* Right - move history + buttons */}
 					<div className="flex flex-col gap-3 w-48">
-						<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl p-3 flex-1">
+						<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl p-3 flex-1 overflow-y-auto max-h-[500px]">
 							<p className="text-[#8896a4] text-xs mb-2 m-0">{t('game.movesHistory')}</p>
 							{moves.length === 0 ? (
 								<p className="text-[#2e2e40] text-xs">{t('game.noMoves')}</p>
 							) : (
 								<div className="text-[#f0eeff] text-xs space-y-1">
-									{moves.map((move, i) => (
-										<span key={i} className="block">{move}</span>
+									{moves.map((movePair, i) => (
+										<div key={i} className="flex gap-2">
+											<span className="text-[#8896a4] min-w-[1.5rem]">{i + 1}.</span>
+											<span className="text-[#e2b96f]">{movePair.white}</span>
+											{movePair.black && <span className="text-[#8896a4]">{movePair.black}</span>}
+										</div>
 									))}
 								</div>
 							)}
 						</div>
-						<button className="w-full bg-[#0f0f13] border border-[#e25f5f] text-[#e25f5f] rounded-lg text-sm cursor-pointer hover:bg-[#e25f5f] hover:text-[#f0eeff]">
+						<button 
+							onClick={() => {
+								if (gameId) {
+									resign_game(gameId, localStorage.getItem('token')).then((data) => {
+										if (data) {
+											setRes(data.result);
+										}
+									});
+								}
+							}}
+							className="w-full bg-[#0f0f13] border border-[#e25f5f] text-[#e25f5f] rounded-lg text-sm cursor-pointer hover:bg-[#e25f5f] hover:text-[#f0eeff]"
+						>
 							{t('game.resign')}
 						</button>
 						<button className="w-full bg-[#0f0f13] border border-[#2e2e40] text-[#8892a4] rounded-lg text-sm cursor-pointer hover:border-[#e2b96f] hover:text-[#e2b96f]">

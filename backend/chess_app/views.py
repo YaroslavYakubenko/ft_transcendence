@@ -1,5 +1,7 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import permission_classes
 import chess
 from .models import Game, Move
 from django.utils import timezone
@@ -227,3 +229,62 @@ def legal_moves(request):
 		})
 
 # return 2, 1 not occupied, 1 occupied 
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def resign_game(request):
+	"""Handle game resignation - resigner loses immediately"""
+	game_id = request.data.get('game_id')
+
+	if not game_id:
+		return Response({"error": "game_id is required"}, status=400)
+
+	try:
+		game = Game.objects.get(id=game_id)
+	except Game.DoesNotExist:
+		return Response({"error": "Game not found"}, status=404)
+
+	# Check if game is already completed
+	if game.status == 'completed':
+		return Response({"error": "Game is already completed"}, status=400)
+
+	# Determine which player resigned
+	if game.white_player == request.user:
+		# White player resigned, black wins
+		game.result = 'black_win'
+		resigner = game.white_player
+		winner = game.black_player
+	elif game.black_player == request.user:
+		# Black player resigned, white wins
+		game.result = 'white_win'
+		resigner = game.black_player
+		winner = game.white_player
+	else:
+		return Response({"error": "You are not a player in this game"}, status=403)
+
+	# Update player stats
+	winner.wins += 1
+	resigner.losses += 1
+
+	# Update ELO
+	elo_change_winner, elo_change_loser = calculate_elo_change(
+		winner.elo, resigner.elo
+	)
+	winner.elo += elo_change_winner
+	resigner.elo += elo_change_loser
+
+	# Save player changes
+	winner.save()
+	resigner.save()
+
+	# Mark game as completed
+	game.status = 'completed'
+	game.ended_at = timezone.now()
+	game.save()
+
+	return Response({
+		"status": "success",
+		"result": game.result,
+		"message": f"{resigner.username or resigner.email} resigned. {winner.username or winner.email} wins!"
+	})

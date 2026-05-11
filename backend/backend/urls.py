@@ -19,6 +19,7 @@ from django.urls import path, include
 from django.conf import settings # access to settings (MEDIA_URL, MEDIA_ROOT)
 from django.conf.urls.static import static #function for distributing media files
 from chess_app.views import make_move, do_promotion, legal_moves
+from chess_app.views import resign_game
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -26,6 +27,7 @@ urlpatterns = [
     path('make-move/', make_move, name='make_move'),
     path('do-promotion/', do_promotion, name='do_promotion'),
     path('legal-moves/', legal_moves, name='legal_moves'),
+    path('resign/', resign_game, name='resign_game'),
     path('', include('django_prometheus.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) # dustribute downloaded files by URL
 
