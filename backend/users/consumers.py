@@ -181,3 +181,6 @@ class GameConsumer(AsyncWebsocketConsumer):
 
     async def game_message(self, event):
         pass    # TODO: forward move updates to the browser
+
+    async def game_over(self, event):
+        await self.send_json(event["payload"])

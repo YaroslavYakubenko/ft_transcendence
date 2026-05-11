@@ -2,9 +2,11 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from django.utils import timezone
 from datetime import timedelta
+import chess
 
 from users.models import User
 from .models import Game
+from .game_results import get_game_result
 
 
 class CreateGameTests(APITestCase):
@@ -92,7 +94,10 @@ class ResignGameTests(APITestCase):
 		)
 		
 		self.assertEqual(response.status_code, status.HTTP_200_OK)
-		self.assertEqual(response.data["result"], "black_win")
+		self.assertTrue(response.data["game_over"])
+		self.assertEqual(response.data["result"]["winner"], "black")
+		self.assertEqual(response.data["result"]["termination"], "resignation")
+		self.assertEqual(response.data["result"]["pgn_result"], "0-1")
 		
 		# Verify game status
 		self.game.refresh_from_db()
@@ -123,7 +128,10 @@ class ResignGameTests(APITestCase):
 		)
 		
 		self.assertEqual(response.status_code, status.HTTP_200_OK)
-		self.assertEqual(response.data["result"], "white_win")
+		self.assertTrue(response.data["game_over"])
+		self.assertEqual(response.data["result"]["winner"], "white")
+		self.assertEqual(response.data["result"]["termination"], "resignation")
+		self.assertEqual(response.data["result"]["pgn_result"], "1-0")
 		
 		# Verify game status
 		self.game.refresh_from_db()
@@ -212,3 +220,14 @@ class ResignGameTests(APITestCase):
 		# Black (lower rated) won, should gain more ELO
 		self.assertLess(self.white_player.elo, initial_white_elo)
 		self.assertGreater(self.black_player.elo, initial_black_elo)
+
+
+class GameResultHelperTests(APITestCase):
+	def test_get_game_result_detects_stalemate(self):
+		board = chess.Board("7k/5K2/6Q1/8/8/8/8/8 b - - 0 1")
+		result = get_game_result(board)
+
+		self.assertIsNotNone(result)
+		self.assertEqual(result["winner"], None)
+		self.assertEqual(result["termination"], "stalemate")
+		self.assertEqual(result["pgn_result"], "1/2-1/2")

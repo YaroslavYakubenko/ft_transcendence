@@ -3,22 +3,30 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
 import chess
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from .models import Game, Move
 from django.utils import timezone
 from users.elo_utils import calculate_elo_change, calculate_draw_elo
 from users.models import User
+from .game_results import get_game_result, get_resignation_result
 
-def check_gameover(board):
 
-	if board.is_checkmate():
-		result = "checkmate"
-	elif board.is_stalemate():
-		result = "stalemate"
-	elif board.is_insufficient_material():
-		result = "draw"
-	else:
-		result = "ongoing"
-	return result
+def broadcast_game_over(game_id, payload):
+	if not game_id:
+		return
+
+	channel_layer = get_channel_layer()
+	if channel_layer is None:
+		return
+
+	async_to_sync(channel_layer.group_send)(
+		f"game_{game_id}",
+		{
+			"type": "game_over",
+			"payload": payload,
+		},
+	)
 
 def check_promotion(board, _s, _t):
 
@@ -43,43 +51,34 @@ def check_promotion(board, _s, _t):
 	return False
 
 
-def update_player_stats(game, result):
-	"""Update player stats and ELO after game completion"""
+def finalize_game(game, game_result):
+	"""Update player stats and ELO after game completion."""
 	white_player = game.white_player
 	black_player = game.black_player
 	
-	if result == "checkmate":
-		# Determine winner from FEN/board state
-		board = chess.Board(game.current_fen)
-		# In checkmate, the player who just moved won, but we need to check whose turn it is
-		# If it's white's turn after black's move, black won
-		if board.turn == chess.WHITE:
-			# Black won
-			game.result = "black_win"
-			black_player.wins += 1
-			white_player.losses += 1
-			# Update ELO
-			elo_change_white, elo_change_black = calculate_elo_change(
-				white_player.elo, black_player.elo
-			)
-			white_player.elo += elo_change_white
-			black_player.elo += elo_change_black
-		else:
-			# White won
-			game.result = "white_win"
-			white_player.wins += 1
-			black_player.losses += 1
-			# Update ELO
-			elo_change_white, elo_change_black = calculate_elo_change(
-				white_player.elo, black_player.elo
-			)
-			white_player.elo += elo_change_white
-			black_player.elo += elo_change_black
-	elif result == "stalemate" or result == "draw":
+	winner = game_result.get("winner")
+	if winner == "white":
+		game.result = "white_win"
+		white_player.wins += 1
+		black_player.losses += 1
+		elo_change_white, elo_change_black = calculate_elo_change(
+			white_player.elo, black_player.elo
+		)
+		white_player.elo += elo_change_white
+		black_player.elo += elo_change_black
+	elif winner == "black":
+		game.result = "black_win"
+		black_player.wins += 1
+		white_player.losses += 1
+		elo_change_white, elo_change_black = calculate_elo_change(
+			white_player.elo, black_player.elo
+		)
+		white_player.elo += elo_change_white
+		black_player.elo += elo_change_black
+	else:
 		game.result = "draw"
 		white_player.draws += 1
 		black_player.draws += 1
-		# Update ELO for draw
 		elo_change_white, elo_change_black = calculate_draw_elo(
 			white_player.elo, black_player.elo
 		)
@@ -111,17 +110,22 @@ def make_move(request):
 	board = chess.Board(fen)
 	move = chess.Move.from_uci(_s + _t)
 	if check_promotion(board, _s, _t) == True:
-		return Response({
+		promotion_result = {
+			"type": "move",
+			"game_over": False,
 			"fen": fen,
-			"result": "ongoing",
-			"promotion": (_s + _t)
+			"promotion": (_s + _t),
+			"result": None,
+		}
+		return Response({
+			**promotion_result,
 		})
 
 	if move not in board.legal_moves:
 		return Response({"log": "illegal move"})
 
 	board.push(move)
-	res = check_gameover(board)
+	game_result = get_game_result(board)
 	
 	# Save move to database if game_id is provided
 	if game_id:
@@ -139,9 +143,16 @@ def make_move(request):
 			# Update game FEN and status
 			game.current_fen = board.fen()
 			
-			if res != "ongoing":
+			if game_result is not None:
 				# Game is over, update stats
-				update_player_stats(game, res)
+				finalize_game(game, game_result)
+				payload = {
+					"type": "game_over",
+					"game_over": True,
+					"result": game_result,
+					"fen": board.fen(),
+				}
+				broadcast_game_over(game.id, payload)
 			elif game.status == 'pending':
 				game.status = 'ongoing'
 				game.started_at = timezone.now()
@@ -149,11 +160,14 @@ def make_move(request):
 		except Game.DoesNotExist:
 			pass  # Continue without saving if game doesn't exist
 
-	return Response({
+	response_data = {
+		"type": "game_over" if game_result is not None else "move",
+		"game_over": game_result is not None,
 		"fen": board.fen(),
-		"result": res,
-		"promotion": ''
-		})
+		"promotion": '',
+		"result": game_result,
+	}
+	return Response(response_data)
 
 @api_view(['POST'])
 def do_promotion(request):
@@ -171,7 +185,7 @@ def do_promotion(request):
 		return Response({"log": "illegal move"})
 
 	board.push(move)
-	res = check_gameover(board)
+	game_result = get_game_result(board)
 	
 	# Save promotion move to database if game_id is provided
 	if game_id:
@@ -190,18 +204,28 @@ def do_promotion(request):
 			# Update game FEN and status
 			game.current_fen = board.fen()
 			
-			if res != "ongoing":
+			if game_result is not None:
 				# Game is over, update stats
-				update_player_stats(game, res)
+				finalize_game(game, game_result)
+				payload = {
+					"type": "game_over",
+					"game_over": True,
+					"result": game_result,
+					"fen": board.fen(),
+				}
+				broadcast_game_over(game.id, payload)
 			game.save()
 		except Game.DoesNotExist:
 			pass  # Continue without saving if game doesn't exist
 	
-	return Response({
+	response_data = {
+		"type": "game_over" if game_result is not None else "move",
+		"game_over": game_result is not None,
 		"fen": board.fen(),
-		"result": res,
-		"promotion": ''
-		})
+		"promotion": '',
+		"result": game_result,
+	}
+	return Response(response_data)
 
 
 @api_view(['POST'])
@@ -323,8 +347,19 @@ def resign_game(request):
 	game.ended_at = timezone.now()
 	game.save()
 
+	game_result = get_resignation_result("black" if game.white_player == request.user else "white")
+	payload = {
+		"type": "game_over",
+		"game_over": True,
+		"result": game_result,
+		"fen": game.current_fen,
+	}
+	broadcast_game_over(game.id, payload)
+
 	return Response({
 		"status": "success",
-		"result": game.result,
-		"message": f"{resigner.username or resigner.email} resigned. {winner.username or winner.email} wins!"
+		"type": "game_over",
+		"game_over": True,
+		"result": game_result,
+		"fen": game.current_fen,
 	})

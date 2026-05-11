@@ -1,6 +1,5 @@
-import { useState } from "react"
-import { useMemo } from "react";
-import { useLocation } from "react-router-dom"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
 import { Chessboard, defaultPieces} from "react-chessboard"
 import { useAuth } from "../context/AuthContext"
 import Navbar from "../components/Navbar"
@@ -8,6 +7,22 @@ import Footer from "../components/Footer"
 import { useTranslation } from "react-i18next"
 import type { PieceHandlerArgs } from "react-chessboard"
 import type { PieceDropHandlerArgs } from "react-chessboard"
+
+
+interface GameResult {
+	winner: "white" | "black" | null
+	termination: string
+	message: string
+	pgn_result: string
+}
+
+interface GameEventPayload {
+	type?: string
+	game_over?: boolean
+	result?: GameResult | null
+	fen?: string
+	promotion?: string
+}
 
 
 async function make_move(fen: string, from: string, to: string, gameId?: number | null) {
@@ -132,7 +147,7 @@ async function playScholarsMate(
 	currentFen: string,
 	gameId: number | null,
 	setFen: (fen: string) => void,
-	setRes: (result: string) => void,
+	setGameResult: (result: GameResult) => void,
 	setMoves: (updater: (prev: { white: string; black?: string }[]) => { white: string; black?: string }[]) => void
 ) {
 	let fen = currentFen;
@@ -148,6 +163,9 @@ async function playScholarsMate(
 		
 		fen = data.fen;
 		setFen(fen);
+		if (data.game_over && data.result) {
+			setGameResult(data.result)
+		}
 		
 		// Add move to history
 		const isWhiteMove = i % 2 === 0;
@@ -174,9 +192,6 @@ async function playScholarsMate(
 		// Add small delay between moves for visibility
 		await new Promise(resolve => setTimeout(resolve, 500));
 	}
-	
-	// Set final result
-	setRes("checkmate");
 }
 
 interface GameSettings {
@@ -228,6 +243,7 @@ const BOARD_THEMES = {
 
 function GamePage() {
 	const { user, token } = useAuth()
+	const navigate = useNavigate()
 	const location = useLocation()
 	const settings: GameSettings = location.state ?? {
 		opponent: 'bot',
@@ -239,6 +255,7 @@ function GamePage() {
 	}
 	const theme = BOARD_THEMES[settings.boardTheme]
 	const pieces = PIECE_THEMES[settings.pieceTheme]
+	const wsRef = useRef<WebSocket | null>(null)
 
 	const locationState = (location.state as Record<string, unknown>) ?? {}
 	const gameIdFromState =
@@ -254,7 +271,7 @@ function GamePage() {
 	}))
 
 	const [fen, setFen] = useState("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
-	const [result, setRes] = useState<string>("ongoing")
+	const [gameResult, setGameResult] = useState<GameResult | null>(null)
 	const [promotion, setPro] = useState({
 		move: "",
 		x: -1,
@@ -269,8 +286,47 @@ function GamePage() {
 	const [isResigning, setIsResigning] = useState(false);
 	const [isPlayingScholarsMate, setIsPlayingScholarsMate] = useState(false);
 
+	useEffect(() => {
+		if (!gameId || !token) {
+			return
+		}
+
+		if (wsRef.current) {
+			wsRef.current.close()
+			wsRef.current = null
+		}
+
+		const ws = new WebSocket(`wss://localhost:8443/ws/game/${gameId}/?token=${token}`)
+
+		ws.onmessage = (event) => {
+			const data = JSON.parse(event.data) as GameEventPayload
+			if (data.type === "game_over" && data.result) {
+				setGameResult(data.result)
+				if (data.fen) {
+					setFen(data.fen)
+				}
+			}
+		}
+
+		ws.onerror = (event) => console.error("Game websocket error:", event)
+		ws.onclose = () => console.log("Game websocket closed")
+
+		wsRef.current = ws
+
+		return () => {
+			ws.close()
+			if (wsRef.current === ws) {
+				wsRef.current = null
+			}
+		}
+	}, [gameId, token])
+
 	const handleResign = async () => {
 		setResignError("");
+
+		if (gameResult) {
+			return
+		}
 
 		if (!token) {
 			setResignError("You must be logged in to resign.");
@@ -291,17 +347,22 @@ function GamePage() {
 			return;
 		}
 
-		setRes(data.result);
+		if (data.result) {
+			setGameResult(data.result)
+			if (data.fen) {
+				setFen(data.fen)
+			}
+		}
 	}
 
 	const handleScholarsMate = async () => {
-		if (result !== "ongoing") {
+		if (gameResult) {
 			console.log("Game is not ongoing");
 			return;
 		}
 
 		setIsPlayingScholarsMate(true);
-		await playScholarsMate(fen, gameId, setFen, setRes, setMoves);
+		await playScholarsMate(fen, gameId, setFen, setGameResult, setMoves)
 		setIsPlayingScholarsMate(false);
 	}
 
@@ -345,6 +406,9 @@ function GamePage() {
 				setHighlightSquares2([]);
 				return;
 			}
+			if (gameResult) {
+				return
+			}
 			const currentFen = fen;
 			legal_moves(currentFen).then((data) => {
 				if (!piece)
@@ -362,6 +426,8 @@ function GamePage() {
 
 		onPieceDrop: ({ sourceSquare, targetSquare }: PieceDropHandlerArgs) => {
 			if (!sourceSquare || !targetSquare)
+				return false;
+			if (gameResult)
 				return false;
 			make_move(fen, sourceSquare, targetSquare, gameId).then((data) => {
 				if (!data)
@@ -387,6 +453,9 @@ function GamePage() {
 
 					return;
 				}
+				if (data.game_over && data.result) {
+					setGameResult(data.result)
+				}
 				
 				// Add move to history
 				const moveNotation = `${sourceSquare}-${targetSquare}`;
@@ -410,7 +479,6 @@ function GamePage() {
 				});
 				
 				setFen(data.fen);
-				setRes(data.result);
 				setPro({move: data.promotion, x: -1, y: -1, pre: ''})
 			});
 			setHighlightSquares([]);
@@ -486,6 +554,9 @@ function GamePage() {
 												console.log(getPromotionOptions(promotion.pre as "w" | "b"))
 												do_promotion(fen, promotion.move, promo, gameId).then((data) => {
 													if (!data) return;
+													if (data.game_over && data.result) {
+														setGameResult(data.result)
+													}
 													
 													// Add promotion move to history
 													const moveNotation = `${promotion.move}-${promo.toUpperCase()}`;
@@ -506,7 +577,6 @@ function GamePage() {
 													});
 													
 													setFen(data.fen);
-													setRes(data.result);
 													setPro({move: "", x: -1, y: -1, pre: ''}); // IMPORTANT: clear UI
 												});
 											}} >
@@ -562,7 +632,7 @@ function GamePage() {
 						</button>
 					<button 
 						onClick={handleScholarsMate}
-						disabled={isPlayingScholarsMate || result !== "ongoing"}
+						disabled={isPlayingScholarsMate || Boolean(gameResult)}
 						className="w-full bg-[#0f0f13] border border-[#2e2e40] text-[#8892a4] rounded-lg text-sm cursor-pointer hover:border-[#e2b96f] hover:text-[#e2b96f] disabled:opacity-50 disabled:cursor-not-allowed"
 					>
 						{isPlayingScholarsMate ? 'Scholar\'s Mate...' : t('game.draw')}
@@ -572,23 +642,27 @@ function GamePage() {
 						)}
 					</div>
 
-					{/* gameover	make better with rematch option and stuff*/}
-					{result !== "ongoing" && (
-						<div style={{
-							position: "absolute",
-							top: 0,
-							left: 0,
-							right: 0,
-							bottom: 0,
-							background: "rgba(0,0,0,0.6)",
-							color: "white",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							fontSize: "32px",
-							fontWeight: "bold"
-						}}>
-							Game Over: {result}
+					{gameResult && (
+						<div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/75 px-4">
+							<div className="w-full max-w-md rounded-2xl border border-[#2e2e40] bg-[#1a1a24] p-6 text-center shadow-2xl">
+								<p className="text-[#8896a4] text-xs uppercase tracking-[0.3em] mb-3">Game Over</p>
+								<h2 className="text-[#f0eeff] text-2xl font-semibold mb-2">{gameResult.message}</h2>
+								<p className="text-[#e2b96f] text-lg font-mono mb-4">PGN result: {gameResult.pgn_result}</p>
+								<div className="flex flex-col sm:flex-row gap-3 justify-center">
+									<button
+										onClick={() => navigate('/lobby', { state: settings })}
+										className="rounded-lg border border-[#e2b96f] bg-[#e2b96f] px-4 py-2 text-sm font-medium text-[#0f0f13] cursor-pointer"
+									>
+										Rematch
+									</button>
+									<button
+										onClick={() => navigate('/lobby')}
+										className="rounded-lg border border-[#2e2e40] bg-[#0f0f13] px-4 py-2 text-sm font-medium text-[#f0eeff] cursor-pointer"
+									>
+										New Game
+									</button>
+								</div>
+							</div>
 						</div>
 					)}
 				</div>
