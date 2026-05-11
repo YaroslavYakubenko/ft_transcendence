@@ -51,7 +51,7 @@ INSTALLED_APPS = [
     'corsheaders', # can talk frontend (port: 5173) to backend (port: 8000)
     'channels',
     'users', #our folder, which we created
-	'chess_app', #our folder, which we created 
+	'chess_app.apps.ChessAppConfig', #our folder, which we created 
 ]
 
 MIDDLEWARE = [

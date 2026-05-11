@@ -1,6 +1,8 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 import chess
+from .models import Game, Move
+from django.utils import timezone
 
 def check_gameover(board):
 
@@ -43,6 +45,7 @@ def make_move(request):
 	fen = request.data.get('fen')
 	_s = request.data.get('from')
 	_t = request.data.get('to')
+	game_id = request.data.get('game_id')  # Optional: save to database if provided
 
 	if not fen or not _s or not _t:
 		return Response({"error": "missing data"}, status=400)
@@ -53,7 +56,6 @@ def make_move(request):
 	board = chess.Board(fen)
 	move = chess.Move.from_uci(_s + _t)
 	if check_promotion(board, _s, _t) == True:
-		print('here')
 		return Response({
 			"fen": fen,
 			"result": "ongoing",
@@ -65,6 +67,32 @@ def make_move(request):
 
 	board.push(move)
 	res = check_gameover(board)
+	
+	# Save move to database if game_id is provided
+	if game_id:
+		try:
+			game = Game.objects.get(id=game_id)
+			move_count = game.moves.count() + 1
+			Move.objects.create(
+				game=game,
+				from_square=_s,
+				to_square=_t,
+				fen_before=fen,
+				fen_after=board.fen(),
+				move_number=move_count
+			)
+			# Update game FEN and status
+			game.current_fen = board.fen()
+			game.result = res
+			if res != "ongoing":
+				game.status = 'completed'
+				game.ended_at = timezone.now()
+			elif game.status == 'pending':
+				game.status = 'ongoing'
+				game.started_at = timezone.now()
+			game.save()
+		except Game.DoesNotExist:
+			pass  # Continue without saving if game doesn't exist
 
 	return Response({
 		"fen": board.fen(),
@@ -74,27 +102,46 @@ def make_move(request):
 
 @api_view(['POST'])
 def do_promotion(request):
-	print("here")
-
 	fen = request.data.get('fen')
 	_move = request.data.get('move')
 	key = request.data.get('key')
-
-	print("here")
-
+	game_id = request.data.get('game_id')  # Optional: save to database if provided
 
 	if not fen or not _move or not key:
 		return Response({"error": "missing data"}, status=400)
 
 	board = chess.Board(fen)
 	move = chess.Move.from_uci(_move + key)
-	print(move)
 	if move not in board.legal_moves:
 		return Response({"log": "illegal move"})
 
 	board.push(move)
-	print(board)
 	res = check_gameover(board)
+	
+	# Save promotion move to database if game_id is provided
+	if game_id:
+		try:
+			game = Game.objects.get(id=game_id)
+			move_count = game.moves.count() + 1
+			Move.objects.create(
+				game=game,
+				from_square=_move,
+				to_square=key,
+				promotion_piece=None,  # Could extract from move if needed
+				fen_before=fen,
+				fen_after=board.fen(),
+				move_number=move_count
+			)
+			# Update game FEN and status
+			game.current_fen = board.fen()
+			game.result = res
+			if res != "ongoing":
+				game.status = 'completed'
+				game.ended_at = timezone.now()
+			game.save()
+		except Game.DoesNotExist:
+			pass  # Continue without saving if game doesn't exist
+	
 	return Response({
 		"fen": board.fen(),
 		"result": res,
