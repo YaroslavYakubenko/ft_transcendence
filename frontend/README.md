@@ -71,7 +71,8 @@ Configuration in frontend/.env:
 ## Known Limitations
 
 - Chat is currently a placeholder in the frontend.
-- Game statistics/leaderboard currently use mock data.
+- Game statistics, match history, and leaderboard are fetched from the backend API.
+- Chess resign/move flows depend on the backend game endpoints being available.
 - Additional hardening steps are required for production deployment.
 
 ## Why This Stack
