@@ -3,6 +3,7 @@ from rest_framework.response import Response
 import chess
 from .models import Game, Move
 from django.utils import timezone
+from users.elo_utils import calculate_elo_change, calculate_draw_elo
 
 def check_gameover(board):
 
@@ -37,6 +38,57 @@ def check_promotion(board, _s, _t):
 		return True
 
 	return False
+
+
+def update_player_stats(game, result):
+	"""Update player stats and ELO after game completion"""
+	white_player = game.white_player
+	black_player = game.black_player
+	
+	if result == "checkmate":
+		# Determine winner from FEN/board state
+		board = chess.Board(game.current_fen)
+		# In checkmate, the player who just moved won, but we need to check whose turn it is
+		# If it's white's turn after black's move, black won
+		if board.turn == chess.WHITE:
+			# Black won
+			game.result = "black_win"
+			black_player.wins += 1
+			white_player.losses += 1
+			# Update ELO
+			elo_change_white, elo_change_black = calculate_elo_change(
+				white_player.elo, black_player.elo
+			)
+			white_player.elo += elo_change_white
+			black_player.elo += elo_change_black
+		else:
+			# White won
+			game.result = "white_win"
+			white_player.wins += 1
+			black_player.losses += 1
+			# Update ELO
+			elo_change_white, elo_change_black = calculate_elo_change(
+				white_player.elo, black_player.elo
+			)
+			white_player.elo += elo_change_white
+			black_player.elo += elo_change_black
+	elif result == "stalemate" or result == "draw":
+		game.result = "draw"
+		white_player.draws += 1
+		black_player.draws += 1
+		# Update ELO for draw
+		elo_change_white, elo_change_black = calculate_draw_elo(
+			white_player.elo, black_player.elo
+		)
+		white_player.elo += elo_change_white
+		black_player.elo += elo_change_black
+	
+	# Save all changes
+	white_player.save()
+	black_player.save()
+	game.status = 'completed'
+	game.ended_at = timezone.now()
+	game.save()
 
 
 # Django API endpoint - wraps your logic
@@ -83,14 +135,14 @@ def make_move(request):
 			)
 			# Update game FEN and status
 			game.current_fen = board.fen()
-			game.result = res
+			
 			if res != "ongoing":
-				game.status = 'completed'
-				game.ended_at = timezone.now()
+				# Game is over, update stats
+				update_player_stats(game, res)
 			elif game.status == 'pending':
 				game.status = 'ongoing'
 				game.started_at = timezone.now()
-			game.save()
+				game.save()
 		except Game.DoesNotExist:
 			pass  # Continue without saving if game doesn't exist
 
@@ -134,10 +186,10 @@ def do_promotion(request):
 			)
 			# Update game FEN and status
 			game.current_fen = board.fen()
-			game.result = res
+			
 			if res != "ongoing":
-				game.status = 'completed'
-				game.ended_at = timezone.now()
+				# Game is over, update stats
+				update_player_stats(game, res)
 			game.save()
 		except Game.DoesNotExist:
 			pass  # Continue without saving if game doesn't exist

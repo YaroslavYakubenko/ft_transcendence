@@ -6,12 +6,14 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate # check email + password and return object or none
 from .models import User, Friendship
 from .serializers import RegisterSerializer, UserSerializer, FriendSerializer
+from chess_app.models import Game
 import requests #for http request to GitHub API
 import secrets
 import logging
 from django.conf import settings #to read our settings.py
 from django.http import JsonResponse # for docker health check
 from django.db import connection
+from django.db import models
 
 
 logger = logging.getLogger(__name__)
@@ -315,3 +317,104 @@ def status_check(request):
                         },
                         status=status.HTTP_503_SERVICE_UNAVAILABLE,
                 )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_stats(request, user_id):
+	"""Get user statistics (wins, losses, draws, elo, rank)"""
+	try:
+		user = User.objects.get(id=user_id)
+	except User.DoesNotExist:
+		return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+	
+	from .serializers import UserStatsSerializer
+	serializer = UserStatsSerializer(user)
+	return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_match_history(request, user_id):
+	"""Get match history for a user with pagination"""
+	try:
+		user = User.objects.get(id=user_id)
+	except User.DoesNotExist:
+		return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+	
+	# Get page number from query params
+	page = request.query_params.get('page', 1)
+	page_size = 10
+	offset = (int(page) - 1) * page_size
+	
+	# Get games where this user participated
+	games = Game.objects.filter(
+		models.Q(white_player=user) | models.Q(black_player=user),
+		status='completed'
+	).order_by('-ended_at')[offset:offset+page_size]
+	
+	matches = []
+	for game in games:
+		# Determine opponent and result
+		if game.white_player == user:
+			opponent = game.black_player
+			is_white = True
+		else:
+			opponent = game.white_player
+			is_white = False
+		
+		# Determine result from user's perspective
+		if game.result == 'ongoing':
+			result = 'ongoing'
+		elif game.result == 'draw' or game.result == 'stalemate':
+			result = 'draw'
+		elif (game.result == 'white_win' and is_white) or (game.result == 'black_win' and not is_white):
+			result = 'win'
+		else:
+			result = 'loss'
+		
+		# Calculate duration
+		duration = "N/A"
+		if game.started_at and game.ended_at:
+			delta = game.ended_at - game.started_at
+			minutes = int(delta.total_seconds() / 60)
+			duration = f"{minutes} min"
+		
+		matches.append({
+			'id': game.id,
+			'opponent_name': opponent.username or opponent.email,
+			'result': result,
+			'date': game.ended_at or game.created_at,
+			'started_at': game.started_at,
+			'ended_at': game.ended_at,
+			'duration': duration,
+		})
+	
+	from .serializers import MatchRecordSerializer
+	serializer = MatchRecordSerializer(matches, many=True)
+	return Response({
+		'matches': serializer.data,
+		'page': page,
+		'page_size': page_size,
+	})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_leaderboard(request):
+	"""Get leaderboard of top players by ELO rating"""
+	limit = request.query_params.get('limit', 50)
+	
+	try:
+		limit = int(limit)
+	except ValueError:
+		limit = 50
+	
+	# Get top players by ELO
+	top_players = User.objects.filter(
+		is_active=True
+	).order_by('-elo')[:limit]
+	
+	from .serializers import LeaderboardSerializer
+	serializer = LeaderboardSerializer(top_players, many=True)
+	return Response({'leaderboard': serializer.data})

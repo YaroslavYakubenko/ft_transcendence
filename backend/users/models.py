@@ -27,6 +27,12 @@ class User(AbstractBaseUser, PermissionsMixin):
 	is_active = models.BooleanField(default=True)
 	is_staff = models.BooleanField(default=False)
 	created_at = models.DateTimeField(auto_now_add=True) # time of registration
+	
+	# Game statistics
+	wins = models.IntegerField(default=0)
+	losses = models.IntegerField(default=0)
+	draws = models.IntegerField(default=0)
+	elo = models.IntegerField(default=1200)  # Standard starting ELO rating
 
 	USERNAME_FIELD = 'email' # login via email
 	REQUIRED_FIELDS = []

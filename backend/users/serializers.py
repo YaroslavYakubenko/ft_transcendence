@@ -3,6 +3,7 @@
 import re
 from rest_framework import serializers
 from .models import User, Friendship
+from chess_app.models import Game
 import os
 
 class RegisterSerializer(serializers.ModelSerializer): # accept and password and create user
@@ -29,8 +30,8 @@ class UserSerializer(serializers.ModelSerializer): # return the current user's d
 
 	class Meta:
 		model = User
-		fields = ('id', 'email', 'username', 'avatar', 'is_online')
-		read_only_fields = ('id', 'is_online')
+		fields = ('id', 'email', 'username', 'avatar', 'is_online', 'wins', 'losses', 'draws', 'elo')
+		read_only_fields = ('id', 'is_online', 'wins', 'losses', 'draws', 'elo')
 
 	def get_avatar(self, obj):
 		request = self.context.get('request') # has information about current HTTP request
@@ -57,3 +58,46 @@ class FriendSerializer(serializers.ModelSerializer): # return the list of friend
 		if obj.to_user.avatar and request:
 			return request.build_absolute_uri(obj.to_user.avatar.url)
 		return obj.to_user.oauth_avatar or ''
+
+
+class UserStatsSerializer(serializers.ModelSerializer):
+	"""Serializer for user statistics"""
+	rank = serializers.SerializerMethodField()
+	
+	class Meta:
+		model = User
+		fields = ('id', 'username', 'wins', 'losses', 'draws', 'elo', 'rank')
+	
+	def get_rank(self, obj):
+		# Calculate rank based on elo (higher elo = lower rank number)
+		rank = User.objects.filter(elo__gt=obj.elo).count() + 1
+		return rank
+
+
+class MatchRecordSerializer(serializers.Serializer):
+	"""Serializer for match history records"""
+	id = serializers.IntegerField()
+	opponent_name = serializers.CharField()
+	result = serializers.CharField()
+	date = serializers.DateTimeField()
+	duration = serializers.SerializerMethodField()
+	
+	def get_duration(self, obj):
+		if obj.get('started_at') and obj.get('ended_at'):
+			delta = obj['ended_at'] - obj['started_at']
+			minutes = int(delta.total_seconds() / 60)
+			return f"{minutes} min"
+		return "N/A"
+
+
+class LeaderboardSerializer(serializers.ModelSerializer):
+	"""Serializer for leaderboard entries"""
+	rank = serializers.SerializerMethodField()
+	
+	class Meta:
+		model = User
+		fields = ('id', 'username', 'wins', 'losses', 'draws', 'elo', 'rank')
+	
+	def get_rank(self, obj):
+		rank = User.objects.filter(elo__gt=obj.elo).count() + 1
+		return rank
