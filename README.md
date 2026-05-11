@@ -26,6 +26,14 @@ Rules of thumb:
 - Keep the root .env limited to values Docker Compose needs before containers start.
 - Use localhost HTTPS URLs in development so the frontend talks to Nginx, not directly to Django.
 
+## Data Persistence
+
+The primary application database is PostgreSQL and is persisted through the named Docker volume `postgres_data`.
+
+- Game records, user stats, match history, leaderboard data, friendships, and auth tokens live in PostgreSQL.
+- Uploaded media is persisted separately in the `media_data` volume.
+- SQLite is only available if `USE_SQLITE=True` is set explicitly in `backend/.env` for a local-only fallback.
+
 ## Relevant Directories
 
 - backend: Django project incl. API
@@ -95,9 +103,17 @@ Currently implemented endpoints:
 - PATCH /api/users/me/
 - DELETE /api/users/me/delete/
 - GET /api/users/<id>/
+- GET /api/users/<id>/stats/
+- GET /api/users/<id>/matches/
+- GET /api/leaderboard/
 - GET /api/friends/
 - POST /api/friends/<id>/
 - DELETE /api/friends/<id>/remove/
+- POST /create-game/
+- POST /resign/
+- POST /make-move/
+- POST /do-promotion/
+- POST /legal-moves/
 - GET /api/health/
 - GET /api/status/
 
@@ -158,8 +174,8 @@ Checked on: 2026-04-22
 
 Current repo/runtime state:
 
-- Git working tree is clean (`git status --short` returned no changes).
-- No Docker services are currently running (`docker compose ps` returned no active services).
+- Git working tree may vary by local changes, but the stack is intended to run through Docker Compose.
+- The PostgreSQL service uses a named volume, so persisted data survives container restarts.
 
 Implemented and working in codebase:
 
@@ -167,6 +183,8 @@ Implemented and working in codebase:
 - OAuth login (GitHub + 42) with server-side state validation.
 - Profile operations (get/update/delete) and avatar support.
 - Friends system (list/add/remove) with online status tracking.
+- Chess game creation, resignation, move tracking, and persistent match records.
+- Backend-driven user stats, match history, and leaderboard data.
 - Health endpoints (`/api/health/` and `/api/status/`).
 - Monitoring stack is configured in Compose and provisioned in Grafana (Prometheus, Grafana, Node Exporter, cAdvisor).
 
@@ -174,9 +192,7 @@ Missing or still in-progress:
 
 - Real chat backend and persistence (current chat API in frontend is a placeholder).
 - Real-time messaging/game transport (no WebSocket pipeline implemented yet).
-- Chess gameplay logic is incomplete in UI (board renders, but move handling is blocked).
-- Backend game domain is missing (matches, stats, leaderboard, achievements storage/APIs).
-- Frontend game stats, match history, and leaderboard are still mock/static data.
+- Some UI flows still depend on local page state and can be hardened further.
 - Online multiplayer/matchmaking flow is not implemented.
 - Tournament system is not implemented.
 - 2FA is not implemented.
@@ -206,13 +222,15 @@ Missing or still in-progress:
 
 ## Database backup and restore
 
-Create/restore a backup:
+Create/restore a backup of the persistent PostgreSQL data:
 
 ```bash
 ./scripts/backup_db.sh
 ./scripts/restore_db.sh backups/<backup-file>.sql
 curl -k https://localhost:8443/api/status/
 ```
+
+Use the backup script before major schema changes or when you want to move data between environments.
 
 ## Monitoring
 

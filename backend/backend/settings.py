@@ -98,7 +98,16 @@ CHANNEL_LAYERS = {
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-if os.environ.get('DB_NAME'): #our DB
+USE_SQLITE = os.environ.get('USE_SQLITE', 'False') == 'True'
+
+if USE_SQLITE:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+elif os.environ.get('DB_NAME'): #our DB
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -110,12 +119,10 @@ if os.environ.get('DB_NAME'): #our DB
         }
     }
 else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+    raise RuntimeError(
+        'Database configuration missing. Set DB_NAME/DB_USER/DB_PASSWORD for Postgres '
+        'or USE_SQLITE=True for a local SQLite database.'
+    )
 
 
 # Password validation

@@ -72,7 +72,7 @@ export async function getMatchHistory(userId: number, page: number = 1): Promise
 		const data = await response.json()
 		return (data.matches || []).map((match: any) => ({
 			id: match.id,
-			opponentName: match.opponent_name,
+			opponent_name: match.opponent_name,
 			result: match.result,
 			date: match.date,
 			duration: match.duration,
