@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import { getFriends, getMessages, sendMessage, type Friend, type ChatMessage } from "../api/social"
+import { getFriends, type Friend, type ChatMessage } from "../api/social"
 import { useTranslation } from "react-i18next"
 import { useAuth } from "../context/AuthContext"
 

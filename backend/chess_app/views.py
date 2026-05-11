@@ -6,6 +6,7 @@ import chess
 from .models import Game, Move
 from django.utils import timezone
 from users.elo_utils import calculate_elo_change, calculate_draw_elo
+from users.models import User
 
 def check_gameover(board):
 
@@ -229,6 +230,45 @@ def legal_moves(request):
 		})
 
 # return 2, 1 not occupied, 1 occupied 
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_game(request):
+	"""Create a new game and return game ID for move/resign tracking."""
+	opponent_type = request.data.get('opponent', 'bot')
+
+	if opponent_type == 'bot':
+		bot_user, _ = User.objects.get_or_create(
+			email='chess-bot@transcendence.local',
+			defaults={'username': 'ChessBot', 'is_active': True},
+		)
+		opponent = bot_user
+	elif opponent_type == 'live':
+		opponent_id = request.data.get('opponent_id')
+		if not opponent_id:
+			return Response({'error': 'opponent_id is required for live games'}, status=400)
+		try:
+			opponent = User.objects.get(id=opponent_id)
+		except User.DoesNotExist:
+			return Response({'error': 'Opponent not found'}, status=404)
+		if opponent == request.user:
+			return Response({'error': 'Cannot create a game against yourself'}, status=400)
+	else:
+		return Response({'error': 'Invalid opponent type'}, status=400)
+
+	game = Game.objects.create(
+		white_player=request.user,
+		black_player=opponent,
+		status='pending',
+		result='ongoing',
+	)
+
+	return Response({
+		'game_id': game.id,
+		'status': game.status,
+		'result': game.result,
+	}, status=201)
 
 
 @api_view(['POST'])

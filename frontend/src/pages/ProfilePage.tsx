@@ -95,7 +95,7 @@ function ProfilePage() {
                             {t(`profile.${match.result}`).toUpperCase()}
                           </span>
                         </td>
-                        <td className="px-6 py-3">{match.opponentName}</td>
+                        <td className="px-6 py-3">{match.opponent_name}</td>
                         <td className="px-6 py-3 text-[#8892a4]">{match.duration}</td>
                         <td className="px-6 py-3 text-[#8892a4]">{match.date}</td>
                       </tr>

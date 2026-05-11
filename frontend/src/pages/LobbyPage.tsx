@@ -3,16 +3,72 @@ import { useNavigate } from "react-router-dom"
 import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
 import { useTranslation } from "react-i18next"
+import { useAuth } from "../context/AuthContext"
+
+async function createGame(opponent: 'bot' | 'live', token: string | null) {
+	if (!token) {
+		return null
+	}
+
+	const response = await fetch("http://localhost:8000/create-game/", {
+		method: "POST",
+		headers: {
+			"Authorization": `Token ${token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({ opponent }),
+	})
+
+	const data = await response.json()
+	if (!response.ok || data.error) {
+		console.error(data.error || "Failed to create game")
+		return null
+	}
+
+	return data
+}
 
 function LobbyPage() {
 	const navigate = useNavigate()
+	const { token } = useAuth()
 	const [opponent, setOpponent] = useState<'bot' | 'live'>('bot')
 	const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
 	const [timer, setTimer] = useState<'none' | '3' | '5' | '10'>('none')
 	const [pieceColor, setPieceColor] = useState<'white' | 'black' | 'random'>('random')
 	const [boardTheme, setBoardTheme] = useState<'default' | 'green' | 'blue' | 'brown'>('default')
 	const [pieceTheme, setPieceTheme] = useState<'default' | 'simple'>('default')
+	const [isStarting, setIsStarting] = useState(false)
+	const [startError, setStartError] = useState("")
 	const { t } = useTranslation()
+
+	const handleStartGame = async () => {
+		setStartError("")
+		setIsStarting(true)
+		let gameId: number | undefined
+
+		// Keep previous UX: start game even if backend game creation is unavailable.
+		if (opponent === 'bot' && token) {
+			const game = await createGame(opponent, token)
+			if (game?.game_id) {
+				gameId = game.game_id
+			} else {
+				setStartError("Could not create tracked game. Starting local game without stats/resign tracking.")
+			}
+		}
+
+		setIsStarting(false)
+		navigate('/game', {
+			state: {
+				opponent,
+				difficulty,
+				timer,
+				pieceColor,
+				boardTheme,
+				pieceTheme,
+				game_id: gameId,
+			},
+		})
+	}
 
 	return (
 		<div className="bg-[#0f0f13] min-h-screen flex flex-col">
@@ -136,11 +192,13 @@ function LobbyPage() {
 
 
 					<button
-						onClick={() => navigate('/game', { state: { opponent, difficulty, timer, pieceColor, boardTheme, pieceTheme } })}
+						onClick={handleStartGame}
+						disabled={isStarting}
 						className="w-full bg-[#e2b96f] text-[#0f0f13] border-none rounded-lg py-2.5 text-sm font-medium cursor-pointer mt-2"
 					>
-						▶ {t('lobby.startGame')}
+						▶ {isStarting ? 'Starting...' : t('lobby.startGame')}
 					</button>
+					{startError && <p className="text-[#e25f5f] text-xs mt-2 mb-0">{startError}</p>}
 				</div>
 			</div>
 			<Footer />

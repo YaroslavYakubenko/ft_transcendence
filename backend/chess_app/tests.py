@@ -7,6 +7,55 @@ from users.models import User
 from .models import Game
 
 
+class CreateGameTests(APITestCase):
+	def setUp(self):
+		self.password = "StrongPass123!"
+		self.user = User.objects.create_user(
+			email="player@example.com", password=self.password, username="player"
+		)
+		login_response = self.client.post(
+			"/api/auth/login/",
+			{"email": self.user.email, "password": self.password},
+			format="json",
+		)
+		self.token = login_response.data["token"]
+		self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token}")
+
+	def test_create_bot_game_returns_game_id(self):
+		response = self.client.post(
+			"/create-game/",
+			{"opponent": "bot"},
+			format="json",
+		)
+
+		self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+		self.assertIn("game_id", response.data)
+
+		game = Game.objects.get(id=response.data["game_id"])
+		self.assertEqual(game.white_player, self.user)
+		self.assertEqual(game.black_player.email, "chess-bot@transcendence.local")
+		self.assertEqual(game.status, "pending")
+
+	def test_create_live_game_requires_opponent_id(self):
+		response = self.client.post(
+			"/create-game/",
+			{"opponent": "live"},
+			format="json",
+		)
+
+		self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+	def test_create_game_requires_authentication(self):
+		self.client.credentials()
+		response = self.client.post(
+			"/create-game/",
+			{"opponent": "bot"},
+			format="json",
+		)
+
+		self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
 class ResignGameTests(APITestCase):
 	def setUp(self):
 		self.password = "StrongPass123!"

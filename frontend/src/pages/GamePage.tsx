@@ -10,7 +10,7 @@ import type { PieceHandlerArgs } from "react-chessboard"
 import type { PieceDropHandlerArgs } from "react-chessboard"
 
 
-async function make_move(fen: string, from: string, to: string) {
+async function make_move(fen: string, from: string, to: string, gameId?: number | null) {
 	const res = await fetch("http://localhost:8000/make-move/", {
 	method: "POST",
 	headers: {
@@ -20,6 +20,7 @@ async function make_move(fen: string, from: string, to: string) {
 		fen,
 		from,
 		to,
+		game_id: gameId ?? undefined,
 	}),
 	});
 
@@ -37,7 +38,7 @@ async function make_move(fen: string, from: string, to: string) {
 	return data;
 }
 
-async function do_promotion(fen: string, move: string, key: string) {
+async function do_promotion(fen: string, move: string, key: string, gameId?: number | null) {
 	const res = await fetch("http://localhost:8000/do-promotion/", {
 	method: "POST",
 	headers: {
@@ -47,6 +48,7 @@ async function do_promotion(fen: string, move: string, key: string) {
 		fen,
 		move,
 		key,
+		game_id: gameId ?? undefined,
 	}),
 	});
 
@@ -68,33 +70,6 @@ async function do_promotion(fen: string, move: string, key: string) {
 
 async function legal_moves(fen: string) {
 	const res = await fetch("http://localhost:8000/legal-moves/", {
-		async function resign_game(gameId: number | null, token: string | null) {
-			if (!gameId || !token) {
-				console.error("Game ID or token missing");
-				return null;
-			}
-
-			const res = await fetch("http://localhost:8000/resign/", {
-				method: "POST",
-				headers: {
-					"Authorization": `Token ${token}`,
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					game_id: gameId,
-				}),
-			});
-
-			const data = await res.json();
-
-			if (data.error) {
-				console.error(data.error);
-				return null;
-			}
-
-			return data;
-		}
-
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
@@ -112,6 +87,33 @@ async function legal_moves(fen: string) {
 		console.error(data.error);
 		return null; // fallback: no update
 	}
+	return data;
+}
+
+async function resign_game(gameId: number | null, token: string | null) {
+	if (!gameId || !token) {
+		console.error("Game ID or token missing");
+		return null;
+	}
+
+	const res = await fetch("http://localhost:8000/resign/", {
+		method: "POST",
+		headers: {
+			"Authorization": `Token ${token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			game_id: gameId,
+		}),
+	});
+
+	const data = await res.json();
+
+	if (data.error) {
+		console.error(data.error);
+		return null;
+	}
+
 	return data;
 }
 
@@ -163,7 +165,7 @@ const BOARD_THEMES = {
 }
 
 function GamePage() {
-	const { user } = useAuth()
+	const { user, token } = useAuth()
 	const location = useLocation()
 	const settings: GameSettings = location.state ?? {
 		opponent: 'bot',
@@ -176,8 +178,12 @@ function GamePage() {
 	const theme = BOARD_THEMES[settings.boardTheme]
 	const pieces = PIECE_THEMES[settings.pieceTheme]
 
-	// Get game_id from location state (could be null for bot games)
-	const gameId = (location.state as any)?.game_id || null
+	const locationState = (location.state as Record<string, unknown>) ?? {}
+	const gameIdFromState =
+		locationState.game_id ??
+		locationState.gameId ??
+		((locationState.game as { id?: number } | undefined)?.id ?? null)
+	const gameId = typeof gameIdFromState === "number" ? gameIdFromState : null
 
 	const getPromotionOptions = (prefix: "w" | "b") =>
 		ppieces.map((p) => ({
@@ -197,6 +203,33 @@ function GamePage() {
 	const [highlightSquares, setHighlightSquares] = useState<string[]>([]);
 	const [highlightSquares2, setHighlightSquares2] = useState<string[]>([]);
 	const [moves, setMoves] = useState<{ white: string; black?: string }[]>([]);
+	const [resignError, setResignError] = useState<string>("");
+	const [isResigning, setIsResigning] = useState(false);
+
+	const handleResign = async () => {
+		setResignError("");
+
+		if (!token) {
+			setResignError("You must be logged in to resign.");
+			return;
+		}
+
+		if (!gameId) {
+			setResignError("No game ID found. Resign is unavailable for this game.");
+			return;
+		}
+
+		setIsResigning(true);
+		const data = await resign_game(gameId, token);
+		setIsResigning(false);
+
+		if (!data) {
+			setResignError("Resign request failed.");
+			return;
+		}
+
+		setRes(data.result);
+	}
 
 
 	const customSquareStyles = useMemo(() => {
@@ -256,7 +289,7 @@ function GamePage() {
 		onPieceDrop: ({ sourceSquare, targetSquare }: PieceDropHandlerArgs) => {
 			if (!sourceSquare || !targetSquare)
 				return false;
-			make_move(fen, sourceSquare, targetSquare).then((data) => {
+			make_move(fen, sourceSquare, targetSquare, gameId).then((data) => {
 				if (!data)
 					return;
 				if (data.promotion !== '') {
@@ -377,7 +410,7 @@ function GamePage() {
 											key={promo}
 											onClick={() => {
 												console.log(getPromotionOptions(promotion.pre as "w" | "b"))
-												do_promotion(fen, promotion.move, promo).then((data) => {
+												do_promotion(fen, promotion.move, promo, gameId).then((data) => {
 													if (!data) return;
 													
 													// Add promotion move to history
@@ -446,23 +479,19 @@ function GamePage() {
 								</div>
 							)}
 						</div>
-						<button 
-							onClick={() => {
-								if (gameId) {
-									resign_game(gameId, localStorage.getItem('token')).then((data) => {
-										if (data) {
-											setRes(data.result);
-										}
-									});
-								}
-							}}
+						<button
+							onClick={handleResign}
+							disabled={isResigning}
 							className="w-full bg-[#0f0f13] border border-[#e25f5f] text-[#e25f5f] rounded-lg text-sm cursor-pointer hover:bg-[#e25f5f] hover:text-[#f0eeff]"
 						>
-							{t('game.resign')}
+							{isResigning ? 'Resigning...' : t('game.resign')}
 						</button>
 						<button className="w-full bg-[#0f0f13] border border-[#2e2e40] text-[#8892a4] rounded-lg text-sm cursor-pointer hover:border-[#e2b96f] hover:text-[#e2b96f]">
 							{t('game.draw')}
 						</button>
+						{resignError && (
+							<p className="text-[#e25f5f] text-xs m-0">{resignError}</p>
+						)}
 					</div>
 
 					{/* gameover	make better with rematch option and stuff*/}
