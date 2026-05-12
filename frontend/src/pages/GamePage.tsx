@@ -54,6 +54,8 @@ async function make_move(fen: string, from: string, to: string, gameId?: number 
 }
 
 async function do_promotion(fen: string, move: string, key: string, gameId?: number | null) {
+	const from = move.slice(0, 2)
+	const to = move.slice(2, 4)
 	const res = await fetch("http://localhost:8000/do-promotion/", {
 	method: "POST",
 	headers: {
@@ -62,6 +64,8 @@ async function do_promotion(fen: string, move: string, key: string, gameId?: num
 	body: JSON.stringify({
 		fen,
 		move,
+		from,
+		to,
 		key,
 		game_id: gameId ?? undefined,
 	}),

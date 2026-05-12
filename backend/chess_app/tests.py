@@ -110,6 +110,53 @@ class ResignGameTests(APITestCase):
 		self.assertEqual(self.white_player.losses, 1)
 		self.assertEqual(self.black_player.wins, 1)
 
+
+class PromotionGameTests(APITestCase):
+	def setUp(self):
+		self.password = "StrongPass123!"
+		self.white_player = User.objects.create_user(
+			email="white@example.com", password=self.password, username="white"
+		)
+		self.black_player = User.objects.create_user(
+			email="black@example.com", password=self.password, username="black"
+		)
+		self.game = Game.objects.create(
+			white_player=self.white_player,
+			black_player=self.black_player,
+			status="ongoing",
+			result="ongoing",
+		)
+		login_response = self.client.post(
+			"/api/auth/login/",
+			{"email": self.white_player.email, "password": self.password},
+			format="json",
+		)
+		self.token = login_response.data["token"]
+		self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token}")
+
+	def test_do_promotion_saves_move_for_game(self):
+		response = self.client.post(
+			"/do-promotion/",
+			{
+				"fen": "4k3/4P3/8/8/8/8/8/4K3 w - - 0 1",
+				"move": "e7e8",
+				"from": "e7",
+				"to": "e8",
+				"key": "q",
+				"game_id": self.game.id,
+			},
+			format="json",
+		)
+
+		self.assertEqual(response.status_code, status.HTTP_200_OK)
+		self.assertIn("fen", response.data)
+
+		move = self.game.moves.get()
+		self.assertEqual(move.game_id, self.game.id)
+		self.assertEqual(move.from_square, "e7")
+		self.assertEqual(move.to_square, "e8")
+		self.assertEqual(move.promotion_piece, "Q")
+
 	def test_black_player_resigns(self):
 		"""Test that black player can resign and white wins"""
 		# Login as black player

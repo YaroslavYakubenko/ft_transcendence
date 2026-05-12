@@ -173,14 +173,23 @@ def make_move(request):
 def do_promotion(request):
 	fen = request.data.get('fen')
 	_move = request.data.get('move')
+	from_square = request.data.get('from')
+	to_square = request.data.get('to')
 	key = request.data.get('key')
 	game_id = request.data.get('game_id')  # Optional: save to database if provided
 
-	if not fen or not _move or not key:
+	if not fen or not key:
 		return Response({"error": "missing data"}, status=400)
 
+	if not from_square or not to_square:
+		if _move and len(_move) >= 4:
+			from_square = _move[:2]
+			to_square = _move[2:4]
+		else:
+			return Response({"error": "missing move squares"}, status=400)
+
 	board = chess.Board(fen)
-	move = chess.Move.from_uci(_move + key)
+	move = chess.Move.from_uci(from_square + to_square + key)
 	if move not in board.legal_moves:
 		return Response({"log": "illegal move"})
 
@@ -194,9 +203,9 @@ def do_promotion(request):
 			move_count = game.moves.count() + 1
 			Move.objects.create(
 				game=game,
-				from_square=_move,
-				to_square=key,
-				promotion_piece=None,  # Could extract from move if needed
+				from_square=from_square,
+				to_square=to_square,
+				promotion_piece=key.upper(),
 				fen_before=fen,
 				fen_after=board.fen(),
 				move_number=move_count
