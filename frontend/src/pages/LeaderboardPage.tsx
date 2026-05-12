@@ -46,6 +46,7 @@ function LeaderboardPage() {
 			<Navbar />
 			<div className="flex flex-col items-center flex-1 text-[#f0eeff] pt-12 px-4">
 				<h1 className="text-2xl font-bold mb-8">{t('leaderboard.title')}</h1>
+				<p className="text-sm text-[#8892a4] mb-6">Select player to view profile detail / add as friend.</p>
 				<div className="w-full max-w-2xl bg-[#1a1a24] border border-[#2e2e40] rounded-xl overflow-hidden">
 					<table className="w-full">
 						<thead>
