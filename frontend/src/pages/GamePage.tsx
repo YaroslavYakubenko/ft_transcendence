@@ -461,8 +461,8 @@ function GamePage() {
 					setGameResult(data.result)
 				}
 				
-				// Add move to history
-				const moveNotation = `${sourceSquare}-${targetSquare}`;
+				// Add move to history (UCI format: e2e4)
+				const moveNotation = `${sourceSquare}${targetSquare}`;
 				const isWhiteMove = fen.split(" ")[1] === "w";
 				
 				setMoves(prevMoves => {
@@ -562,8 +562,8 @@ function GamePage() {
 														setGameResult(data.result)
 													}
 													
-													// Add promotion move to history
-													const moveNotation = `${promotion.move}-${promo.toUpperCase()}`;
+												// Add promotion move to history (UCI format: e7e8q)
+												const moveNotation = `${promotion.move}${promo.toLowerCase()}`;
 													const isWhiteMove = fen.split(" ")[1] === "w";
 													
 													setMoves(prevMoves => {
@@ -610,8 +610,8 @@ function GamePage() {
 					</div>
 
 					{/* Right - move history + buttons */}
-					<div className="flex flex-col gap-3 w-48">
-						<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl p-3 flex-1 overflow-y-auto max-h-[500px]">
+					<div className="flex flex-col gap-3 w-48 h-fit mt-2">
+						<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl p-3 overflow-y-auto h-[620px]">
 							<p className="text-[#8896a4] text-xs mb-2 m-0">{t('game.movesHistory')}</p>
 							{moves.length === 0 ? (
 								<p className="text-[#2e2e40] text-xs">{t('game.noMoves')}</p>
@@ -648,10 +648,32 @@ function GamePage() {
 
 					{gameResult && (
 						<div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/75 px-4">
-							<div className="w-full max-w-md rounded-2xl border border-[#2e2e40] bg-[#1a1a24] p-6 text-center shadow-2xl">
-								<p className="text-[#8896a4] text-xs uppercase tracking-[0.3em] mb-3">Game Over</p>
-								<h2 className="text-[#f0eeff] text-2xl font-semibold mb-2">{gameResult.message}</h2>
-								<p className="text-[#e2b96f] text-lg font-mono mb-4">PGN result: {gameResult.pgn_result}</p>
+							<div className="w-full max-w-2xl rounded-2xl border border-[#2e2e40] bg-[#1a1a24] p-6 shadow-2xl flex flex-col max-h-[80vh]">
+								<div className="text-center mb-4">
+									<p className="text-[#8896a4] text-xs uppercase tracking-[0.3em] mb-2">Game Over</p>
+									<h2 className="text-[#f0eeff] text-2xl font-semibold mb-2">{gameResult.message}</h2>
+									<p className="text-[#e2b96f] text-lg font-mono">PGN result: {gameResult.pgn_result}</p>
+								</div>
+
+								{/* Moves History */}
+								<div className="flex-1 overflow-y-auto mb-4 px-4 py-3 bg-[#0f0f13] rounded-lg border border-[#2e2e40]">
+									<p className="text-[#8896a4] text-xs mb-3 m-0">{t('game.movesHistory')}</p>
+									{moves.length === 0 ? (
+										<p className="text-[#2e2e40] text-xs">{t('game.noMoves')}</p>
+									) : (
+										<div className="text-[#f0eeff] text-sm space-y-1">
+											{moves.map((movePair, i) => (
+												<div key={i} className="flex gap-3">
+													<span className="text-[#8896a4] min-w-[2rem] font-mono">{i + 1}.</span>
+													<span className="text-[#e2b96f]">{movePair.white}</span>
+													{movePair.black && <span className="text-[#8896a4]">{movePair.black}</span>}
+												</div>
+											))}
+										</div>
+									)}
+								</div>
+
+								{/* Action Buttons */}
 								<div className="flex flex-col sm:flex-row gap-3 justify-center">
 									<button
 										onClick={() => navigate('/lobby', { state: settings })}
