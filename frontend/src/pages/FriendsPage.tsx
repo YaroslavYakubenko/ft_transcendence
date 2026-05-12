@@ -32,6 +32,44 @@ function FriendsPage() {
 		refreshFriends()
 	}, [token])
 
+	useEffect(() => {
+		if (!token) return
+
+		const query = searchQuery.trim()
+		if (query.length < 2) {
+			setSearchResults([])
+			setSearchError(null)
+			setSearching(false)
+			return
+		}
+
+		let cancelled = false
+		setSearching(true)
+		setSearchError(null)
+
+		const timeoutId = window.setTimeout(async () => {
+			try {
+				const results = await searchUsers(query, token)
+				if (!cancelled) {
+					setSearchResults(results)
+				}
+			} catch {
+				if (!cancelled) {
+					setSearchError(t('friends.fetchFailed'))
+				}
+			} finally {
+				if (!cancelled) {
+					setSearching(false)
+				}
+			}
+		}, 250)
+
+		return () => {
+			cancelled = true
+			window.clearTimeout(timeoutId)
+		}
+	}, [searchQuery, token, t])
+
 	async function handleRemove(userId: number) {
 		try {
 			if (!token) return
@@ -41,21 +79,6 @@ function FriendsPage() {
 			setLoadError(null)
 		} catch {
 			setLoadError(t('friends.removeFailed'))
-		}
-	}
-
-	async function handleSearch(event: React.FormEvent) {
-		event.preventDefault()
-		setSearchError(null)
-		setSearching(true)
-		try {
-			if (!token) return
-			const results = await searchUsers(searchQuery, token)
-			setSearchResults(results)
-		} catch {
-			setSearchError(t('friends.fetchFailed'))
-		} finally {
-			setSearching(false)
 		}
 	}
 
@@ -78,7 +101,7 @@ function FriendsPage() {
 				<p className="text-sm text-[#8892a4] mb-6 text-center">
 					You can add friends from the leaderboard or search by username below.
 				</p>
-				<form onSubmit={handleSearch} className="w-full max-w-md mb-6 flex gap-2">
+				<div className="w-full max-w-md mb-6 flex gap-2">
 					<input
 						type="text"
 						value={searchQuery}
@@ -86,14 +109,10 @@ function FriendsPage() {
 						placeholder="Search by username"
 						className="flex-1 bg-[#1a1a24] border border-[#2e2e40] rounded-xl px-4 py-3 text-[#f0eeff] outline-none focus:border-[#e2b96f]"
 					/>
-					<button
-						type="submit"
-						disabled={searching}
-						className="bg-[#e2b96f] border-none rounded-xl px-4 py-3 text-[#0f0f13] font-semibold cursor-pointer disabled:opacity-60"
-					>
-						{searching ? 'Searching...' : 'Search'}
-					</button>
-				</form>
+					<div className="bg-[#e2b96f] border-none rounded-xl px-4 py-3 text-[#0f0f13] font-semibold select-none min-w-[112px] text-center">
+						{searching ? 'Searching...' : 'Live search'}
+					</div>
+				</div>
 				{searchResults.length > 0 && (
 					<div className="w-full max-w-md mb-8">
 						<h2 className="text-sm text-[#8892a4] mb-3">Search results</h2>

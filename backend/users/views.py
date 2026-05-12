@@ -142,7 +142,7 @@ def search_users(request):
 	existing_friend_ids = Friendship.objects.filter(from_user=request.user).values_list('to_user_id', flat=True)
 	users = (
 		User.objects
-		.filter(models.Q(username__icontains=query) | models.Q(email__icontains=query))
+		.filter(models.Q(username__contains=query) | models.Q(email__contains=query))
 		.exclude(id=request.user.id)
 		.exclude(id__in=existing_friend_ids)
 		.order_by('username', 'email')[:20]
