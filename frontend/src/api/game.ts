@@ -127,7 +127,16 @@ export async function getLeaderboard(limit: number = 50): Promise<{ id: number; 
 		}
 		
 		const data = await response.json()
-		return data.leaderboard || []
+		const list = data.leaderboard || []
+		return list.map((p: any) => ({
+			id: p.id,
+			username: p.username,
+			wins: p.wins ?? 0,
+			losses: p.losses ?? 0,
+			draws: p.draws ?? 0,
+			elo: p.elo ?? 0,
+			rank: p.rank ?? 0,
+		}))
 	} catch (error) {
 		console.error('Error fetching leaderboard:', error)
 		return []

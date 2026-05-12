@@ -128,6 +128,7 @@ export default {
 		player: "Player",
 		elo: "Elo",
 		wins: "Wins",
+		draws: "Draws",
 		losses: "Losses",
 	},
 	common: {

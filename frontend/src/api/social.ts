@@ -35,8 +35,8 @@ export async function getFriends(token: string): Promise<Friend[]> {
 		id: f.id,
 		email: f.email,
 		username: f.username,
-		wins: 0,
-		losses: 0,
+		wins: f.wins ?? 0,
+		losses: f.losses ?? 0,
 		avatarUrl: f.avatar || null,
 		isOnline: f.is_online
 	}))
@@ -66,7 +66,14 @@ export async function getUserProfile(userId: number, token: string): Promise<Use
 	})
 	if (!res.ok) throw new Error('User not found')
 	const data = await res.json()
-	return { ...data, wins: 0, losses: 0, avatarUrl: data.avatar || null }
+	return {
+		id: data.id,
+		email: data.email,
+		username: data.username,
+		wins: data.wins ?? 0,
+		losses: data.losses ?? 0,
+		avatarUrl: data.avatar || null,
+	}
 }
 
 // Chat API

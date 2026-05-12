@@ -10,6 +10,7 @@ type LeaderboardEntry = {
 	username: string
 	wins: number
 	losses: number
+	draws: number
 	elo: number
 	rank: number
 }
@@ -20,7 +21,24 @@ function LeaderboardPage() {
 	const { t } = useTranslation()
 
 	useEffect(() => {
-		getLeaderboard().then(setPlayers)
+		const fetch = () => getLeaderboard().then(setPlayers).catch(() => {})
+
+		// initial load
+		fetch()
+
+		// refetch when page becomes visible or window gains focus
+		const onFocus = () => fetch()
+		const onVisibility = () => {
+			if (document.visibilityState === 'visible') fetch()
+		}
+
+		window.addEventListener('focus', onFocus)
+		document.addEventListener('visibilitychange', onVisibility)
+
+		return () => {
+			window.removeEventListener('focus', onFocus)
+			document.removeEventListener('visibilitychange', onVisibility)
+		}
 	}, [])
 
 	return (
@@ -35,6 +53,7 @@ function LeaderboardPage() {
 								<th className="text-left px-6 py-4">{t('leaderboard.rank')}</th>
 								<th className="text-left px-6 py-4">{t('leaderboard.player')}</th>
 								<th className="text-left px-6 py-4">{t('leaderboard.wins')}</th>
+								<th className="text-left px-6 py-4">{t('leaderboard.draws')}</th>
 								<th className="text-left px-6 py-4">{t('leaderboard.losses')}</th>
 								<th className="text-left px-6 py-4">{t('leaderboard.elo')}</th>
 							</tr>
@@ -49,6 +68,7 @@ function LeaderboardPage() {
 									<td className="px-6 py-4 text-[#e2b96f] font-semibold">{player.rank}</td>
 									<td className="px-6 py-4">{player.username}</td>
 									<td className="px-6 py-4 text-green-400">{player.wins}</td>
+									<td className="px-6 py-4 text-[#8892a4]">{player.draws}</td>
 									<td className="px-6 py-4 text-[#e25f5f]">{player.losses}</td>
 									<td className="px-6 py-4 text-[#8892a4]">{player.elo}</td>
 								</tr>
