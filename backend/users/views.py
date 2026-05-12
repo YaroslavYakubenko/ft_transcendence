@@ -132,6 +132,24 @@ def get_friends(request): # view who added whom
 	serializer = FriendSerializer(friendships, many=True, context={'request': request}) # many=True is a list, converts 
 	return Response(serializer.data)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def search_users(request):
+	query = (request.query_params.get('q') or '').strip()
+	if not query:
+		return Response([])
+
+	existing_friend_ids = Friendship.objects.filter(from_user=request.user).values_list('to_user_id', flat=True)
+	users = (
+		User.objects
+		.filter(models.Q(username__icontains=query) | models.Q(email__icontains=query))
+		.exclude(id=request.user.id)
+		.exclude(id__in=existing_friend_ids)
+		.order_by('username', 'email')[:20]
+	)
+	serializer = UserSerializer(users, many=True, context={'request': request})
+	return Response(serializer.data)
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_friend(request, user_id):

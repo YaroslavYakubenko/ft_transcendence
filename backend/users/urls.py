@@ -16,6 +16,7 @@ urlpatterns = [
 	path('users/<int:user_id>/stats/', views.get_user_stats, name='user_stats'),
 	path('users/<int:user_id>/matches/', views.get_match_history, name='match_history'),
 	path('friends/', views.get_friends),
+	path('friends/search/', views.search_users),
 	path('friends/<int:user_id>/', views.add_friend),
 	path('friends/<int:user_id>/remove/', views.remove_friend),
 	path('leaderboard/', views.get_leaderboard, name='leaderboard'),

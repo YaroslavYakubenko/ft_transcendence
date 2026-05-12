@@ -50,6 +50,25 @@ export async function addFriend(userId: number, token: string): Promise<void> {
 	if (!res.ok) throw new Error('Failed to add friend')
 }
 
+export async function searchUsers(query: string, token: string): Promise<UserProfile[]> {
+	const trimmedQuery = query.trim()
+	if (!trimmedQuery) return []
+
+	const res = await fetch(`${API}/friends/search/?q=${encodeURIComponent(trimmedQuery)}`, {
+		headers: { 'Authorization': `Token ${token}` }
+	})
+	if (!res.ok) throw new Error('Failed to search users')
+	const data = await res.json()
+	return data.map((user: any) => ({
+		id: user.id,
+		email: user.email,
+		username: user.username,
+		wins: user.wins ?? 0,
+		losses: user.losses ?? 0,
+		avatarUrl: user.avatar || null,
+	}))
+}
+
 export async function removeFriend(userId: number, token: string): Promise<void> {
 	const res = await fetch(`${API}/friends/${userId}/remove/`, {
 		method: 'DELETE',
