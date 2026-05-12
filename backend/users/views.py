@@ -87,13 +87,23 @@ def update_me(request):
 		serializer.save()
 		# Handle avatar file upload separately (SerializerMethodField is read-only)
 		if 'avatar' in request.FILES:
-			request.user.avatar = request.FILES['avatar']
+			avatar_file = request.FILES['avatar']
+			request.user.avatar = avatar_file
+			try:
+				request.user.save(update_fields=['avatar'])
+				print(f"✓ Avatar saved for user {request.user.id}: {request.user.avatar.url}")
+			except Exception as e:
+				print(f"✗ Error saving avatar: {e}")
+				return Response({'error': f'Failed to save avatar: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+		
 		# Handle password update
 		password = request.data.get('password')
 		if password:
 			request.user.set_password(password)
-		# Save all changes
-		request.user.save()
+			request.user.save(update_fields=['password'])
+		
+		# Refresh from database to ensure latest state
+		request.user.refresh_from_db()
 		# Return fresh user data
 		fresh = UserSerializer(request.user, context={'request': request})
 		return Response(fresh.data)

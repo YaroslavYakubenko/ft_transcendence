@@ -34,12 +34,15 @@ class UserSerializer(serializers.ModelSerializer): # return the current user's d
 		read_only_fields = ('id', 'is_online', 'wins', 'losses', 'draws', 'elo')
 
 	def get_avatar(self, obj):
-		request = self.context.get('request') # has information about current HTTP request
-		if obj.avatar and request and os.path.exists(obj.avatar.path ):
-			return request.build_absolute_uri(obj.avatar.url)
-		# Return relative URL so frontend can use Vite proxy
+		"""Return avatar URL - prefer relative URLs for better compatibility across environments"""
 		if obj.avatar:
-			return obj.avatar.url
+			try:
+				# Always return the relative URL first (works across all environments)
+				# The frontend/nginx will handle routing appropriately
+				if obj.avatar.name:
+					return obj.avatar.url
+			except Exception as e:
+				print(f"Error getting avatar URL: {e}")
 		return obj.oauth_avatar or ''
 
 class FriendSerializer(serializers.ModelSerializer): # return the list of friends

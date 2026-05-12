@@ -29,7 +29,15 @@ function ProfilePage() {
 
           {/* Avatar + name */}
           {user?.avatarUrl ? (
-            <img src={user.avatarUrl} alt="avatar" className="w-20 h-20 rounded-full object-cover mb-4" />
+            <img 
+              src={`${user.avatarUrl}?t=${Date.now()}`} 
+              alt="avatar" 
+              className="w-20 h-20 rounded-full object-cover mb-4"
+              onError={(e) => {
+                // If avatar fails to load, hide it and show initials
+                e.currentTarget.style.display = 'none'
+              }}
+            />
           ) : (
             <div className="w-20 h-20 rounded-full bg-[#e2b96f] flex items-center justify-center text-[#0f0f13] text-3xl font-bold mb-4">
               {user ? (user.username || user.email)[0].toUpperCase() : '?'}
