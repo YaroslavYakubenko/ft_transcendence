@@ -18,7 +18,7 @@ function ProfilePage() {
     useEffect(() => {
       if (!user) return
       getUserStats(user.id).then(setStats).catch(() => {})
-      getMatchHistory(user.id).then(setMatches).catch(() => {})
+      getMatchHistory(user.id).then((data) => setMatches(data.slice(0, 10))).catch(() => {})
       getAchievements(user.id).then(setAchievements).catch(() => {})
     }, [user])
 

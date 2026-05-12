@@ -17,7 +17,7 @@ function HomePage() {
 	useEffect(() => {
 		if (!user) return
 		getUserStats(user.id).then(setStats).catch(() => {})
-		getMatchHistory(user.id).then((data) => setMatches(data.slice(0, 5))).catch(() => {})
+		getMatchHistory(user.id).then((data) => setMatches(data.slice(0, 10))).catch(() => {})
 	}, [user])
 
 	return (
