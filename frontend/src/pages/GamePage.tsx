@@ -138,13 +138,13 @@ async function resign_game(gameId: number | null, token: string | null) {
 
 // Scholar's Mate sequence: e4 e5, Qh5 Nc6, Bc4 Nf6?, Qxf7#
 const SCHOLARS_MATE_MOVES = [
-	{ from: "e2", to: "e4", name: "e4" },       // 1. e4
-	{ from: "e7", to: "e5", name: "e5" },       // 1... e5
-	{ from: "d1", to: "h5", name: "Qh5" },      // 2. Qh5
-	{ from: "b8", to: "c6", name: "Nc6" },      // 2... Nc6
-	{ from: "f1", to: "c4", name: "Bc4" },      // 3. Bc4
-	{ from: "g8", to: "f6", name: "Nf6" },      // 3... Nf6?
-	{ from: "h5", to: "f7", name: "Qxf7#" },    // 4. Qxf7# Checkmate
+	{ from: "e2", to: "e4", name: "e2e4" },       // 1. e4
+	{ from: "e7", to: "e5", name: "e7e5" },       // 1... e5
+	{ from: "d1", to: "h5", name: "d1h5" },      // 2. Qh5
+	{ from: "b8", to: "c6", name: "b8c6" },      // 2... Nc6
+	{ from: "f1", to: "c4", name: "f1c4" },      // 3. Bc4
+	{ from: "g8", to: "f6", name: "g8f6" },      // 3... Nf6?
+	{ from: "h5", to: "f7", name: "h5f7" },    // 4. Qxf7# Checkmate
 ];
 
 async function playScholarsMate(

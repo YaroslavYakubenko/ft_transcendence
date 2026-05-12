@@ -54,29 +54,44 @@ export async function getUserStats(userId: number): Promise<UserStats> {
 
 export async function getMatchHistory(userId: number, page: number = 1): Promise<MatchRecord[]> {
 	try {
-		const response = await fetch(
-			`${API_BASE_URL}/users/${userId}/matches/?page=${page}`,
-			{
-				method: 'GET',
-				headers: {
-					'Authorization': `Token ${localStorage.getItem('token')}`,
-					'Content-Type': 'application/json',
-				},
+		let allMatches: MatchRecord[] = []
+		let currentPage = 1
+		let hasMore = true
+
+		while (hasMore) {
+			const response = await fetch(
+				`${API_BASE_URL}/users/${userId}/matches/?page=${currentPage}`,
+				{
+					method: 'GET',
+					headers: {
+						'Authorization': `Token ${localStorage.getItem('token')}`,
+						'Content-Type': 'application/json',
+					},
+				}
+			)
+			
+			if (!response.ok) {
+				throw new Error(`Failed to fetch match history: ${response.statusText}`)
 			}
-		)
-		
-		if (!response.ok) {
-			throw new Error(`Failed to fetch match history: ${response.statusText}`)
+			
+			const data = await response.json()
+			const pageMatches = (data.matches || []).map((match: any) => ({
+				id: match.id,
+				opponent_name: match.opponent_name,
+				result: match.result,
+				date: match.date,
+				duration: match.duration,
+			}))
+
+			if (pageMatches.length === 0) {
+				hasMore = false
+			} else {
+				allMatches = [...allMatches, ...pageMatches]
+				currentPage++
+			}
 		}
-		
-		const data = await response.json()
-		return (data.matches || []).map((match: any) => ({
-			id: match.id,
-			opponent_name: match.opponent_name,
-			result: match.result,
-			date: match.date,
-			duration: match.duration,
-		}))
+
+		return allMatches
 	} catch (error) {
 		console.error('Error fetching match history:', error)
 		return []

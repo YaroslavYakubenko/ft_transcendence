@@ -17,7 +17,7 @@ function HomePage() {
 	useEffect(() => {
 		if (!user) return
 		getUserStats(user.id).then(setStats).catch(() => {})
-		getMatchHistory(user.id).then((data) => setMatches(data.slice(0, 10))).catch(() => {})
+		getMatchHistory(user.id).then(setMatches).catch(() => {})
 	}, [user])
 
 	return (
@@ -60,8 +60,11 @@ function HomePage() {
 				</div>
 
 				<div className="w-full max-w-2xl mb-8">
-					<h2 className="text-lg font-semibold mb-4 text-[#f0eeff]">{t('profile.matchHistory')}</h2>
-					<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl overflow-hidden">
+					<h2 className="text-lg font-semibold mb-4 text-[#f0eeff]">
+						{t('profile.matchHistory')}
+						<span className="text-sm text-[#8892a4] ml-3">{matches.length} matches</span>
+					</h2>
+				<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl overflow-hidden max-h-[500px] overflow-y-auto">
 						{matches.length === 0 ? (
 							<p className="text-[#8892a4] text-sm px-6 py-4">{t('profile.noMatches')}</p>
 						) : (
