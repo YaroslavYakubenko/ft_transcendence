@@ -46,7 +46,7 @@ The primary application database is PostgreSQL and is persisted through the name
 ## Requirements
 
 - Docker + Docker Compose
-- Available ports: 3000, 5173, 5432, 8000, 8080, 8081, 8443, 9090, 9100
+- Available ports: 3000, 5173, 5432, 8000, 8080, 8081, 8082, 8443, 9090, 9100
 
 ## Quick Start
 
@@ -76,6 +76,7 @@ docker compose ps
 - Backend directly: http://localhost:8000
 - Nginx HTTP: http://localhost:8080
 - Nginx HTTPS: https://localhost:8443
+- Adminer: http://localhost:8082
 - Healthcheck via Nginx: https://localhost:8443/api/health/
 
 Note: Browsers will display a warning for self-signed certificates.
