@@ -35,6 +35,7 @@ async function createGame(opponent: 'bot' | 'live', token: string | null) {
 	return data
 }
 
+// make move 
 async function make_move(fen: string, from: string, to: string, gameId?: number | null) {
 	const res = await fetch("http://localhost:8000/make-move/", {
 	method: "POST",
@@ -94,6 +95,7 @@ async function do_promotion(fen: string, move: string, key: string, gameId?: num
 	return data;
 }
 
+// get legal moves to empty and occupied spaces
 async function legal_moves(fen: string) {
 	const res = await fetch("http://localhost:8000/legal-moves/", {
 		method: "POST",
@@ -202,11 +204,17 @@ const BOARD_THEMES = {
 	brown: { light: '#f0d9b5', dark: '#b58863' },
 }
 
+const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
+
 function GamePage() {
 	const { user, token } = useAuth()
 	const location = useLocation()
 	const navigate = useNavigate()
 
+// variables ----------------------------------------
+
+	// setting vars ----------------------------------------
 	const settings: GameSettings = location.state ?? {
 		opponent: 'bot',
 		difficulty: 'medium',
@@ -215,23 +223,88 @@ function GamePage() {
 		boardTheme: 'default',
 		pieceTheme: 'default',
 		game_id: undefined,
-	}
-
+	} 
 	const theme = BOARD_THEMES[settings.boardTheme]
 	const pieces = PIECE_THEMES[settings.pieceTheme]
 
+	// game id
 	const locationState = (location.state as Record<string, unknown>) ?? {}
 	const gameIdFromState =
 		locationState.game_id ??
 		locationState.gameId ??
 		((locationState.game as { id?: number } | undefined)?.id ?? null)
 	const gameId = typeof gameIdFromState === "number" ? gameIdFromState : null
+	
+	// storage keys
+	const storage_keys = useMemo(() => ({
+		fen: `chess_fen_${gameId ?? "local"}`,
+		move_history: `move_history_${gameId ?? "local"}`,
+		piece_color: `piece_color_${gameId ?? "local"}`,
+	}), [gameId]);
+
+	// highlight squares ----------------------------------------
+	const [highlightSquares, setHighlightSquares] = useState<string[]>([])
+	const [highlightSquares2, setHighlightSquares2] = useState<string[]>([])
+	const [checkSquare, setCheckSquare] = useState<string | null>(null)
+
+	const customSquareStyles = useMemo(() => {
+		const styles: Record<string, React.CSSProperties> = {};
+		highlightSquares.forEach((sq) => {
+		styles[sq] = {
+			background:
+			"radial-gradient(circle, rgba(244, 201, 148, 0.9) 25%, transparent 25%)",
+		};
+		});
+		highlightSquares2.forEach((sq) => {
+		styles[sq] = {
+			background:
+			"radial-gradient(circle, transparent 50%, rgba(244, 201, 148, 0.9) 50%, rgba(244, 201, 148, 0.9) 60%, transparent 60%)",
+		};
+		});
+		if (checkSquare) {
+			styles[checkSquare] = {
+				background:
+					"radial-gradient(circle, rgba(255,0,0,0.35) 0%, rgba(180,0,0,0.8) 85%)",
+			};
+		}
+		return styles;
+	}, [highlightSquares, highlightSquares2, checkSquare]);
 
 
-	// when random reasign every refresh
+	// game vars ----------------------------------------
+	const [fen, setFen] = useState(() => {
+		if (location.state?.rematchId) return START_FEN;
+
+		return localStorage.getItem(storage_keys.fen) || START_FEN;
+	});
+	
+	const [result, setRes] = useState( {state: "ongoing", winner: "" })
+	const [promotion, setPro] = useState({ move: "", x: -1, y: -1, pre: "" })
+
+	const [moves, setMoves] = useState<{ white: string; black?: string }[]>(() => {
+		const saved = localStorage.getItem(storage_keys.move_history);
+		return saved ? JSON.parse(saved) : [];
+	});
+
+	const [resignError, setResignError] = useState<string>("")
+	const [isResigning, setIsResigning] = useState(false)
+
+
+// actions, ract hooks?? what do you call it ----------------------------------------
+
+	// when random reasign every refresh, fix with local
 	const playerColor = useMemo(() => {
-		return sideChoice(settings.pieceColor);
-	}, [settings.pieceColor]);
+		const saved = localStorage.getItem(storage_keys.piece_color);
+
+		if (saved === "white" || saved === "black") {
+			return saved;
+		}
+
+		const resolved = sideChoice(settings.pieceColor); // your random logic
+		localStorage.setItem(storage_keys.piece_color, resolved);
+
+		return resolved;
+	}, [settings.pieceColor, storage_keys.piece_color]);
 
 
 	// calls the create game function and returns its game id, 
@@ -249,16 +322,41 @@ function GamePage() {
 		return gameId
 	}
 
+
+	// update local fen on change
+	useEffect(() => {
+		if (location.state?.rematchId) return;
+
+		localStorage.setItem(storage_keys.fen, fen);
+	}, [fen, storage_keys.fen, location.state?.rematchId]);
+
+	useEffect(() => {
+		localStorage.setItem(storage_keys.move_history, JSON.stringify(moves));
+	}, [moves, storage_keys.move_history]);
+
 	// when given rematch id reset board to starting positions
 	useEffect(() => {
-		setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+		if (!location.state?.rematchId) return;
+
+		localStorage.removeItem(storage_keys.fen);
+		localStorage.removeItem(storage_keys.move_history);
+
+		setFen(START_FEN)
 		setMoves([])
 		setRes({state:"ongoing", winner:""})
 		setPro({ move: "", x: -1, y: -1, pre: "" })
 		setHighlightSquares([])
 		setHighlightSquares2([])
-	}, [location.state?.rematchId])
+		setCheckSquare(null)
 
+		navigate(location.pathname, {
+			replace: true,
+			state: {
+				...location.state,
+				rematchId: undefined,
+			},
+		});
+	}, [location.state?.rematchId])
 
 	// adds w/b to promotion pieces 
 	const getPromotionOptions = (prefix: "w" | "b") =>
@@ -267,16 +365,12 @@ function GamePage() {
 		promo: p.toLowerCase(),
 	}))
 
-	const [fen, setFen] = useState("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
-	const [result, setRes] = useState( {state: "ongoing", winner: "" })
-	const [promotion, setPro] = useState({ move: "", x: -1, y: -1, pre: "" })
-
-	const [moves, setMoves] = useState<{ white: string; black?: string }[]>([])
-	const [resignError, setResignError] = useState<string>("")
-	const [isResigning, setIsResigning] = useState(false)
-
-
 	const handleResign = async () => {
+		localStorage.removeItem(storage_keys.fen);
+		localStorage.removeItem(storage_keys.move_history);
+		setFen(START_FEN);
+		setMoves([]);
+
 		setResignError("");
 
 		if (!token) {
@@ -302,44 +396,9 @@ function GamePage() {
 	}
 
 
-	// highlight squares
-	const [highlightSquares, setHighlightSquares] = useState<string[]>([])
-	const [highlightSquares2, setHighlightSquares2] = useState<string[]>([])
-	const [checkSquare, setCheckSquare] = useState<string | null>(null)
-
-	const customSquareStyles = useMemo(() => {
-		const styles: Record<string, React.CSSProperties> = {};
-
-		highlightSquares.forEach((sq) => {
-		styles[sq] = {
-			background:
-			"radial-gradient(circle, rgba(244, 201, 148, 0.9) 25%, transparent 25%)",
-		};
-		});
-
-		highlightSquares2.forEach((sq) => {
-		styles[sq] = {
-			background:
-			"radial-gradient(circle, transparent 50%, rgba(244, 201, 148, 0.9) 50%, rgba(244, 201, 148, 0.9) 60%, transparent 60%)",
-		};
-		});
-
-		if (checkSquare) {
-			styles[checkSquare] = {
-				background:
-					"radial-gradient(circle, rgba(255,0,0,0.35) 0%, rgba(180,0,0,0.8) 85%)",
-			};
-		}
-
-
-		return styles;
-	}, [highlightSquares, highlightSquares2, checkSquare]);
-
-
 	// gameplay loop, essentially
 	const chessboardOptions =
 	{
-		// your config options here
 		position: fen,
 		boardOrientation: playerColor,
 		darkSquareStyle: { backgroundColor: theme.dark },
@@ -355,17 +414,20 @@ function GamePage() {
 				return;
 			}
 			const currentFen = fen;
+			// gets highlights through legal moves 
 			legal_moves(currentFen).then((data) => {
 				if (!piece)
 					return;
-				console.debug("DEBUG: SOURCE:", square);
-				console.debug("DEBUG: HIGHLIGHT KEYS:", Object.keys(data.moves));
+				// console.debug("DEBUG: SOURCE:", square);
+				// console.debug("DEBUG: HIGHLIGHT KEYS:", Object.keys(data.moves));
+
 				const newhigh = data.moves[square] || [];
 				setHighlightSquares(newhigh);
 				const newhigh2 = data.moves2[square] || [];
 				setHighlightSquares2(newhigh2);
-				console.debug('DEBUG: HIGHLIGHT SQUARES:', newhigh);
-				console.debug('DEBUG: HIGHLIGHT SQUARES2:', newhigh2);
+
+				// console.debug('DEBUG: HIGHLIGHT SQUARES:', newhigh);
+				// console.debug('DEBUG: HIGHLIGHT SQUARES2:', newhigh2);
 			});
 		},
 
@@ -375,6 +437,8 @@ function GamePage() {
 			make_move(fen, sourceSquare, targetSquare, gameId).then((data) => {
 				if (!data)
 					return;
+
+				// menueing, change sometime looks disgusting, own function maybe
 				if (data.promotion !== '') {
 					const squareSize = 500 / 8; // 62.5px
 					const file = targetSquare[0].charCodeAt(0) - 97
@@ -400,7 +464,6 @@ function GamePage() {
 				// Add move to history
 				const moveNotation = `${sourceSquare}${targetSquare}`;
 				const isWhiteMove = fen.split(" ")[1] === "w";
-				
 				setMoves(prevMoves => {
 					const newMoves = [...prevMoves];
 					if (isWhiteMove) {
@@ -418,19 +481,19 @@ function GamePage() {
 					return newMoves;
 				});
 				
+				// update variables
 				setFen(data.fen);
 				setRes({state:data.result, winner: data.winner});
 				setPro({move: data.promotion, x: -1, y: -1, pre: ''})
-
 				setCheckSquare(data.kingpos || null)
 				
 				// console.log("piece color", settings.pieceColor)
 				// const neww = data.winner;
 				// console.log("winner:", neww);
 			});
+			// after movement reset highlights
 			setHighlightSquares([]);
 			setHighlightSquares2([]);
-
 			return false; // prevent local move, backend is source of truth
 		},
 
@@ -676,7 +739,7 @@ function GamePage() {
 									}}
 									onClick={() => navigate("/")}
 								>
-									Menu
+									Home
 								</button>
 
 							</div>
@@ -693,4 +756,3 @@ function GamePage() {
 export default GamePage
 
 // tabading@example.com Hello1295!
-// site refresh compleatly resets everything, implement local storage 
