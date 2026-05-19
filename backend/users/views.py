@@ -221,6 +221,12 @@ def oauth_login(request):
 		return Response({'token': token.key})
 		
 	if provider == '42':
+		if not settings.FORTY_TWO_CLIENT_ID or not settings.FORTY_TWO_CLIENT_SECRET:
+			logger.warning('42 OAuth credentials are not configured in backend/.env')
+			return Response(
+				{'error': '42 OAuth credentials are missing or invalid on the backend. Check backend/.env.'},
+				status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			)
 		try:
 			# change code to access_token
 			token_res = requests.post(
