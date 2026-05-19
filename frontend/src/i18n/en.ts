@@ -67,6 +67,12 @@ export default {
 		black: "Black",
 		random: "Random",
 		boardTheme: "Board Theme",
+
+		// add to other languages
+		pieceTheme: "Piece Theme",
+		default: "Default",
+		simple: "Simple",
+
 		startGame: "Start Game",
 	},
 	game: {

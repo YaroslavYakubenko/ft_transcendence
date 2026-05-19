@@ -4,11 +4,36 @@ import { useLocation } from "react-router-dom"
 import { Chessboard, defaultPieces} from "react-chessboard"
 import { useAuth } from "../context/AuthContext"
 import Navbar from "../components/Navbar"
+import { useNavigate } from "react-router-dom"
+import { useEffect } from "react"
+
 import Footer from "../components/Footer"
 import { useTranslation } from "react-i18next"
 import type { PieceHandlerArgs } from "react-chessboard"
 import type { PieceDropHandlerArgs } from "react-chessboard"
 
+async function createGame(opponent: 'bot' | 'live', token: string | null) {
+	if (!token) {
+		return null
+	}
+
+	const response = await fetch("http://localhost:8000/create-game/", {
+		method: "POST",
+		headers: {
+			"Authorization": `Token ${token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({ opponent }),
+	})
+
+	const data = await response.json()
+	if (!response.ok || data.error) {
+		console.error(data.error || "Failed to create game")
+		return null
+	}
+
+	return data
+}
 
 async function make_move(fen: string, from: string, to: string, gameId?: number | null) {
 	const res = await fetch("http://localhost:8000/make-move/", {
@@ -38,6 +63,7 @@ async function make_move(fen: string, from: string, to: string, gameId?: number 
 	return data;
 }
 
+// promote pawn
 async function do_promotion(fen: string, move: string, key: string, gameId?: number | null) {
 	const res = await fetch("http://localhost:8000/do-promotion/", {
 	method: "POST",
@@ -117,6 +143,17 @@ async function resign_game(gameId: number | null, token: string | null) {
 	return data;
 }
 
+
+function sideChoice(pieceColor: "white" | "black" | "random"): "white" | "black"
+{
+	if (pieceColor === "random")
+	{
+		return Math.random() < 0.5 ? "white" : "black";
+	}
+	return pieceColor
+}
+
+
 interface GameSettings {
 	opponent: 'bot' | 'live'
 	difficulty: 'easy' | 'medium' | 'hard'
@@ -124,6 +161,7 @@ interface GameSettings {
 	pieceColor: 'white' | 'black' | 'random'
 	boardTheme: 'default' | 'green' | 'blue' | 'brown'
 	pieceTheme: 'default' | 'simple'
+	game_id?: number
 }
 
 const pieceStyle: React.CSSProperties = {
@@ -167,6 +205,8 @@ const BOARD_THEMES = {
 function GamePage() {
 	const { user, token } = useAuth()
 	const location = useLocation()
+	const navigate = useNavigate()
+
 	const settings: GameSettings = location.state ?? {
 		opponent: 'bot',
 		difficulty: 'medium',
@@ -174,7 +214,9 @@ function GamePage() {
 		pieceColor: 'random',
 		boardTheme: 'default',
 		pieceTheme: 'default',
+		game_id: undefined,
 	}
+
 	const theme = BOARD_THEMES[settings.boardTheme]
 	const pieces = PIECE_THEMES[settings.pieceTheme]
 
@@ -185,6 +227,40 @@ function GamePage() {
 		((locationState.game as { id?: number } | undefined)?.id ?? null)
 	const gameId = typeof gameIdFromState === "number" ? gameIdFromState : null
 
+
+	// when random reasign every refresh
+	const playerColor = useMemo(() => {
+		return sideChoice(settings.pieceColor);
+	}, [settings.pieceColor]);
+
+
+	// calls the create game function and returns its game id, 
+	const restartGame = async () => {
+
+		let gameId: number | undefined
+
+		// Keep previous UX: start game even if backend game creation is unavailable.
+		if (settings.opponent === 'bot' && token) {
+			const game = await createGame(settings.opponent, token)
+			if (game?.game_id) {
+				gameId = game.game_id
+			}
+		}
+		return gameId
+	}
+
+	// when given rematch id reset board to starting positions
+	useEffect(() => {
+		setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+		setMoves([])
+		setRes({state:"ongoing", winner:""})
+		setPro({ move: "", x: -1, y: -1, pre: "" })
+		setHighlightSquares([])
+		setHighlightSquares2([])
+	}, [location.state?.rematchId])
+
+
+	// adds w/b to promotion pieces 
 	const getPromotionOptions = (prefix: "w" | "b") =>
 		ppieces.map((p) => ({
 		piece: `${prefix}${p}` as keyof typeof pieces,
@@ -192,19 +268,13 @@ function GamePage() {
 	}))
 
 	const [fen, setFen] = useState("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
-	const [result, setRes] = useState<string>("ongoing")
-	const [promotion, setPro] = useState({
-		move: "",
-		x: -1,
-		y: -1, 
-		pre: "" 
-	})
+	const [result, setRes] = useState( {state: "ongoing", winner: "" })
+	const [promotion, setPro] = useState({ move: "", x: -1, y: -1, pre: "" })
 
-	const [highlightSquares, setHighlightSquares] = useState<string[]>([]);
-	const [highlightSquares2, setHighlightSquares2] = useState<string[]>([]);
-	const [moves, setMoves] = useState<{ white: string; black?: string }[]>([]);
-	const [resignError, setResignError] = useState<string>("");
-	const [isResigning, setIsResigning] = useState(false);
+	const [moves, setMoves] = useState<{ white: string; black?: string }[]>([])
+	const [resignError, setResignError] = useState<string>("")
+	const [isResigning, setIsResigning] = useState(false)
+
 
 	const handleResign = async () => {
 		setResignError("");
@@ -228,9 +298,14 @@ function GamePage() {
 			return;
 		}
 
-		setRes(data.result);
+		setRes({state:"Resign", winner: data.result});
 	}
 
+
+	// highlight squares
+	const [highlightSquares, setHighlightSquares] = useState<string[]>([])
+	const [highlightSquares2, setHighlightSquares2] = useState<string[]>([])
+	const [checkSquare, setCheckSquare] = useState<string | null>(null)
 
 	const customSquareStyles = useMemo(() => {
 		const styles: Record<string, React.CSSProperties> = {};
@@ -249,16 +324,24 @@ function GamePage() {
 		};
 		});
 
+		if (checkSquare) {
+			styles[checkSquare] = {
+				background:
+					"radial-gradient(circle, rgba(255,0,0,0.35) 0%, rgba(180,0,0,0.8) 85%)",
+			};
+		}
+
+
 		return styles;
-	}, [highlightSquares, highlightSquares2]);
+	}, [highlightSquares, highlightSquares2, checkSquare]);
 
 
-	// const customPieces: 
-
+	// gameplay loop, essentially
 	const chessboardOptions =
 	{
 		// your config options here
 		position: fen,
+		boardOrientation: playerColor,
 		darkSquareStyle: { backgroundColor: theme.dark },
 		lightSquareStyle: { backgroundColor: theme.light },
 		pieces: pieces,
@@ -282,7 +365,7 @@ function GamePage() {
 				const newhigh2 = data.moves2[square] || [];
 				setHighlightSquares2(newhigh2);
 				console.debug('DEBUG: HIGHLIGHT SQUARES:', newhigh);
-				console.debug('DEBUG: HIGHLIGHT SQUARES:', newhigh2);
+				console.debug('DEBUG: HIGHLIGHT SQUARES2:', newhigh2);
 			});
 		},
 
@@ -315,7 +398,7 @@ function GamePage() {
 				}
 				
 				// Add move to history
-				const moveNotation = `${sourceSquare}-${targetSquare}`;
+				const moveNotation = `${sourceSquare}${targetSquare}`;
 				const isWhiteMove = fen.split(" ")[1] === "w";
 				
 				setMoves(prevMoves => {
@@ -336,11 +419,18 @@ function GamePage() {
 				});
 				
 				setFen(data.fen);
-				setRes(data.result);
+				setRes({state:data.result, winner: data.winner});
 				setPro({move: data.promotion, x: -1, y: -1, pre: ''})
+
+				setCheckSquare(data.kingpos || null)
+				
+				// console.log("piece color", settings.pieceColor)
+				// const neww = data.winner;
+				// console.log("winner:", neww);
 			});
 			setHighlightSquares([]);
 			setHighlightSquares2([]);
+
 			return false; // prevent local move, backend is source of truth
 		},
 
@@ -409,12 +499,14 @@ function GamePage() {
 										<button
 											key={promo}
 											onClick={() => {
-												console.log(getPromotionOptions(promotion.pre as "w" | "b"))
-												do_promotion(fen, promotion.move, promo, gameId).then((data) => {
-													if (!data) return;
+												console.log("promotion options", getPromotionOptions(promotion.pre as "w" | "b"))
+												// console.log("game id", gameId)
+												do_promotion(fen, promotion.move, promo).then((data) => {
+													if (!data)
+														return;
 													
 													// Add promotion move to history
-													const moveNotation = `${promotion.move}-${promo.toUpperCase()}`;
+													const moveNotation = `${promotion.move}${promo}`;
 													const isWhiteMove = fen.split(" ")[1] === "w";
 													
 													setMoves(prevMoves => {
@@ -432,12 +524,12 @@ function GamePage() {
 													});
 													
 													setFen(data.fen);
-													setRes(data.result);
+													setRes({state:data.result, winner: data.win});
 													setPro({move: "", x: -1, y: -1, pre: ''}); // IMPORTANT: clear UI
 												});
 											}} >
-									{Piece()}
-									{/* {'hello'} */}
+											{Piece()}
+											{/* {'hello'} */}
 										</button>
 									)})}
 								</div>
@@ -495,24 +587,102 @@ function GamePage() {
 					</div>
 
 					{/* gameover	make better with rematch option and stuff*/}
-					{result !== "ongoing" && (
-						<div style={{
+					{result.state !== "ongoing" && (
+					<div
+						style={{
 							position: "absolute",
-							top: 0,
-							left: 0,
-							right: 0,
-							bottom: 0,
-							background: "rgba(0,0,0,0.6)",
-							color: "white",
+							inset: 0,
+							background: "rgba(0,0,0,0.65)",
+							backdropFilter: "blur(4px)",
 							display: "flex",
 							alignItems: "center",
 							justifyContent: "center",
-							fontSize: "32px",
-							fontWeight: "bold"
-						}}>
-							Game Over: {result}
+							zIndex: 9999,
+						}}
+					>
+						<div
+							style={{
+								width: "320px",
+								background: "#262522",
+								borderRadius: "14px",
+								border: "1px solid #3a3937",
+								boxShadow: "0 20px 50px rgba(0,0,0,0.6)",
+								padding: "20px",
+								display: "flex",
+								flexDirection: "column",
+								gap: "16px",
+								color: "#f0eeff",
+							}}
+						>
+							{/* Result header */}
+							<div style={{ textAlign: "center" }}>
+								<div style={{ fontSize: "18px", fontWeight: 700 }}>
+									{result?.winner + " Won!" || "Draw"}
+								</div>
+
+								<div style={{ fontSize: "12px", color: "#8892a4", marginTop: "4px" }}>
+									Game over
+								</div>
+							</div>
+
+							{/* Divider */}
+							<div style={{ height: "1px", background: "#3a3937" }} />
+
+							{/* Buttons */}
+							<div style={{ display: "flex", gap: "10px" }}>
+								<button
+									type="button"
+									style={{
+										flex: 1,
+										background: "#81b64c",
+										color: "white",
+										padding: "10px",
+										borderRadius: "8px",
+										border: "none",
+										fontWeight: 600,
+										cursor: "pointer",
+									}}
+									onClick={async () => {
+										const newGameId = await restartGame()
+
+										if (!newGameId) {
+											console.error("Failed to create rematch")
+											return
+										}
+
+										navigate("/game", {
+											state: {
+												...settings,
+												game_id: newGameId,
+												rematchId: newGameId,
+											},
+										})
+									}}
+								>
+									Rematch
+								</button>
+
+								<button
+									type="button"
+									style={{
+										flex: 1,
+										background: "#3a3937",
+										color: "#f0eeff",
+										padding: "10px",
+										borderRadius: "8px",
+										border: "none",
+										fontWeight: 600,
+										cursor: "pointer",
+									}}
+									onClick={() => navigate("/")}
+								>
+									Menu
+								</button>
+
+							</div>
 						</div>
-					)}
+					</div>
+				)}
 				</div>
 			</div>
 			<Footer />
@@ -523,4 +693,4 @@ function GamePage() {
 export default GamePage
 
 // tabading@example.com Hello1295!
-// 
+// site refresh compleatly resets everything, implement local storage 

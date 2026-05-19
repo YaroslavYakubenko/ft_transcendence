@@ -12,6 +12,8 @@ def check_gameover(board):
 
 	if board.is_checkmate():
 		result = "checkmate"
+	elif board.is_check():
+		result = "check"
 	elif board.is_stalemate():
 		result = "stalemate"
 	elif board.is_insufficient_material():
@@ -110,96 +112,113 @@ def make_move(request):
 
 	board = chess.Board(fen)
 	move = chess.Move.from_uci(_s + _t)
-	if check_promotion(board, _s, _t) == True:
-		return Response({
-			"fen": fen,
-			"result": "ongoing",
-			"promotion": (_s + _t)
-		})
 
 	if move not in board.legal_moves:
 		return Response({"log": "illegal move"})
 
+	if check_promotion(board, _s, _t) == True:
+		return Response({
+			"fen": fen,
+			"result": "ongoing",
+			"winner": "",
+			"promotion": (_s + _t)
+		})
+
 	board.push(move)
 	res = check_gameover(board)
+	win = ""
+	king = ""
+	if res == "check":
+		king = chess.square_name(board.king(board.turn))
+		res = "ongoing"
+	elif res != "ongoing" :
+		win = "Black" if board.turn else "White"
+
+	print("\n\n\king: ", king, "\n\n\n")
 	
 	# Save move to database if game_id is provided
-	if game_id:
-		try:
-			game = Game.objects.get(id=game_id)
-			move_count = game.moves.count() + 1
-			Move.objects.create(
-				game=game,
-				from_square=_s,
-				to_square=_t,
-				fen_before=fen,
-				fen_after=board.fen(),
-				move_number=move_count
-			)
-			# Update game FEN and status
-			game.current_fen = board.fen()
+	# if game_id:
+	# 	try:
+	# 		game = Game.objects.get(id=game_id)
+	# 		move_count = game.moves.count() + 1
+	# 		Move.objects.create(
+	# 			game=game,
+	# 			from_square=_s,
+	# 			to_square=_t,
+	# 			fen_before=fen,
+	# 			fen_after=board.fen(),
+	# 			move_number=move_count
+	# 		)
+	# 		# Update game FEN and status
+	# 		game.current_fen = board.fen()
 			
-			if res != "ongoing":
-				# Game is over, update stats
-				update_player_stats(game, res)
-			elif game.status == 'pending':
-				game.status = 'ongoing'
-				game.started_at = timezone.now()
-				game.save()
-		except Game.DoesNotExist:
-			pass  # Continue without saving if game doesn't exist
+	# 		if res != "ongoing":
+	# 			# Game is over, update stats
+	# 			update_player_stats(game, res)
+	# 		elif game.status == 'pending':
+	# 			game.status = 'ongoing'
+	# 			game.started_at = timezone.now()
+	# 			game.save()
+	# 	except Game.DoesNotExist:
+	# 		pass  # Continue without saving if game doesn't exist
 
 	return Response({
 		"fen": board.fen(),
 		"result": res,
-		"promotion": ''
+		"winner" : win,
+		"promotion": '',
+		"kingpos" : king,
 		})
 
 @api_view(['POST'])
 def do_promotion(request):
 	fen = request.data.get('fen')
 	_move = request.data.get('move')
-	key = request.data.get('key')
+	promo_to = request.data.get('key')
 	game_id = request.data.get('game_id')  # Optional: save to database if provided
 
-	if not fen or not _move or not key:
+	if not fen or not _move or not promo_to:
 		return Response({"error": "missing data"}, status=400)
 
 	board = chess.Board(fen)
-	move = chess.Move.from_uci(_move + key)
+	move = chess.Move.from_uci(_move + promo_to)
 	if move not in board.legal_moves:
 		return Response({"log": "illegal move"})
 
 	board.push(move)
 	res = check_gameover(board)
+	win = ""
+	if res != "ongoing":
+		win = "Black" if board.turn else "White"
 	
 	# Save promotion move to database if game_id is provided
-	if game_id:
-		try:
-			game = Game.objects.get(id=game_id)
-			move_count = game.moves.count() + 1
-			Move.objects.create(
-				game=game,
-				from_square=_move,
-				to_square=key,
-				promotion_piece=None,  # Could extract from move if needed
-				fen_before=fen,
-				fen_after=board.fen(),
-				move_number=move_count
-			)
-			# Update game FEN and status
-			game.current_fen = board.fen()
+	# if game_id:
+	# 	try:
+	# 		game = Game.objects.get(id=game_id)
+	# 		move_count = game.moves.count() + 1
+	# 		Move.objects.create(
+	# 			game=game,
+	# 			from_square=_move,
+	# 			to_square=promo_to,
+	# 			promotion_piece=None,  # Could extract from move if needed
+	# 			fen_before=fen,
+	# 			fen_after=board.fen(),
+	# 			move_number=move_count
+	# 		)
+	# 		# Update game FEN and status
+	# 		game.current_fen = board.fen()
 			
-			if res != "ongoing":
-				# Game is over, update stats
-				update_player_stats(game, res)
-			game.save()
-		except Game.DoesNotExist:
-			pass  # Continue without saving if game doesn't exist
+	# 		if res != "ongoing":
+	# 			# Game is over, update stats
+	# 			update_player_stats(game, res)
+	# 		game.save()
+	# 	except Game.DoesNotExist:
+	# 		pass  # Continue without saving if game doesn't exist
 	
 	return Response({
 		"fen": board.fen(),
 		"result": res,
+		"winner" : win,
 		"promotion": ''
 		})
 
@@ -232,6 +251,7 @@ def legal_moves(request):
 # return 2, 1 not occupied, 1 occupied 
 
 
+# when resigning always assumes player 1 is white -> doesn't check pieceColor
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_game(request):
@@ -292,12 +312,12 @@ def resign_game(request):
 	# Determine which player resigned
 	if game.white_player == request.user:
 		# White player resigned, black wins
-		game.result = 'black_win'
+		game.result = 'Black'
 		resigner = game.white_player
 		winner = game.black_player
 	elif game.black_player == request.user:
 		# Black player resigned, white wins
-		game.result = 'white_win'
+		game.result = 'White'
 		resigner = game.black_player
 		winner = game.white_player
 	else:
