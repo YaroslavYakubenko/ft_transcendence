@@ -28,11 +28,9 @@ def check_promotion(board, _s, _t):
 
 	if piece is None:
 		return False
-
 	# not your turn
 	if piece and piece.color != board.turn:
 		return False
-
 	if piece.piece_type != chess.PAWN:
 		return False
 
@@ -41,7 +39,6 @@ def check_promotion(board, _s, _t):
 	# white pawn reaching rank 7 (8th rank)
 	if piece.color == chess.WHITE and to_rank == 7:
 		return True
-
 	# black pawn reaching rank 0 (1st rank)
 	if piece.color == chess.BLACK and to_rank == 0:
 		return True
@@ -141,7 +138,7 @@ def make_move(request):
 	# print("\n\n\king: ", king, "\n\n\n")
 	
 	# Save move to database if game_id is provided
-	# if game_id:
+	if game_id:
 		try:
 			game = Game.objects.get(id=game_id)
 			move_count = game.moves.count() + 1
@@ -195,7 +192,7 @@ def do_promotion(request):
 		win = "Black" if board.turn else "White"
 	
 	# Save promotion move to database if game_id is provided
-	# if game_id:
+	if game_id:
 		try:
 			game = Game.objects.get(id=game_id)
 			move_count = game.moves.count() + 1
@@ -225,6 +222,7 @@ def do_promotion(request):
 		})
 
 
+# return legal moves to free & occupied spaces
 @api_view(['POST'])
 def legal_moves(request):
 	fen = request.data.get("fen")
@@ -244,13 +242,10 @@ def legal_moves(request):
 		else:
 			moves.setdefault(frm, []).append(to)
 
-	# print(moves['h2'])
 	return Response({
 		"moves": moves,
 		"moves2": moves2,
 		})
-
-# return 2, 1 not occupied, 1 occupied 
 
 
 # when resigning always assumes player 1 is white -> doesn't check pieceColor

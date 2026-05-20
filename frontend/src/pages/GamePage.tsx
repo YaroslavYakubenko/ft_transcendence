@@ -1,159 +1,17 @@
-import { useState } from "react"
-import { useMemo } from "react";
-import { useLocation } from "react-router-dom"
-import { Chessboard, defaultPieces} from "react-chessboard"
-import { useAuth } from "../context/AuthContext"
+import { useState, useMemo }	from "react"
+import { useLocation, useNavigate } 	from "react-router-dom"
+import { Chessboard} 	from "react-chessboard"
+import { useAuth } 			from "../context/AuthContext"
+import { useTranslation }	from "react-i18next"
 import Navbar from "../components/Navbar"
-import { useNavigate } from "react-router-dom"
-import { useEffect } from "react"
-
 import Footer from "../components/Footer"
-import { useTranslation } from "react-i18next"
-import type { PieceHandlerArgs } from "react-chessboard"
-import type { PieceDropHandlerArgs } from "react-chessboard"
+import type { PieceHandlerArgs, PieceDropHandlerArgs } from "react-chessboard"
 
-async function createGame(opponent: 'bot' | 'live', token: string | null) {
-	if (!token) {
-		return null
-	}
+import { make_move, legal_moves, resign_game, do_promotion, createGame } from "../api/game"
+import { PROMOTION_PIECES, START_FEN, SQUARE_SIZE } from "../chess/constants"
+import { PIECE_THEMES, BOARD_THEMES } from "../chess/themes"
 
-	const response = await fetch("http://localhost:8000/create-game/", {
-		method: "POST",
-		headers: {
-			"Authorization": `Token ${token}`,
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify({ opponent }),
-	})
-
-	const data = await response.json()
-	if (!response.ok || data.error) {
-		console.error(data.error || "Failed to create game")
-		return null
-	}
-
-	return data
-}
-
-// make move 
-async function make_move(fen: string, from: string, to: string, gameId?: number | null) {
-	const res = await fetch("http://localhost:8000/make-move/", {
-	method: "POST",
-	headers: {
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		fen,
-		from,
-		to,
-		game_id: gameId ?? undefined,
-	}),
-	});
-
-	const data = await res.json();
-
-	if (data.error) {
-		console.error(data.error);
-		return null; // fallback: no update
-	}
-	if (data.log) {
-		console.log("LOG:" ,data.log)
-		return null; // fallback: no update
-	}
-
-	return data;
-}
-
-// promote pawn
-async function do_promotion(fen: string, move: string, key: string, gameId?: number | null) {
-	const res = await fetch("http://localhost:8000/do-promotion/", {
-	method: "POST",
-	headers: {
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		fen,
-		move,
-		key,
-		game_id: gameId ?? undefined,
-	}),
-	});
-
-	const data = await res.json();
-
-	// console.log(data);
-
-	if (data.error) {
-		console.error(data.error);
-		return null; // fallback: no update
-	}
-	if (data.log) {
-		console.log("LOG:" ,data.log)
-		return null; // fallback: no update
-	}
-
-	return data;
-}
-
-// get legal moves to empty and occupied spaces
-async function legal_moves(fen: string) {
-	const res = await fetch("http://localhost:8000/legal-moves/", {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify({
-			fen,
-		}),
-	});
-
-	const data = await res.json();
-
-	// console.log(data);
-
-	if (data.error) {
-		console.error(data.error);
-		return null; // fallback: no update
-	}
-	return data;
-}
-
-async function resign_game(gameId: number | null, token: string | null) {
-	if (!gameId || !token) {
-		console.error("Game ID or token missing");
-		return null;
-	}
-
-	const res = await fetch("http://localhost:8000/resign/", {
-		method: "POST",
-		headers: {
-			"Authorization": `Token ${token}`,
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify({
-			game_id: gameId,
-		}),
-	});
-
-	const data = await res.json();
-
-	if (data.error) {
-		console.error(data.error);
-		return null;
-	}
-
-	return data;
-}
-
-
-function sideChoice(pieceColor: "white" | "black" | "random"): "white" | "black"
-{
-	if (pieceColor === "random")
-	{
-		return Math.random() < 0.5 ? "white" : "black";
-	}
-	return pieceColor
-}
+import { usePersistState, useRematchReset, usePlayerColor } from "../chess/hooks"
 
 
 interface GameSettings {
@@ -165,47 +23,6 @@ interface GameSettings {
 	pieceTheme: 'default' | 'simple'
 	game_id?: number
 }
-
-const pieceStyle: React.CSSProperties = {
-  width: "100%",
-  height: "100%",
-  objectFit: "contain",
-}
-
-const PIECE_THEMES = {
-	default: {
-		 ...defaultPieces
-	},
-
-	simple: {
-		wP: () => <img src="/imgs/wp.png" style={pieceStyle} />,
-		wN: () => <img src="/imgs/wn.png"  style={pieceStyle} />,
-		wB: () => <img src="/imgs/wb.png"  style={pieceStyle} />,
-		wR: () => <img src="/imgs/wr.png"  style={pieceStyle} />,
-		wQ: () => <img src="/imgs/wq.png"  style={pieceStyle} />,
-		wK: () => <img src="/imgs/wk.png"  style={pieceStyle} />,
-
-		bP: () => <img src="/imgs/bp.png"  style={pieceStyle} />,
-		bN: () => <img src="/imgs/bn.png"  style={pieceStyle} />,
-		bB: () => <img src="/imgs/bb.png"  style={pieceStyle} />,
-		bR: () => <img src="/imgs/br.png"  style={pieceStyle} />,
-		bQ: () => <img src="/imgs/bq.png"  style={pieceStyle} />,
-		bK: () => <img src="/imgs/bk.png"  style={pieceStyle} />,
-	},
-}
-
-const ppieces = ["Q", "R", "B", "N"] as const
-
-
-const BOARD_THEMES = {
-	default: { light: '#f0eeff', dark: '#2e2e40' },
-	green: { light: '#ffffdd', dark: '#86a666' },
-	blue: { light: '#dee3e6', dark: '#8ca2ad' },
-	brown: { light: '#f0d9b5', dark: '#b58863' },
-}
-
-const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-
 
 function GamePage() {
 	const { user, token } = useAuth()
@@ -290,21 +107,10 @@ function GamePage() {
 	const [isResigning, setIsResigning] = useState(false)
 
 
-// actions, ract hooks?? what do you call it ----------------------------------------
+// actions, react hooks?? what do you call it ----------------------------------------
 
-	// when random reasign every refresh, fix with local
-	const playerColor = useMemo(() => {
-		const saved = localStorage.getItem(storage_keys.piece_color);
-
-		if (saved === "white" || saved === "black") {
-			return saved;
-		}
-
-		const resolved = sideChoice(settings.pieceColor); // your random logic
-		localStorage.setItem(storage_keys.piece_color, resolved);
-
-		return resolved;
-	}, [settings.pieceColor, storage_keys.piece_color]);
+	// set player color
+	const playerColor = usePlayerColor( settings.pieceColor, storage_keys.piece_color )
 
 
 	// calls the create game function and returns its game id, 
@@ -322,45 +128,30 @@ function GamePage() {
 		return gameId
 	}
 
-
-	// update local fen on change
-	useEffect(() => {
-		if (location.state?.rematchId) return;
-
-		localStorage.setItem(storage_keys.fen, fen);
-	}, [fen, storage_keys.fen, location.state?.rematchId]);
-
-	useEffect(() => {
-		localStorage.setItem(storage_keys.move_history, JSON.stringify(moves));
-	}, [moves, storage_keys.move_history]);
-
 	// when given rematch id reset board to starting positions
-	useEffect(() => {
-		if (!location.state?.rematchId) return;
+	useRematchReset({
+		rematchId: location.state?.rematchId,
+		storage_keys,
+		resetGameState: () => {
+			setFen(START_FEN)
+			setMoves([])
+			setRes({ state: "ongoing", winner: "" })
+			setPro({ move: "", x: -1, y: -1, pre: "" })
+			setHighlightSquares([])
+			setHighlightSquares2([])
+			setCheckSquare(null)
+		},
+	})
+	// update local fen on change
+	usePersistState(storage_keys.fen, fen, location.state?.rematchId)
 
-		localStorage.removeItem(storage_keys.fen);
-		localStorage.removeItem(storage_keys.move_history);
+	// update local move history on change
+	usePersistState(storage_keys.move_history, JSON.stringify(moves), location.state?.rematchId)
 
-		setFen(START_FEN)
-		setMoves([])
-		setRes({state:"ongoing", winner:""})
-		setPro({ move: "", x: -1, y: -1, pre: "" })
-		setHighlightSquares([])
-		setHighlightSquares2([])
-		setCheckSquare(null)
-
-		navigate(location.pathname, {
-			replace: true,
-			state: {
-				...location.state,
-				rematchId: undefined,
-			},
-		});
-	}, [location.state?.rematchId])
 
 	// adds w/b to promotion pieces 
 	const getPromotionOptions = (prefix: "w" | "b") =>
-		ppieces.map((p) => ({
+		PROMOTION_PIECES.map((p) => ({
 		piece: `${prefix}${p}` as keyof typeof pieces,
 		promo: p.toLowerCase(),
 	}))
@@ -440,13 +231,12 @@ function GamePage() {
 
 				// menueing, change sometime looks disgusting, own function maybe
 				if (data.promotion !== '') {
-					const squareSize = 500 / 8; // 62.5px
 					const file = targetSquare[0].charCodeAt(0) - 97
 					const rank = 8 - Number(targetSquare[1])
-					const offset = squareSize / 2 + 8
+					const offset = SQUARE_SIZE / 2 + 8
 
-					const x = file * squareSize + squareSize / 2
-					const centerY = rank * squareSize + squareSize / 2
+					const x = file * SQUARE_SIZE + SQUARE_SIZE / 2
+					const centerY = rank * SQUARE_SIZE + SQUARE_SIZE / 2
 					if (fen.split(" ")[1] === "w")
 					{
 						const y = centerY + offset
@@ -587,7 +377,7 @@ function GamePage() {
 													});
 													
 													setFen(data.fen);
-													setRes({state:data.result, winner: data.win});
+													setRes({state:data.result, winner: data.winner});
 													setPro({move: "", x: -1, y: -1, pre: ''}); // IMPORTANT: clear UI
 												});
 											}} >
@@ -756,3 +546,8 @@ function GamePage() {
 export default GamePage
 
 // tabading@example.com Hello1295!
+
+// resign assumes player is always white 
+// promotion window assumes player is white
+// promoting into checkmate = undefiened Won
+// when reloading in gameover screen it dissapears and you're stuck
