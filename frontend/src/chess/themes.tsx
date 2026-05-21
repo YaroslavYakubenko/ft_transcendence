@@ -36,3 +36,35 @@ export const BOARD_THEMES = {
 	blue: { light: '#dee3e6', dark: '#8ca2ad' },
 	brown: { light: '#f0d9b5', dark: '#b58863' },
 }
+
+
+export const createSquareStyles = (
+	highlightSquares: string[],
+	highlightSquares2: string[],
+	checkSquare: string | null
+): Record<string, React.CSSProperties> => {
+	const styles: Record<string, React.CSSProperties> = {};
+
+	highlightSquares.forEach((sq) => {
+		styles[sq] = {
+			background:
+				"radial-gradient(circle, rgba(244, 201, 148, 0.9) 25%, transparent 25%)",
+		};
+	});
+
+	highlightSquares2.forEach((sq) => {
+		styles[sq] = {
+			background:
+				"radial-gradient(circle, transparent 50%, rgba(244, 201, 148, 0.9) 50%, rgba(244, 201, 148, 0.9) 60%, transparent 60%)",
+		};
+	});
+
+	if (checkSquare) {
+		styles[checkSquare] = {
+			background:
+				"radial-gradient(circle, rgba(255,0,0,0.35) 0%, rgba(180,0,0,0.8) 85%)",
+		};
+	}
+
+	return styles;
+};

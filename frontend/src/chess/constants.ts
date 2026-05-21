@@ -6,3 +6,4 @@ export const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0
 export const BOARD_SIZE = 500
 
 export const SQUARE_SIZE = BOARD_SIZE / 8
+

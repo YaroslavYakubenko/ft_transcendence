@@ -8,10 +8,12 @@ import Footer from "../components/Footer"
 import type { PieceHandlerArgs, PieceDropHandlerArgs } from "react-chessboard"
 
 import { make_move, legal_moves, resign_game, do_promotion, createGame } from "../api/game"
-import { PROMOTION_PIECES, START_FEN, SQUARE_SIZE } from "../chess/constants"
-import { PIECE_THEMES, BOARD_THEMES } from "../chess/themes"
 
+import { START_FEN } from "../chess/constants"
+import { PIECE_THEMES, BOARD_THEMES, createSquareStyles } from "../chess/themes"
 import { usePersistState, useRematchReset, usePlayerColor } from "../chess/hooks"
+import { appendMove, getBoardCoordinates} from "../chess/utils"
+import PromotionSelector from "../components/PromotionSelector"
 
 
 interface GameSettings {
@@ -52,7 +54,7 @@ function GamePage() {
 		((locationState.game as { id?: number } | undefined)?.id ?? null)
 	const gameId = typeof gameIdFromState === "number" ? gameIdFromState : null
 	
-	// storage keys
+	// storage keys for persistance on site reload
 	const storage_keys = useMemo(() => ({
 		fen: `chess_fen_${gameId ?? "local"}`,
 		move_history: `move_history_${gameId ?? "local"}`,
@@ -63,29 +65,15 @@ function GamePage() {
 	const [highlightSquares, setHighlightSquares] = useState<string[]>([])
 	const [highlightSquares2, setHighlightSquares2] = useState<string[]>([])
 	const [checkSquare, setCheckSquare] = useState<string | null>(null)
-
-	const customSquareStyles = useMemo(() => {
-		const styles: Record<string, React.CSSProperties> = {};
-		highlightSquares.forEach((sq) => {
-		styles[sq] = {
-			background:
-			"radial-gradient(circle, rgba(244, 201, 148, 0.9) 25%, transparent 25%)",
-		};
-		});
-		highlightSquares2.forEach((sq) => {
-		styles[sq] = {
-			background:
-			"radial-gradient(circle, transparent 50%, rgba(244, 201, 148, 0.9) 50%, rgba(244, 201, 148, 0.9) 60%, transparent 60%)",
-		};
-		});
-		if (checkSquare) {
-			styles[checkSquare] = {
-				background:
-					"radial-gradient(circle, rgba(255,0,0,0.35) 0%, rgba(180,0,0,0.8) 85%)",
-			};
-		}
-		return styles;
-	}, [highlightSquares, highlightSquares2, checkSquare]);
+	const customSquareStyles = useMemo(
+		() =>
+			createSquareStyles(
+				highlightSquares,
+				highlightSquares2,
+				checkSquare
+			),
+		[highlightSquares, highlightSquares2, checkSquare]
+	);
 
 
 	// game vars ----------------------------------------
@@ -148,14 +136,6 @@ function GamePage() {
 	// update local move history on change
 	usePersistState(storage_keys.move_history, JSON.stringify(moves), location.state?.rematchId)
 
-
-	// adds w/b to promotion pieces 
-	const getPromotionOptions = (prefix: "w" | "b") =>
-		PROMOTION_PIECES.map((p) => ({
-		piece: `${prefix}${p}` as keyof typeof pieces,
-		promo: p.toLowerCase(),
-	}))
-
 	const handleResign = async () => {
 		localStorage.removeItem(storage_keys.fen);
 		localStorage.removeItem(storage_keys.move_history);
@@ -204,21 +184,16 @@ function GamePage() {
 				setHighlightSquares2([]);
 				return;
 			}
+			// saved as var in case of needing debug statements, doesn't work otherwise can remove later
 			const currentFen = fen;
 			// gets highlights through legal moves 
 			legal_moves(currentFen).then((data) => {
-				if (!piece)
-					return;
-				// console.debug("DEBUG: SOURCE:", square);
-				// console.debug("DEBUG: HIGHLIGHT KEYS:", Object.keys(data.moves));
-
+				if (!piece) return;
+				// saved as vars in case of needing debug statements, doesn't work otherwise
 				const newhigh = data.moves[square] || [];
 				setHighlightSquares(newhigh);
 				const newhigh2 = data.moves2[square] || [];
 				setHighlightSquares2(newhigh2);
-
-				// console.debug('DEBUG: HIGHLIGHT SQUARES:', newhigh);
-				// console.debug('DEBUG: HIGHLIGHT SQUARES2:', newhigh2);
 			});
 		},
 
@@ -228,58 +203,25 @@ function GamePage() {
 			make_move(fen, sourceSquare, targetSquare, gameId).then((data) => {
 				if (!data)
 					return;
-
-				// menueing, change sometime looks disgusting, own function maybe
+				// get position of the promotion menue 
 				if (data.promotion !== '') {
-					const file = targetSquare[0].charCodeAt(0) - 97
-					const rank = 8 - Number(targetSquare[1])
-					const offset = SQUARE_SIZE / 2 + 8
-
-					const x = file * SQUARE_SIZE + SQUARE_SIZE / 2
-					const centerY = rank * SQUARE_SIZE + SQUARE_SIZE / 2
-					if (fen.split(" ")[1] === "w")
-					{
-						const y = centerY + offset
-						setPro({move: data.promotion, x: x , y: y, pre: 'w'})
-					}
-					else
-					{
-						const y = centerY - offset - 280
-						setPro({move: data.promotion, x: x , y: y, pre: 'b'})
-					}
-
+					const { x, y } = getBoardCoordinates(targetSquare, playerColor, fen);
+					setPro({move: data.promotion, x: x , y: y, pre: fen.split(" ")[1]})
 					return;
 				}
 				
 				// Add move to history
 				const moveNotation = `${sourceSquare}${targetSquare}`;
 				const isWhiteMove = fen.split(" ")[1] === "w";
-				setMoves(prevMoves => {
-					const newMoves = [...prevMoves];
-					if (isWhiteMove) {
-						// White just moved
-						newMoves.push({ white: moveNotation });
-					} else {
-						// Black just moved, add to last white move
-						if (newMoves.length > 0) {
-							newMoves[newMoves.length - 1].black = moveNotation;
-						} else {
-							// Shouldn't happen, but handle it
-							newMoves.push({ white: "", black: moveNotation });
-						}
-					}
-					return newMoves;
-				});
+				setMoves(prevMoves =>
+					appendMove(prevMoves, moveNotation, isWhiteMove)
+				);
 				
 				// update variables
 				setFen(data.fen);
 				setRes({state:data.result, winner: data.winner});
 				setPro({move: data.promotion, x: -1, y: -1, pre: ''})
 				setCheckSquare(data.kingpos || null)
-				
-				// console.log("piece color", settings.pieceColor)
-				// const neww = data.winner;
-				// console.log("winner:", neww);
 			});
 			// after movement reset highlights
 			setHighlightSquares([]);
@@ -316,8 +258,7 @@ function GamePage() {
 						</div>
 
 						{/* Board */}
-						<div 
-							className="relative w-[500px]" 
+						<div className="relative w-[500px]" 
 							>
 							<Chessboard 
 							options={{
@@ -325,68 +266,17 @@ function GamePage() {
 								squareStyles: customSquareStyles,
 							}} />
 
-							{/* promotion */}
-							{promotion.move && (
-								<div			
-									style={{
-										position: "absolute",
-										width: 80,
-										height: 280,
-										left: promotion.x,
-										top: promotion.y,
-										transform: "translateX(-50%)",
-										zIndex: 9999,
-										background: "#ffffff",
-										padding: "12px",
-										borderRadius: "10px",
-										display: "flex",
-										flexDirection: "column",
-										gap: "10px",
-									}} >
-
-
-									{getPromotionOptions(promotion.pre as "w" | "b").map(( {piece, promo} ) => {
-										const Piece = pieces[piece]
-									
-										return (
-										<button
-											key={promo}
-											onClick={() => {
-												console.log("promotion options", getPromotionOptions(promotion.pre as "w" | "b"))
-												// console.log("game id", gameId)
-												do_promotion(fen, promotion.move, promo).then((data) => {
-													if (!data)
-														return;
-													
-													// Add promotion move to history
-													const moveNotation = `${promotion.move}${promo}`;
-													const isWhiteMove = fen.split(" ")[1] === "w";
-													
-													setMoves(prevMoves => {
-														const newMoves = [...prevMoves];
-														if (isWhiteMove) {
-															newMoves.push({ white: moveNotation });
-														} else {
-															if (newMoves.length > 0) {
-																newMoves[newMoves.length - 1].black = moveNotation;
-															} else {
-																newMoves.push({ white: "", black: moveNotation });
-															}
-														}
-														return newMoves;
-													});
-													
-													setFen(data.fen);
-													setRes({state:data.result, winner: data.winner});
-													setPro({move: "", x: -1, y: -1, pre: ''}); // IMPORTANT: clear UI
-												});
-											}} >
-											{Piece()}
-											{/* {'hello'} */}
-										</button>
-									)})}
-								</div>
-							)}
+							{/* promotion, see if clicking outside selector could close it, works weird right now */}
+							<PromotionSelector
+								promotion={promotion}
+								pieces={pieces}
+								fen={fen}
+								setMoves={setMoves}
+								setFen={setFen}
+								setRes={setRes}
+								setPro={setPro}
+								do_promotion={do_promotion}
+							/>
 
 						</div>
 
@@ -441,101 +331,59 @@ function GamePage() {
 
 					{/* gameover	make better with rematch option and stuff*/}
 					{result.state !== "ongoing" && (
-					<div
-						style={{
-							position: "absolute",
-							inset: 0,
-							background: "rgba(0,0,0,0.65)",
-							backdropFilter: "blur(4px)",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							zIndex: 9999,
-						}}
-					>
-						<div
-							style={{
-								width: "320px",
-								background: "#262522",
-								borderRadius: "14px",
-								border: "1px solid #3a3937",
-								boxShadow: "0 20px 50px rgba(0,0,0,0.6)",
-								padding: "20px",
-								display: "flex",
-								flexDirection: "column",
-								gap: "16px",
-								color: "#f0eeff",
-							}}
-						>
-							{/* Result header */}
-							<div style={{ textAlign: "center" }}>
-								<div style={{ fontSize: "18px", fontWeight: 700 }}>
-									{result?.winner + " Won!" || "Draw"}
+						<div className="absolute inset-0 z-[9999] flex items-center justify-center bg-black/65 backdrop-blur-sm">
+							<div className="w-[320px] rounded-[14px] border border-[#3a3937] bg-[#262522] p-5 shadow-[0_20px_50px_rgba(0,0,0,0.6)] text-[#f0eeff] flex flex-col gap-4">
+
+								{/* Result header */}
+								<div className="text-center">
+									<div className="text-[18px] font-bold">
+										{result?.winner ? `${result.winner} Won!` : "Draw"}
+									</div>
+
+									<div className="mt-1 text-xs text-[#8892a4]">
+										Game over
+									</div>
 								</div>
 
-								<div style={{ fontSize: "12px", color: "#8892a4", marginTop: "4px" }}>
-									Game over
+								{/* Divider */}
+								<div className="h-px bg-[#3a3937]" />
+
+								{/* Buttons */}
+								<div className="flex gap-2.5">
+									<button
+										type="button"
+										className="flex-1 rounded-lg bg-[#81b64c] px-4 py-2.5 font-semibold text-white cursor-pointer"
+										onClick={async () => {
+											const newGameId = await restartGame()
+
+											if (!newGameId) {
+												console.error("Failed to create rematch")
+												return
+											}
+
+											navigate("/game", {
+												state: {
+													...settings,
+													game_id: newGameId,
+													rematchId: newGameId,
+												},
+											})
+										}}
+									>
+										Rematch
+									</button>
+
+									<button
+										type="button"
+										className="flex-1 rounded-lg bg-[#3a3937] px-4 py-2.5 font-semibold text-[#f0eeff] cursor-pointer"
+										onClick={() => navigate("/")}
+									>
+										Home
+									</button>
 								</div>
-							</div>
-
-							{/* Divider */}
-							<div style={{ height: "1px", background: "#3a3937" }} />
-
-							{/* Buttons */}
-							<div style={{ display: "flex", gap: "10px" }}>
-								<button
-									type="button"
-									style={{
-										flex: 1,
-										background: "#81b64c",
-										color: "white",
-										padding: "10px",
-										borderRadius: "8px",
-										border: "none",
-										fontWeight: 600,
-										cursor: "pointer",
-									}}
-									onClick={async () => {
-										const newGameId = await restartGame()
-
-										if (!newGameId) {
-											console.error("Failed to create rematch")
-											return
-										}
-
-										navigate("/game", {
-											state: {
-												...settings,
-												game_id: newGameId,
-												rematchId: newGameId,
-											},
-										})
-									}}
-								>
-									Rematch
-								</button>
-
-								<button
-									type="button"
-									style={{
-										flex: 1,
-										background: "#3a3937",
-										color: "#f0eeff",
-										padding: "10px",
-										borderRadius: "8px",
-										border: "none",
-										fontWeight: 600,
-										cursor: "pointer",
-									}}
-									onClick={() => navigate("/")}
-								>
-									Home
-								</button>
-
 							</div>
 						</div>
-					</div>
-				)}
+					)}
 				</div>
 			</div>
 			<Footer />
@@ -548,6 +396,6 @@ export default GamePage
 // tabading@example.com Hello1295!
 
 // resign assumes player is always white 
-// promotion window assumes player is white
 // promoting into checkmate = undefiened Won
+// change game over screen to include type of win like, "white won" -> checkmate, "Draw" -> stalemate etc.
 // when reloading in gameover screen it dissapears and you're stuck
