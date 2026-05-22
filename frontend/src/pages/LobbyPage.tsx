@@ -5,7 +5,7 @@ import Footer from "../components/Footer"
 import { useTranslation } from "react-i18next"
 import { useAuth } from "../context/AuthContext"
 
-async function createGame(opponent: 'bot' | 'live', token: string | null) {
+async function createGame(opponent: 'bot' | 'live', difficulty: 'easy' | 'medium' | 'hard', token: string | null) {
 	if (!token) {
 		return null
 	}
@@ -16,7 +16,7 @@ async function createGame(opponent: 'bot' | 'live', token: string | null) {
 			"Authorization": `Token ${token}`,
 			"Content-Type": "application/json",
 		},
-		body: JSON.stringify({ opponent }),
+		body: JSON.stringify({ opponent, difficulty }),
 	})
 
 	const data = await response.json()
@@ -48,7 +48,7 @@ function LobbyPage() {
 
 		// Keep previous UX: start game even if backend game creation is unavailable.
 		if (opponent === 'bot' && token) {
-			const game = await createGame(opponent, token)
+			const game = await createGame(opponent, difficulty, token)
 			if (game?.game_id) {
 				gameId = game.game_id
 			} else {

@@ -5,6 +5,11 @@ User = get_user_model()
 
 class Game(models.Model):
 	"""Represents a chess game between two players"""
+	DIFFICULTY_CHOICES = [
+		('easy', 'Easy'),
+		('medium', 'Medium'),
+		('hard', 'Hard'),
+	]
 	STATUS_CHOICES = [
 		('pending', 'Pending'),
 		('ongoing', 'Ongoing'),
@@ -21,6 +26,7 @@ class Game(models.Model):
 
 	white_player = models.ForeignKey(User, related_name='games_as_white', on_delete=models.CASCADE)
 	black_player = models.ForeignKey(User, related_name='games_as_black', on_delete=models.CASCADE)
+	difficulty = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, default='medium')
 	
 	status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
 	result = models.CharField(max_length=20, choices=RESULT_CHOICES, default='ongoing')

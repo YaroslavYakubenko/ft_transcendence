@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 import chess
 from .models import Game, Move
+from django.db.models import Q
 from django.utils import timezone
 from .game_results import get_resignation_result
 from users.models import User
@@ -71,8 +72,11 @@ def check_promotion(board, _s, _t):
 @permission_classes([IsAuthenticated])
 def create_game(request):
 	opponent = request.data.get('opponent')
+	difficulty = request.data.get('difficulty', 'medium')
 	if opponent not in ('bot', 'live'):
 		return Response({'error': 'unsupported opponent'}, status=status.HTTP_400_BAD_REQUEST)
+	if difficulty not in ('easy', 'medium', 'hard'):
+		return Response({'error': 'unsupported difficulty'}, status=status.HTTP_400_BAD_REQUEST)
 
 	if opponent == 'bot':
 		black_player = _get_bot_user()
@@ -90,6 +94,7 @@ def create_game(request):
 	game = Game.objects.create(
 		white_player=request.user,
 		black_player=black_player,
+		difficulty=difficulty if opponent == 'bot' else 'medium',
 		status='pending',
 		result='ongoing',
 	)
@@ -178,70 +183,79 @@ def make_move(request):
 	board.push(move)
 	res = check_gameover(board)
 	
-	# Save move to database if game_id is provided
+	# Try to find the game to persist the move and bot reply.
+	game = None
 	if game_id:
 		try:
-			game = Game.objects.get(id=game_id)
-			move_count = game.moves.count() + 1
-			Move.objects.create(
-				game=game,
-				from_square=_s,
-				to_square=_t,
-				fen_before=fen,
-				fen_after=board.fen(),
-				move_number=move_count
-			)
-			# Update game FEN and status
-			game.current_fen = board.fen()
-			game.result = res
-			if res != "ongoing":
-				game.status = 'completed'
-				game.ended_at = timezone.now()
-			elif game.status == 'pending':
-				game.status = 'ongoing'
-				game.started_at = timezone.now()
-			game.save()
-
-			# If opponent is the chess bot and it's the bot's turn, compute and apply bot move
-			try:
-				bot_user = _get_bot_user()
-			except Exception:
-				bot_user = None
-
-			if bot_user and (game.black_player == bot_user or game.white_player == bot_user):
-				# Determine if it's the bot's turn according to the board
-				is_bot_white = (game.white_player == bot_user)
-				if board.turn == chess.WHITE and is_bot_white or board.turn == chess.BLACK and not is_bot_white:
-					# pick difficulty (default to 'medium') and depth
-					difficulty = 'medium'
-					depth = get_depth(difficulty)
-					bot_move = find_best_move(board, depth, difficulty)
-					if bot_move is not None:
-						# Save fen before bot move
-						fen_before_bot = board.fen()
-						# expose bot move UCI for response
-						bot_move_uci = chess.square_name(bot_move.from_square) + chess.square_name(bot_move.to_square)
-						board.push(bot_move)
-						res_after = check_gameover(board)
-						# create Move record for bot
-						move_count = game.moves.count() + 1
-						Move.objects.create(
-							game=game,
-							from_square=chess.square_name(bot_move.from_square),
-							to_square=chess.square_name(bot_move.to_square),
-							fen_before=fen_before_bot,
-							fen_after=board.fen(),
-							move_number=move_count
-						)
-						# Update game state
-						game.current_fen = board.fen()
-						game.result = res_after
-						if res_after != 'ongoing':
-							game.status = 'completed'
-							game.ended_at = timezone.now()
-						game.save()
+			game = Game.objects.select_related('white_player', 'black_player').get(id=game_id)
 		except Game.DoesNotExist:
-			pass  # Continue without saving if game doesn't exist
+			game = None
+	# If no explicit game_id, attempt to locate a game for the authenticated user matching the fen
+	if not game and hasattr(request, 'user') and request.user and request.user.is_authenticated:
+		try:
+			game = Game.objects.select_related('white_player', 'black_player').filter(
+				current_fen=fen,
+				status__in=['pending', 'ongoing']
+			).filter(
+				Q(white_player=request.user) | Q(black_player=request.user)
+			).first()
+		except Exception:
+			game = None
+
+	if game:
+		move_count = game.moves.count() + 1
+		Move.objects.create(
+			game=game,
+			from_square=_s,
+			to_square=_t,
+			fen_before=fen,
+			fen_after=board.fen(),
+			move_number=move_count,
+		)
+		# Update game FEN and status
+		game.current_fen = board.fen()
+		game.result = res
+		if res != "ongoing":
+			game.status = 'completed'
+			game.ended_at = timezone.now()
+		elif game.status == 'pending':
+			game.status = 'ongoing'
+			game.started_at = timezone.now()
+		game.save()
+
+		# If opponent is the chess bot and it's the bot's turn, compute and apply bot move
+		try:
+			bot_user = _get_bot_user()
+		except Exception:
+			bot_user = None
+
+		if bot_user and (game.black_player == bot_user or game.white_player == bot_user):
+			is_bot_white = (game.white_player == bot_user)
+			if (board.turn == chess.WHITE and is_bot_white) or (board.turn == chess.BLACK and not is_bot_white):
+				difficulty = game.difficulty or 'medium'
+				depth = get_depth(difficulty)
+				bot_move = find_best_move(board, depth, difficulty)
+				if bot_move is not None:
+					fen_before_bot = board.fen()
+					bot_move_uci = chess.square_name(bot_move.from_square) + chess.square_name(bot_move.to_square)
+					board.push(bot_move)
+					res_after = check_gameover(board)
+					move_count = game.moves.count() + 1
+					Move.objects.create(
+						game=game,
+						from_square=chess.square_name(bot_move.from_square),
+						to_square=chess.square_name(bot_move.to_square),
+						fen_before=fen_before_bot,
+						fen_after=board.fen(),
+						move_number=move_count,
+					)
+					# Update game state
+					game.current_fen = board.fen()
+					game.result = res_after
+					if res_after != 'ongoing':
+						game.status = 'completed'
+						game.ended_at = timezone.now()
+					game.save()
 
 	return Response({
 		"fen": board.fen(),
