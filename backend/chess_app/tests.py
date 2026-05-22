@@ -60,6 +60,34 @@ class CreateGameTests(APITestCase):
 
 		self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+	def test_make_move_returns_and_saves_bot_reply(self):
+		create_response = self.client.post(
+			"/create-game/",
+			{"opponent": "bot", "difficulty": "medium"},
+			format="json",
+		)
+		self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+		game = Game.objects.get(id=create_response.data["game_id"])
+
+		move_response = self.client.post(
+			"/make-move/",
+			{
+				"fen": game.current_fen,
+				"from": "e2",
+				"to": "e4",
+				"game_id": game.id,
+			},
+			format="json",
+		)
+
+		self.assertEqual(move_response.status_code, status.HTTP_200_OK)
+		self.assertIn("bot_move", move_response.data)
+		self.assertNotEqual(move_response.data["bot_move"], "")
+
+		game.refresh_from_db()
+		self.assertEqual(game.moves.count(), 2)
+		self.assertEqual(game.moves.last().from_square, move_response.data["bot_move"][:2])
+
 
 class ResignGameTests(APITestCase):
 	def setUp(self):

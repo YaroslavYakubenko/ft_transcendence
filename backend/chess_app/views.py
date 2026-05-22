@@ -3,9 +3,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 import chess
-from .models import Game, Move
 from django.db.models import Q
 from django.utils import timezone
+
+from .models import Game, Move
 from .game_results import get_resignation_result
 from users.models import User
 from chess_app.ai_bot.minimax import find_best_move, get_depth
@@ -45,39 +46,74 @@ def _get_bot_user() -> User:
 			bot_user.save(update_fields=updates)
 	return bot_user
 
-def check_gameover(board):
 
+def check_gameover(board):
 	if board.is_checkmate():
-		result = "checkmate"
-	elif board.is_stalemate():
-		result = "stalemate"
-	elif board.is_insufficient_material():
-		result = "draw"
-	else:
-		result = "ongoing"
-	return result
+		return 'checkmate'
+	if board.is_stalemate():
+		return 'stalemate'
+	if board.is_insufficient_material():
+		return 'draw'
+	return 'ongoing'
+
 
 def check_promotion(board, _s, _t):
-
 	piece = board.piece_at(chess.parse_square(_s))
-
 	if piece is None:
 		return False
-
 	if piece.piece_type != chess.PAWN:
 		return False
 
-	to_rank = chess.parse_square(_t) // 8  # 0–7
-
-	# white pawn reaching rank 7 (8th rank)
+	to_rank = chess.parse_square(_t) // 8
 	if piece.color == chess.WHITE and to_rank == 7:
 		return True
-
-	# black pawn reaching rank 0 (1st rank)
 	if piece.color == chess.BLACK and to_rank == 0:
 		return True
-
 	return False
+
+
+def _persist_bot_move(board: chess.Board, game: Game):
+	if not game:
+		return board, ''
+
+	try:
+		bot_user = _get_bot_user()
+	except Exception:
+		return board, ''
+
+	if not (game.white_player == bot_user or game.black_player == bot_user):
+		return board, ''
+
+	is_bot_white = game.white_player == bot_user
+	if not ((board.turn == chess.WHITE and is_bot_white) or (board.turn == chess.BLACK and not is_bot_white)):
+		return board, ''
+
+	difficulty = game.difficulty or 'medium'
+	depth = get_depth(difficulty)
+	bot_move = find_best_move(board, depth, difficulty)
+	if bot_move is None:
+		return board, ''
+
+	fen_before_bot = board.fen()
+	bot_move_uci = chess.square_name(bot_move.from_square) + chess.square_name(bot_move.to_square)
+	board.push(bot_move)
+	bot_result = check_gameover(board)
+	move_count = game.moves.count() + 1
+	Move.objects.create(
+		game=game,
+		from_square=chess.square_name(bot_move.from_square),
+		to_square=chess.square_name(bot_move.to_square),
+		fen_before=fen_before_bot,
+		fen_after=board.fen(),
+		move_number=move_count,
+	)
+	game.current_fen = board.fen()
+	game.result = bot_result
+	if bot_result != 'ongoing':
+		game.status = 'completed'
+		game.ended_at = timezone.now()
+	game.save()
+	return board, bot_move_uci
 
 
 @api_view(['POST'])
@@ -113,12 +149,10 @@ def create_game(request):
 	return Response({'game_id': game.id}, status=status.HTTP_201_CREATED)
 
 
-# Django API endpoint - wraps your logic
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def resign_game(request):
 	game_id = request.data.get('game_id')
-
 	if not game_id:
 		return Response({'error': 'missing data'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -129,7 +163,6 @@ def resign_game(request):
 
 	if game.status == 'completed':
 		return Response({'error': 'game already completed'}, status=status.HTTP_400_BAD_REQUEST)
-
 	if request.user not in (game.white_player, game.black_player):
 		return Response({'error': 'forbidden'}, status=status.HTTP_403_FORBIDDEN)
 
@@ -160,10 +193,7 @@ def resign_game(request):
 	game.ended_at = timezone.now()
 	game.save(update_fields=['status', 'result', 'ended_at'])
 
-	return Response({
-		'game_over': True,
-		'result': result,
-	})
+	return Response({'game_over': True, 'result': result})
 
 
 @api_view(['POST'])
@@ -171,46 +201,36 @@ def make_move(request):
 	fen = request.data.get('fen')
 	_s = request.data.get('from')
 	_t = request.data.get('to')
-	game_id = request.data.get('game_id')  # Optional: save to database if provided
+	game_id = request.data.get('game_id')
 	bot_move_uci = ''
 
 	if not fen or not _s or not _t:
-		return Response({"error": "missing data"}, status=400)
-	
+		return Response({'error': 'missing data'}, status=400)
 	if _s == _t:
-		return Response({"log": "piece not moved"})
+		return Response({'log': 'piece not moved'})
 
 	board = chess.Board(fen)
 	move = chess.Move.from_uci(_s + _t)
-	if check_promotion(board, _s, _t) == True:
-		return Response({
-			"fen": fen,
-			"result": "ongoing",
-			"promotion": (_s + _t)
-		})
-
+	if check_promotion(board, _s, _t):
+		return Response({'fen': fen, 'result': 'ongoing', 'promotion': (_s + _t)})
 	if move not in board.legal_moves:
-		return Response({"log": "illegal move"})
+		return Response({'log': 'illegal move'})
 
 	board.push(move)
 	res = check_gameover(board)
-	
-	# Try to find the game to persist the move and bot reply.
+
 	game = None
 	if game_id:
 		try:
 			game = Game.objects.select_related('white_player', 'black_player').get(id=game_id)
 		except Game.DoesNotExist:
 			game = None
-	# If no explicit game_id, attempt to locate a game for the authenticated user matching the fen
 	if not game and hasattr(request, 'user') and request.user and request.user.is_authenticated:
 		try:
 			game = Game.objects.select_related('white_player', 'black_player').filter(
 				current_fen=fen,
 				status__in=['pending', 'ongoing']
-			).filter(
-				Q(white_player=request.user) | Q(black_player=request.user)
-			).first()
+			).filter(Q(white_player=request.user) | Q(black_player=request.user)).first()
 		except Exception:
 			game = None
 
@@ -224,10 +244,9 @@ def make_move(request):
 			fen_after=board.fen(),
 			move_number=move_count,
 		)
-		# Update game FEN and status
 		game.current_fen = board.fen()
 		game.result = res
-		if res != "ongoing":
+		if res != 'ongoing':
 			game.status = 'completed'
 			game.ended_at = timezone.now()
 		elif game.status == 'pending':
@@ -235,102 +254,75 @@ def make_move(request):
 			game.started_at = timezone.now()
 		game.save()
 
-		# If opponent is the chess bot and it's the bot's turn, compute and apply bot move
-		try:
-			bot_user = _get_bot_user()
-		except Exception:
-			bot_user = None
-
-		if bot_user and (game.black_player == bot_user or game.white_player == bot_user):
-			is_bot_white = (game.white_player == bot_user)
-			if (board.turn == chess.WHITE and is_bot_white) or (board.turn == chess.BLACK and not is_bot_white):
-				difficulty = game.difficulty or 'medium'
-				depth = get_depth(difficulty)
-				bot_move = find_best_move(board, depth, difficulty)
-				if bot_move is not None:
-					fen_before_bot = board.fen()
-					bot_move_uci = chess.square_name(bot_move.from_square) + chess.square_name(bot_move.to_square)
-					board.push(bot_move)
-					res_after = check_gameover(board)
-					move_count = game.moves.count() + 1
-					Move.objects.create(
-						game=game,
-						from_square=chess.square_name(bot_move.from_square),
-						to_square=chess.square_name(bot_move.to_square),
-						fen_before=fen_before_bot,
-						fen_after=board.fen(),
-						move_number=move_count,
-					)
-					# Update game state
-					game.current_fen = board.fen()
-					game.result = res_after
-					if res_after != 'ongoing':
-						game.status = 'completed'
-						game.ended_at = timezone.now()
-					game.save()
+		board, bot_move_uci = _persist_bot_move(board, game)
 
 	return Response({
-		"fen": board.fen(),
-		"result": check_gameover(board),
-		"promotion": '',
-		"bot_move": bot_move_uci,
-		})
+		'fen': board.fen(),
+		'result': check_gameover(board),
+		'promotion': '',
+		'bot_move': bot_move_uci,
+	})
+
 
 @api_view(['POST'])
 def do_promotion(request):
 	fen = request.data.get('fen')
 	_move = request.data.get('move')
 	key = request.data.get('key')
-	game_id = request.data.get('game_id')  # Optional: save to database if provided
+	game_id = request.data.get('game_id')
+	bot_move_uci = ''
 
 	if not fen or not _move or not key:
-		return Response({"error": "missing data"}, status=400)
+		return Response({'error': 'missing data'}, status=400)
 
 	board = chess.Board(fen)
 	move = chess.Move.from_uci(_move + key)
 	if move not in board.legal_moves:
-		return Response({"log": "illegal move"})
+		return Response({'log': 'illegal move'})
 
 	board.push(move)
 	res = check_gameover(board)
-	
-	# Save promotion move to database if game_id is provided
+
 	if game_id:
 		try:
-			game = Game.objects.get(id=game_id)
+			game = Game.objects.select_related('white_player', 'black_player').get(id=game_id)
 			move_count = game.moves.count() + 1
 			Move.objects.create(
 				game=game,
 				from_square=_move,
 				to_square=key,
-				promotion_piece=None,  # Could extract from move if needed
+				promotion_piece=key.upper(),
 				fen_before=fen,
 				fen_after=board.fen(),
-				move_number=move_count
+				move_number=move_count,
 			)
-			# Update game FEN and status
 			game.current_fen = board.fen()
 			game.result = res
-			if res != "ongoing":
+			if res != 'ongoing':
 				game.status = 'completed'
 				game.ended_at = timezone.now()
+			elif game.status == 'pending':
+				game.status = 'ongoing'
+				game.started_at = timezone.now()
 			game.save()
+
+			board, bot_move_uci = _persist_bot_move(board, game)
 		except Game.DoesNotExist:
-			pass  # Continue without saving if game doesn't exist
-	
+			pass
+
 	return Response({
-		"fen": board.fen(),
-		"result": res,
-		"promotion": ''
-		})
+		'fen': board.fen(),
+		'result': check_gameover(board),
+		'promotion': '',
+		'bot_move': bot_move_uci,
+	})
 
 
 @api_view(['POST'])
 def legal_moves(request):
-	fen = request.data.get("fen")
-
+	fen = request.data.get('fen')
 	if not fen:
-		return Response({"error": "missing fen"}, status=400)
+		return Response({'error': 'missing fen'}, status=400)
 
 	board = chess.Board(fen)
 	moves = {}
@@ -344,10 +336,4 @@ def legal_moves(request):
 		else:
 			moves.setdefault(frm, []).append(to)
 
-	# print(moves['h2'])
-	return Response({
-		"moves": moves,
-		"moves2": moves2,
-		})
-
-# return 2, 1 not occupied, 1 occupied 
+	return Response({'moves': moves, 'moves2': moves2})

@@ -481,6 +481,23 @@ function GamePage() {
 					}
 					return newMoves;
 				});
+
+				if (data.bot_move) {
+					const botMoveNotation = data.bot_move;
+					setMoves(prevMoves => {
+						const newMoves = [...prevMoves];
+						if (isWhiteMove) {
+							if (newMoves.length > 0) {
+								newMoves[newMoves.length - 1].black = botMoveNotation;
+							} else {
+								newMoves.push({ white: '', black: botMoveNotation });
+							}
+						} else {
+							newMoves.push({ white: botMoveNotation });
+						}
+						return newMoves;
+					});
+				}
 				
 				setFen(data.fen);
 				setPro({move: data.promotion, x: -1, y: -1, pre: ''})
@@ -579,6 +596,23 @@ function GamePage() {
 														}
 														return newMoves;
 													});
+
+													if (data.bot_move) {
+														const botMoveNotation = data.bot_move;
+														setMoves(prevMoves => {
+															const newMoves = [...prevMoves];
+															if (isWhiteMove) {
+																if (newMoves.length > 0) {
+																	newMoves[newMoves.length - 1].black = botMoveNotation;
+																} else {
+																	newMoves.push({ white: '', black: botMoveNotation });
+																}
+															} else {
+																newMoves.push({ white: botMoveNotation });
+															}
+															return newMoves;
+														});
+													}
 													
 													setFen(data.fen);
 													setPro({move: "", x: -1, y: -1, pre: ''}); // IMPORTANT: clear UI
