@@ -37,6 +37,9 @@ class CreateGameTests(APITestCase):
 		self.assertEqual(game.white_player, self.user)
 		self.assertEqual(game.black_player.email, "chess-bot@transcendence.local")
 		self.assertEqual(game.status, "pending")
+		self.assertTrue(game.black_player.is_bot)
+		self.assertEqual(game.black_player.username, "Chess Bot")
+		self.assertEqual(game.black_player.oauth_avatar, "/imgs/bk.png")
 
 	def test_create_live_game_requires_opponent_id(self):
 		response = self.client.post(

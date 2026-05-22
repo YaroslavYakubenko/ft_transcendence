@@ -21,16 +21,28 @@ def _get_bot_user() -> User:
 		email='chess-bot@transcendence.local',
 		defaults={
 			'username': 'Chess Bot',
+			'is_bot': True,
 			'is_active': False,
 			'is_online': False,
+			'oauth_avatar': '/imgs/bk.png',
 		},
 	)
 	if created:
 		bot_user.set_unusable_password()
 		bot_user.save(update_fields=['password'])
-	elif not bot_user.username:
-		bot_user.username = 'Chess Bot'
-		bot_user.save(update_fields=['username'])
+	else:
+		updates = []
+		if not bot_user.username:
+			bot_user.username = 'Chess Bot'
+			updates.append('username')
+		if not bot_user.is_bot:
+			bot_user.is_bot = True
+			updates.append('is_bot')
+		if not bot_user.oauth_avatar:
+			bot_user.oauth_avatar = '/imgs/bk.png'
+			updates.append('oauth_avatar')
+		if updates:
+			bot_user.save(update_fields=updates)
 	return bot_user
 
 def check_gameover(board):

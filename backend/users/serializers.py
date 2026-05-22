@@ -27,11 +27,12 @@ class RegisterSerializer(serializers.ModelSerializer): # accept and password and
 
 class UserSerializer(serializers.ModelSerializer): # return the current user's data
 	avatar = serializers.SerializerMethodField() #return URL from file
+	is_online = serializers.SerializerMethodField()
 
 	class Meta:
 		model = User
-		fields = ('id', 'email', 'username', 'avatar', 'is_online', 'wins', 'losses', 'draws', 'elo')
-		read_only_fields = ('id', 'is_online', 'wins', 'losses', 'draws', 'elo')
+		fields = ('id', 'email', 'username', 'avatar', 'is_bot', 'is_online', 'wins', 'losses', 'draws', 'elo')
+		read_only_fields = ('id', 'is_bot', 'is_online', 'wins', 'losses', 'draws', 'elo')
 
 	def get_avatar(self, obj):
 		"""Return avatar URL - prefer relative URLs for better compatibility across environments"""
@@ -45,12 +46,15 @@ class UserSerializer(serializers.ModelSerializer): # return the current user's d
 				print(f"Error getting avatar URL: {e}")
 		return obj.oauth_avatar or ''
 
+	def get_is_online(self, obj):
+		return True if obj.is_bot else obj.is_online
+
 class FriendSerializer(serializers.ModelSerializer): # return the list of friends
 	id = serializers.IntegerField(source='to_user.id')
 	email = serializers.EmailField(source='to_user.email')
 	username = serializers.CharField(source='to_user.username')
 	avatar = serializers.SerializerMethodField()
-	is_online = serializers.BooleanField(source='to_user.is_online')
+	is_online = serializers.SerializerMethodField()
 
 	class Meta:
 		model = Friendship
@@ -61,6 +65,9 @@ class FriendSerializer(serializers.ModelSerializer): # return the list of friend
 		if obj.to_user.avatar and request:
 			return request.build_absolute_uri(obj.to_user.avatar.url)
 		return obj.to_user.oauth_avatar or ''
+
+	def get_is_online(self, obj):
+		return True if obj.to_user.is_bot else obj.to_user.is_online
 
 
 class UserStatsSerializer(serializers.ModelSerializer):

@@ -9,6 +9,8 @@ export interface UserProfile {
 	wins: number
 	losses: number
 	avatarUrl: string | null
+	isBot?: boolean
+	isOnline?: boolean
 }
 
 export interface Friend extends UserProfile {
@@ -31,13 +33,14 @@ export async function getFriends(token: string): Promise<Friend[]> {
 	})
 	if (!res.ok) throw new Error('Failed to fetch friends')
 	const data = await res.json()
-	return data.map((f: { id: number; email: string; username: string; avatar: string; is_online: boolean }) => ({
+	return data.map((f: { id: number; email: string; username: string; avatar: string; is_online: boolean; is_bot?: boolean }) => ({
 		id: f.id,
 		email: f.email,
 		username: f.username,
 		wins: f.wins ?? 0,
 		losses: f.losses ?? 0,
 		avatarUrl: f.avatar || null,
+		isBot: f.is_bot ?? false,
 		isOnline: f.is_online
 	}))
 }
@@ -66,6 +69,8 @@ export async function searchUsers(query: string, token: string): Promise<UserPro
 		wins: user.wins ?? 0,
 		losses: user.losses ?? 0,
 		avatarUrl: user.avatar || null,
+		isBot: user.is_bot ?? false,
+		isOnline: user.is_online ?? false,
 	}))
 }
 
@@ -92,6 +97,8 @@ export async function getUserProfile(userId: number, token: string): Promise<Use
 		wins: data.wins ?? 0,
 		losses: data.losses ?? 0,
 		avatarUrl: data.avatar || null,
+		isBot: data.is_bot ?? false,
+		isOnline: data.is_online ?? false,
 	}
 }
 
