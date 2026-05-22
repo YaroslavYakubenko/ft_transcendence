@@ -7,6 +7,7 @@ from .models import Game, Move
 from django.utils import timezone
 from .game_results import get_resignation_result
 from users.models import User
+from chess_app.ai_bot.minimax import find_best_move, get_depth
 
 
 def _apply_elo_change(rating: int, score: float, opponent_rating: int) -> int:
@@ -154,6 +155,7 @@ def make_move(request):
 	_s = request.data.get('from')
 	_t = request.data.get('to')
 	game_id = request.data.get('game_id')  # Optional: save to database if provided
+	bot_move_uci = ''
 
 	if not fen or not _s or not _t:
 		return Response({"error": "missing data"}, status=400)
@@ -199,13 +201,53 @@ def make_move(request):
 				game.status = 'ongoing'
 				game.started_at = timezone.now()
 			game.save()
+
+			# If opponent is the chess bot and it's the bot's turn, compute and apply bot move
+			try:
+				bot_user = _get_bot_user()
+			except Exception:
+				bot_user = None
+
+			if bot_user and (game.black_player == bot_user or game.white_player == bot_user):
+				# Determine if it's the bot's turn according to the board
+				is_bot_white = (game.white_player == bot_user)
+				if board.turn == chess.WHITE and is_bot_white or board.turn == chess.BLACK and not is_bot_white:
+					# pick difficulty (default to 'medium') and depth
+					difficulty = 'medium'
+					depth = get_depth(difficulty)
+					bot_move = find_best_move(board, depth, difficulty)
+					if bot_move is not None:
+						# Save fen before bot move
+						fen_before_bot = board.fen()
+						# expose bot move UCI for response
+						bot_move_uci = chess.square_name(bot_move.from_square) + chess.square_name(bot_move.to_square)
+						board.push(bot_move)
+						res_after = check_gameover(board)
+						# create Move record for bot
+						move_count = game.moves.count() + 1
+						Move.objects.create(
+							game=game,
+							from_square=chess.square_name(bot_move.from_square),
+							to_square=chess.square_name(bot_move.to_square),
+							fen_before=fen_before_bot,
+							fen_after=board.fen(),
+							move_number=move_count
+						)
+						# Update game state
+						game.current_fen = board.fen()
+						game.result = res_after
+						if res_after != 'ongoing':
+							game.status = 'completed'
+							game.ended_at = timezone.now()
+						game.save()
 		except Game.DoesNotExist:
 			pass  # Continue without saving if game doesn't exist
 
 	return Response({
 		"fen": board.fen(),
-		"result": res,
-		"promotion": ''
+		"result": check_gameover(board),
+		"promotion": '',
+		"bot_move": bot_move_uci,
 		})
 
 @api_view(['POST'])
