@@ -50,6 +50,8 @@ def _get_bot_user() -> User:
 def check_gameover(board):
 	if board.is_checkmate():
 		return 'checkmate'
+	if board.is_check():
+		return 'check'
 	if board.is_stalemate():
 		return 'stalemate'
 	if board.is_insufficient_material():
@@ -60,6 +62,8 @@ def check_gameover(board):
 def check_promotion(board, _s, _t):
 	piece = board.piece_at(chess.parse_square(_s))
 	if piece is None:
+		return False
+	if piece.color != board.turn:
 		return False
 	if piece.piece_type != chess.PAWN:
 		return False
@@ -112,6 +116,9 @@ def _persist_bot_move(board: chess.Board, game: Game):
 	if bot_result != 'ongoing':
 		game.status = 'completed'
 		game.ended_at = timezone.now()
+	elif game.status == 'pending':
+		game.status = 'ongoing'
+		game.started_at = timezone.now()
 	game.save()
 	return board, bot_move_uci
 
@@ -212,12 +219,24 @@ def make_move(request):
 	board = chess.Board(fen)
 	move = chess.Move.from_uci(_s + _t)
 	if check_promotion(board, _s, _t):
-		return Response({'fen': fen, 'result': 'ongoing', 'promotion': (_s + _t)})
+		return Response({
+			'fen': fen,
+			'result': 'ongoing',
+			'winner': '',
+			'promotion': (_s + _t),
+		})
 	if move not in board.legal_moves:
 		return Response({'log': 'illegal move'})
 
 	board.push(move)
 	res = check_gameover(board)
+	win = ''
+	king = ''
+	if res == 'check':
+		king = chess.square_name(board.king(board.turn))
+		res = 'ongoing'
+	elif res != 'ongoing':
+		win = 'Black' if board.turn else 'White'
 
 	game = None
 	if game_id:
@@ -245,8 +264,8 @@ def make_move(request):
 			move_number=move_count,
 		)
 		game.current_fen = board.fen()
-		game.result = res
 		if res != 'ongoing':
+			game.result = 'black_win' if board.turn == chess.WHITE else 'white_win'
 			game.status = 'completed'
 			game.ended_at = timezone.now()
 		elif game.status == 'pending':
@@ -256,10 +275,21 @@ def make_move(request):
 
 		board, bot_move_uci = _persist_bot_move(board, game)
 
+	final_res = check_gameover(board)
+	final_win = ''
+	final_king = ''
+	if final_res == 'check':
+		final_king = chess.square_name(board.king(board.turn))
+		final_res = 'ongoing'
+	elif final_res != 'ongoing':
+		final_win = 'Black' if board.turn else 'White'
+
 	return Response({
 		'fen': board.fen(),
-		'result': check_gameover(board),
+		'result': final_res,
+		'winner': final_win,
 		'promotion': '',
+		'kingpos': final_king,
 		'bot_move': bot_move_uci,
 	})
 
@@ -268,20 +298,23 @@ def make_move(request):
 def do_promotion(request):
 	fen = request.data.get('fen')
 	_move = request.data.get('move')
-	key = request.data.get('key')
+	promo_to = request.data.get('key')
 	game_id = request.data.get('game_id')
 	bot_move_uci = ''
 
-	if not fen or not _move or not key:
+	if not fen or not _move or not promo_to:
 		return Response({'error': 'missing data'}, status=400)
 
 	board = chess.Board(fen)
-	move = chess.Move.from_uci(_move + key)
+	move = chess.Move.from_uci(_move + promo_to)
 	if move not in board.legal_moves:
 		return Response({'log': 'illegal move'})
 
 	board.push(move)
 	res = check_gameover(board)
+	win = ''
+	if res != 'ongoing':
+		win = 'Black' if board.turn else 'White'
 
 	if game_id:
 		try:
@@ -290,15 +323,15 @@ def do_promotion(request):
 			Move.objects.create(
 				game=game,
 				from_square=_move,
-				to_square=key,
-				promotion_piece=key.upper(),
+				to_square=promo_to,
+				promotion_piece=promo_to.upper(),
 				fen_before=fen,
 				fen_after=board.fen(),
 				move_number=move_count,
 			)
 			game.current_fen = board.fen()
-			game.result = res
 			if res != 'ongoing':
+				game.result = 'black_win' if board.turn == chess.WHITE else 'white_win'
 				game.status = 'completed'
 				game.ended_at = timezone.now()
 			elif game.status == 'pending':
@@ -310,10 +343,21 @@ def do_promotion(request):
 		except Game.DoesNotExist:
 			pass
 
+	final_res = check_gameover(board)
+	final_win = ''
+	final_king = ''
+	if final_res == 'check':
+		final_king = chess.square_name(board.king(board.turn))
+		final_res = 'ongoing'
+	elif final_res != 'ongoing':
+		final_win = 'Black' if board.turn else 'White'
+
 	return Response({
 		'fen': board.fen(),
-		'result': check_gameover(board),
+		'result': final_res,
+		'winner': final_win,
 		'promotion': '',
+		'kingpos': final_king,
 		'bot_move': bot_move_uci,
 	})
 
