@@ -36,6 +36,25 @@ export default function PromotionSelector({
 }: Props) {
 	if (!promotion.move) return null
 
+
+	const handlePromotion = (promo: string) => {
+		do_promotion( fen, promotion.move, promo).then((data) => {
+			if (!data) return
+
+			// Add promotion move to history
+			const moveNotation = `${promotion.move}${promo}`
+			const isWhiteMove = fen.split(" ")[1] === "w"
+			setMoves((prevMoves) =>
+				appendMove(prevMoves, moveNotation, isWhiteMove)
+			)
+
+			// update vars
+			setFen(data.fen)
+			setRes({ state: data.result, winner: data.winner, })
+			setPro({ move: "", x: -1, y: -1, pre: "", })
+		})
+	}
+
 	return (
 		<div className="absolute z-[9999] flex h-[280px] w-20 -translate-x-1/2 flex-col gap-2.5 rounded-[10px] bg-white p-3"
 			style={{
@@ -48,23 +67,7 @@ export default function PromotionSelector({
 					return (
 						<button
 							key={promo}
-							onClick={() => {
-								do_promotion( fen, promotion.move, promo).then((data) => {
-									if (!data) return
-
-									// Add promotion move to history
-									const moveNotation = `${promotion.move}${promo}`
-									const isWhiteMove = fen.split(" ")[1] === "w"
-									setMoves((prevMoves) =>
-										appendMove(prevMoves, moveNotation, isWhiteMove)
-									)
-
-									// update vars
-									setFen(data.fen)
-									setRes({ state: data.result, winner: data.winner, })
-									setPro({ move: "", x: -1, y: -1, pre: "", })
-								})
-							}}>
+							onClick={() => handlePromotion(promo)}>
 							{Piece()}
 						</button>
 					)
@@ -73,3 +76,4 @@ export default function PromotionSelector({
 		</div>
 	)
 }
+

@@ -1,6 +1,6 @@
 
 import { PROMOTION_PIECES, SQUARE_SIZE } from "../chess/constants"
-
+import type { PieceHandlerArgs, PieceDropHandlerArgs } from "react-chessboard"
 
 
 export function sideChoice(pieceColor: "white" | "black" | "random"): "white" | "black"
@@ -16,13 +16,12 @@ export const getPromotionOptions = (prefix: "w" | "b") =>
 	PROMOTION_PIECES.map((p) => ({
 		piece: `${prefix}${p}` as const,
 		promo: p.toLowerCase(),
-	}));
+}))
 
-
-export type MovePair = {
+type MovePair = {
 	white: string;
 	black?: string;
-};
+}
 
 export function appendMove(
 	prevMoves: MovePair[],
@@ -72,3 +71,99 @@ export function getBoardCoordinates(
 
 	return { x, y };
 }
+
+export function createOnPieceDrag({
+	fen,
+	setHighlightSquares,
+	setHighlightSquares2,
+	legal_moves,
+}: any) {
+	return ({ isSparePiece, piece, square }: PieceHandlerArgs) => {
+		console.debug("DEBUG: DRAG BEGIN:", isSparePiece, piece, square);
+
+		if (!square) {
+			setHighlightSquares([]);
+			setHighlightSquares2([]);
+			return;
+		}
+		// saved as var in case of needing debug statements, doesn't work otherwise can remove later
+		const currentFen = fen;
+		// gets highlights through legal moves 
+		legal_moves(currentFen).then((data: any) => {
+			if (!piece) return;
+			// saved as vars in case of needing debug statements, doesn't work otherwise
+			const newhigh = data.moves[square] || [];
+			setHighlightSquares(newhigh);
+			const newhigh2 = data.moves2[square] || [];
+			setHighlightSquares2(newhigh2);
+		});
+	};
+}
+
+export function createOnPieceDrop({
+	fen,
+	gameId,
+	playerColor,
+	make_move,
+	getBoardCoordinates,
+	appendMove,
+	setMoves,
+	setFen,
+	setRes,
+	setPro,
+	setCheckSquare,
+	setHighlightSquares,
+	setHighlightSquares2,
+}: any) {
+	return ({ sourceSquare, targetSquare }: PieceDropHandlerArgs) => {
+		if (!sourceSquare || !targetSquare)
+			return false;
+
+		make_move(fen, sourceSquare, targetSquare, gameId).then((data: any) => {
+			if (!data) return;
+
+			// get position of the promotion menue 
+			if (data.promotion !== '') {
+				const { x, y } = getBoardCoordinates( targetSquare, playerColor, fen );
+				setPro({ move: data.promotion, x: x , y: y, pre: fen.split(" ")[1] });
+				return;
+			}
+
+			// Add move to history
+			const moveNotation = `${sourceSquare}${targetSquare}`;
+			const isWhiteMove = fen.split(" ")[1] === "w";
+			setMoves((prevMoves: any) =>
+				appendMove(prevMoves, moveNotation, isWhiteMove)
+			);
+
+			// update variables
+			setFen(data.fen);
+			setRes({ state: data.result, winner: data.winner });
+			setPro({ move: data.promotion, x: -1, y: -1, pre: "" });
+			setCheckSquare(data.kingpos || null);
+		});
+
+		// after movement reset highlights
+		setHighlightSquares([]);
+		setHighlightSquares2([]);
+		return false;
+	};
+}
+
+
+export function getGameId(state: unknown): number | null {
+	if (!state || typeof state !== "object") {
+		return null
+	}
+
+	const locationState = state as Record<string, unknown>
+
+	const gameId =
+		locationState.game_id ??
+		locationState.gameId ??
+		(locationState.game as { id?: number } | undefined)?.id
+
+	return typeof gameId === "number" ? gameId : null
+}
+
+
