@@ -1,8 +1,35 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 import chess
 from .models import Game, Move
 from django.utils import timezone
+from .game_results import get_resignation_result
+from users.models import User
+
+
+def _apply_elo_change(rating: int, score: float, opponent_rating: int) -> int:
+	expected = 1 / (1 + 10 ** ((opponent_rating - rating) / 400))
+	return max(0, round(rating + 32 * (score - expected)))
+
+
+def _get_bot_user() -> User:
+	bot_user, created = User.objects.get_or_create(
+		email='chess-bot@transcendence.local',
+		defaults={
+			'username': 'Chess Bot',
+			'is_active': False,
+			'is_online': False,
+		},
+	)
+	if created:
+		bot_user.set_unusable_password()
+		bot_user.save(update_fields=['password'])
+	elif not bot_user.username:
+		bot_user.username = 'Chess Bot'
+		bot_user.save(update_fields=['username'])
+	return bot_user
 
 def check_gameover(board):
 
@@ -39,7 +66,88 @@ def check_promotion(board, _s, _t):
 	return False
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_game(request):
+	opponent = request.data.get('opponent')
+	if opponent not in ('bot', 'live'):
+		return Response({'error': 'unsupported opponent'}, status=status.HTTP_400_BAD_REQUEST)
+
+	if opponent == 'bot':
+		black_player = _get_bot_user()
+	else:
+		opponent_id = request.data.get('opponent_id')
+		if not opponent_id:
+			return Response({'error': 'missing opponent_id'}, status=status.HTTP_400_BAD_REQUEST)
+		try:
+			black_player = User.objects.get(id=opponent_id)
+		except User.DoesNotExist:
+			return Response({'error': 'opponent not found'}, status=status.HTTP_404_NOT_FOUND)
+		if black_player == request.user:
+			return Response({'error': 'cannot play yourself'}, status=status.HTTP_400_BAD_REQUEST)
+
+	game = Game.objects.create(
+		white_player=request.user,
+		black_player=black_player,
+		status='pending',
+		result='ongoing',
+	)
+	return Response({'game_id': game.id}, status=status.HTTP_201_CREATED)
+
+
 # Django API endpoint - wraps your logic
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def resign_game(request):
+	game_id = request.data.get('game_id')
+
+	if not game_id:
+		return Response({'error': 'missing data'}, status=status.HTTP_400_BAD_REQUEST)
+
+	try:
+		game = Game.objects.select_related('white_player', 'black_player').get(id=game_id)
+	except Game.DoesNotExist:
+		return Response({'error': 'game not found'}, status=status.HTTP_404_NOT_FOUND)
+
+	if game.status == 'completed':
+		return Response({'error': 'game already completed'}, status=status.HTTP_400_BAD_REQUEST)
+
+	if request.user not in (game.white_player, game.black_player):
+		return Response({'error': 'forbidden'}, status=status.HTTP_403_FORBIDDEN)
+
+	resigning_player_is_white = request.user == game.white_player
+	winner = 'black' if resigning_player_is_white else 'white'
+	result_field = 'black_win' if resigning_player_is_white else 'white_win'
+	result = get_resignation_result(winner)
+
+	white_player = game.white_player
+	black_player = game.black_player
+	white_score = 0.0 if winner == 'black' else 1.0
+	black_score = 0.0 if winner == 'white' else 1.0
+	white_new_elo = _apply_elo_change(white_player.elo, white_score, black_player.elo)
+	black_new_elo = _apply_elo_change(black_player.elo, black_score, white_player.elo)
+
+	white_player.wins += 1 if winner == 'white' else 0
+	white_player.losses += 1 if winner == 'black' else 0
+	white_player.elo = white_new_elo
+	white_player.save(update_fields=['wins', 'losses', 'elo'])
+
+	black_player.wins += 1 if winner == 'black' else 0
+	black_player.losses += 1 if winner == 'white' else 0
+	black_player.elo = black_new_elo
+	black_player.save(update_fields=['wins', 'losses', 'elo'])
+
+	game.status = 'completed'
+	game.result = result_field
+	game.ended_at = timezone.now()
+	game.save(update_fields=['status', 'result', 'ended_at'])
+
+	return Response({
+		'game_over': True,
+		'result': result,
+	})
+
+
 @api_view(['POST'])
 def make_move(request):
 	fen = request.data.get('fen')
