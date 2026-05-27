@@ -122,7 +122,12 @@ export async function getLeaderboard(limit: number = 50): Promise<{ id: number; 
 
 // tabading add
 
-export async function createGame(opponent: 'bot' | 'live', token: string | null) {
+// only create game being used now 
+export async function createGame(
+	opponent: 'bot' | 'live', 
+	pieceColor: 'white' | 'black' | 'random',
+	token: string | null
+) {
 	if (!token) {
 		return null
 	}
@@ -133,7 +138,10 @@ export async function createGame(opponent: 'bot' | 'live', token: string | null)
 			"Authorization": `Token ${token}`,
 			"Content-Type": "application/json",
 		},
-		body: JSON.stringify({ opponent }),
+		body: JSON.stringify({
+			opponent,
+			pieceColor,
+		}),
 	})
 
 	const data = await response.json()
@@ -228,7 +236,10 @@ export async function legal_moves(fen: string) {
 	return data;
 }
 
-export async function resign_game(gameId: number | null, token: string | null) {
+export async function resign_game(
+	gameId: number | null, 
+	token: string | null
+) {
 	if (!gameId || !token) {
 		console.error("Game ID or token missing");
 		return null;
@@ -242,6 +253,7 @@ export async function resign_game(gameId: number | null, token: string | null) {
 		},
 		body: JSON.stringify({
 			game_id: gameId,
+
 		}),
 	});
 

@@ -4,29 +4,7 @@ import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
 import { useTranslation } from "react-i18next"
 import { useAuth } from "../context/AuthContext"
-
-async function createGame(opponent: 'bot' | 'live', token: string | null) {
-	if (!token) {
-		return null
-	}
-
-	const response = await fetch("http://localhost:8000/create-game/", {
-		method: "POST",
-		headers: {
-			"Authorization": `Token ${token}`,
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify({ opponent }),
-	})
-
-	const data = await response.json()
-	if (!response.ok || data.error) {
-		console.error(data.error || "Failed to create game")
-		return null
-	}
-
-	return data
-}
+import { createGame } from "../api/game"
 
 function LobbyPage() {
 	const navigate = useNavigate()
@@ -44,16 +22,31 @@ function LobbyPage() {
 	const handleStartGame = async () => {
 		setStartError("")
 		setIsStarting(true)
+		
 		let gameId: number | undefined
+		let userColor = pieceColor
 
 		// Keep previous UX: start game even if backend game creation is unavailable.
 		if (opponent === 'bot' && token) {
-			const game = await createGame(opponent, token)
+
+			console.debug("lobby handle start game1 | pieceColor: ", pieceColor)
+
+			const game = await createGame(opponent, pieceColor, token)
+			
+			console.debug("lobby handle start game2 | game.user: ", game.user)
+
 			if (game?.game_id) {
 				gameId = game.game_id
 			} else {
 				setStartError("Could not create tracked game. Starting local game without stats/resign tracking.")
 			}
+
+			if (game.user !== pieceColor) // this updates from random to site, maybe keep
+			{
+				userColor = game.user
+				setPieceColor(game.user)
+			}
+			console.debug("lobby handle start game3 | userColor: ", userColor)
 		}
 
 		setIsStarting(false)
@@ -63,6 +56,7 @@ function LobbyPage() {
 				difficulty,
 				timer,
 				pieceColor,
+				userColor,
 				boardTheme,
 				pieceTheme,
 				game_id: gameId,
@@ -76,6 +70,8 @@ function LobbyPage() {
 			<div className="flex-1 flex items-center justify-center py-8">
 				<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl p-6 w-full max-w-md">
 					<h1 className="text-[#f0eeff] text-xl font-semibold m-0 mb-6">{t('lobby.title')}</h1>
+					
+					{/* opponent */}
 					<div className="mb-6">
 						<p className="text-[#8892a4] text-xs mb-2">{t('lobby.opponent')}</p>
 						<div className="flex gap-2">
@@ -90,6 +86,8 @@ function LobbyPage() {
 							))}
 						</div>
 					</div>
+
+					{/* Bot difficulty */}
 					{opponent === 'bot' && (
 						<div className="mb-6">
 								<p className="text-[#8892a4] text-xs mb-2">{t('lobby.difficulty')}</p>
@@ -106,6 +104,8 @@ function LobbyPage() {
 								</div>
 						</div>
 					)}
+
+					{/* timer */}
 					<div className="mb-6">
 						<p className="text-[#8892a4] text-xs mb-2">{t('lobby.timer')}</p>
 						<div className="flex gap-2">
@@ -125,6 +125,8 @@ function LobbyPage() {
 							))}
 						</div>
 					</div>
+
+					{/* piece color */}
 					<div className="mb-6">
 							<p className="text-[#8892a4] text-xs mb-2">{t('lobby.pieceColor')}</p>
 							<div className="flex gap-2">
@@ -143,6 +145,8 @@ function LobbyPage() {
 								))}
 							</div>
 					</div>
+
+					{/* Board theme */}
 					<div className="mb-6">
 						<p className="text-[#8892a4] text-xs mb-2">{t('lobby.boardTheme')}</p>
 						<div className="flex gap-3">
@@ -169,7 +173,7 @@ function LobbyPage() {
 					</div>
 
 
-
+					{/* piece theme */}
 					<div className="mb-6">
 						<p className="text-[#8892a4] text-xs mb-2">{t('lobby.pieceTheme')}</p>
 						<div className="flex gap-3">
@@ -190,7 +194,7 @@ function LobbyPage() {
 
 
 
-
+					{/* start game */}
 					<button
 						onClick={handleStartGame}
 						disabled={isStarting}
@@ -198,6 +202,7 @@ function LobbyPage() {
 					>
 						▶ {isStarting ? 'Starting...' : t('lobby.startGame')}
 					</button>
+
 					{startError && <p className="text-[#e25f5f] text-xs mt-2 mb-0">{startError}</p>}
 				</div>
 			</div>

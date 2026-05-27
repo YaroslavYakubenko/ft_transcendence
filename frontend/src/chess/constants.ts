@@ -15,6 +15,7 @@ export interface GameSettings {
 	difficulty: 'easy' | 'medium' | 'hard'
 	timer: 'none' | '3' | '5' | '10'
 	pieceColor: 'white' | 'black' | 'random'
+	userColor: 'white' | 'black'
 	boardTheme: 'default' | 'green' | 'blue' | 'brown'
 	pieceTheme: 'default' | 'simple'
 	game_id?: number
@@ -25,6 +26,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
 	difficulty: 'medium',
 	timer: 'none',
 	pieceColor: 'random',
+	userColor: 'white',
 	boardTheme: 'default',
 	pieceTheme: 'default',
 	game_id: undefined,

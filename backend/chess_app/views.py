@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
 import chess
+import random
 from .models import Game, Move
 from django.utils import timezone
 from users.elo_utils import calculate_elo_change, calculate_draw_elo
@@ -254,6 +255,8 @@ def legal_moves(request):
 def create_game(request):
 	"""Create a new game and return game ID for move/resign tracking."""
 	opponent_type = request.data.get('opponent', 'bot')
+	piece_color = request.data.get('pieceColor', 'random')
+	# print("\n\n\n given color", piece_color, "\n")
 
 	if opponent_type == 'bot':
 		bot_user, _ = User.objects.get_or_create(
@@ -274,19 +277,44 @@ def create_game(request):
 	else:
 		return Response({'error': 'Invalid opponent type'}, status=400)
 
+	if piece_color == 'random':
+		piece_color = random.choice(['white', 'black'])
+
+	if piece_color == 'white':
+		white_player = request.user
+		black_player = opponent
+	else:
+		white_player = opponent
+		black_player = request.user
+
+	# print(" white_player", white_player, "\n")
+	# print(" black_player", black_player, "\n\n\n")
+
+	# this sets request user as white always !!!!!
 	game = Game.objects.create(
-		white_player=request.user,
-		black_player=opponent,
+		white_player=white_player,
+		black_player=black_player,
 		status='pending',
 		result='ongoing',
 	)
 
+	if piece_color == 'white':
+		return Response({
+			'game_id': game.id,
+			'user': 'white',
+			'opp': 'black',
+			'status': game.status,
+			'result': game.result,
+		}, status=201)
+
 	return Response({
 		'game_id': game.id,
+		'user': 'black',
+		'opp': 'white',
 		'status': game.status,
 		'result': game.result,
 	}, status=201)
-
+	
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

@@ -6,7 +6,6 @@ import { sideChoice } from "../chess/utils"
 import { resign_game, createGame } from "../api/game"
 import { START_FEN } from "./constants"
 
-
 interface UseRematchResetProps {
 	rematchId?: number
 	storage_keys: {
@@ -57,6 +56,8 @@ export function usePlayerColor(
 ) {
 	return useMemo(() => {
 		const saved = localStorage.getItem(storageKey)
+		// console.log("usePlayerColor | saved: ", saved)
+		// console.log("usePlayerColor | pieceColor: ", pieceColor)
 
 		if (saved === "white" || saved === "black") {
 			return saved
@@ -66,6 +67,7 @@ export function usePlayerColor(
 
 		localStorage.setItem(storageKey, resolved)
 
+		// console.log("usePlayerColor | resolved: ", resolved)
 		return resolved
 	}, [pieceColor, storageKey])
 }
@@ -107,17 +109,24 @@ export function useResignGame(storage_keys: any, token: string | null, gameId: n
 	return { handleResign, resignError, isResigning }
 }
 
-export function useRestartGame(settings: any, token: string | null) {
+export function useRestartGame(
+	settings: any, 
+	pieceColor: 'white' | 'black' | 'random',
+	token: string | null
+) {
 	const restartGame = async () => {
 		let gameId: number | undefined
+		let user
 
 		if (settings.opponent === "bot" && token) {
-			const game = await createGame(settings.opponent, token)
+			const game = await createGame(settings.opponent, pieceColor, token)
 			if (game?.game_id) {
 				gameId = game.game_id
 			}
+			// console.log("useRestartGame | game user color:", game.user)
+			user = game.user
 		}
-		return gameId
+		return {gameId, user}
 	}
 	return restartGame
 }

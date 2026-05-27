@@ -52,16 +52,17 @@ function GamePage() {
 
 // react hooks?? what do you call it ----------------------------------------
 
-	const playerColor = usePlayerColor( settings.pieceColor, storage_keys.piece_color )
+	// const playerColor = usePlayerColor( settings.pieceColor, storage_keys.piece_color )
+	const restartGame  = useRestartGame(settings, settings.pieceColor, token)
 
-	// calls the create game function and returns its game id, 
-	const restartGame = useRestartGame(settings, token)
-
+	let playerColor = usePlayerColor( settings.userColor, storage_keys.piece_color )
 	// when given rematch id reset board to starting positions
 	useRematchReset({
 		rematchId: location.state?.rematchId,
 		storage_keys,
 		resetGameState: () => {
+			// console.log("id:", gameId)
+			// console.log("player color:", playerColor)
 			setFen(START_FEN)
 			setMoves([])
 			setRes({ state: "ongoing", winner: "" })
@@ -76,7 +77,7 @@ function GamePage() {
 	usePersistState(storage_keys.fen, fen, location.state?.rematchId)
 	usePersistState(storage_keys.move_history, JSON.stringify(moves), location.state?.rematchId)
 
-	// handle resign 
+	// use player color, don't assume white
 	const {handleResign, resignError,isResigning} = useResignGame(
 		storage_keys, token, gameId,
 		setFen, setMoves, setRes
@@ -168,6 +169,7 @@ function GamePage() {
 						settings={settings}
 						restartGame={restartGame}
 					/>
+
 				</div>
 			</div>
 			<Footer />
@@ -179,7 +181,7 @@ export default GamePage
 
 // tabading@example.com Hello1295!
 
-// resign assumes player is always white 
-// promoting into checkmate = undefiened Won
+// resign assumes player is always white -> think its fixed, keep an eye on it haengt einen zuruk
+// something doesn't work in designaten 
 // change game over screen to include type of win like, "white won" -> checkmate, "Draw" -> stalemate etc.
 // when reloading in gameover screen it dissapears and you're stuck

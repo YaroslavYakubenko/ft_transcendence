@@ -1,13 +1,18 @@
 
 import { useNavigate } from "react-router-dom"
 
+type RestartGameResult = {
+	gameId?: number
+	user?: 'white' | 'black'
+}
+
 type Props = {
 	result: {
 		state: string
 		winner: string
 	}
 	settings: any
-	restartGame: () => Promise<number | undefined>
+	restartGame: () => Promise<RestartGameResult>
 }
 
 export default function Gameover({
@@ -18,11 +23,10 @@ export default function Gameover({
 	const navigate = useNavigate()
 	if (result.state === "ongoing") return null
 
-
 	const handleRematch = async () => {
-		const newGameId = await restartGame()
+		const res = await restartGame()
 
-		if (!newGameId) {
+		if (!res.gameId) {
 			console.error("Failed to create rematch")
 			return
 		}
@@ -30,13 +34,13 @@ export default function Gameover({
 		navigate("/game", {
 			state: {
 				...settings,
-				game_id: newGameId,
-				rematchId: newGameId,
+				userColor: res.user,
+				game_id: res.gameId,
+				rematchId: res.gameId,
 			},
 		})
 	}
 
-	
 	return (
 		<div className="absolute inset-0 z-[9999] flex items-center justify-center bg-black/65 backdrop-blur-sm">
 			<div className="w-[320px] rounded-[14px] border border-[#3a3937] bg-[#262522] p-5 shadow-[0_20px_50px_rgba(0,0,0,0.6)] text-[#f0eeff] flex flex-col gap-4">
