@@ -40,5 +40,6 @@ export const getStorageKeys = (gameId: number | null) => {
 		fen: `chess_fen_${id}`,
 		move_history: `move_history_${id}`,
 		piece_color: `piece_color_${id}`,
+		result: `result_${id}`,
 	}
 }

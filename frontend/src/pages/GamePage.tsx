@@ -12,7 +12,7 @@ import OpponentPanel from "../components/OpponentPanel"
 import MoveHistoryPanel from "../components/MoveHistoryPanel"
 import PromotionSelector from "../components/PromotionSelector"
 
-import { loadFen, loadMoves } from "../chess/storage"
+import { loadFen, loadMoves, loadResult } from "../chess/storage"
 import { PIECE_THEMES, BOARD_THEMES, createSquareStyles } from "../chess/themes"
 import { START_FEN, DEFAULT_SETTINGS, getStorageKeys, type GameSettings } from "../chess/constants"
 import { usePersistState, useRematchReset, usePlayerColor, useRestartGame, useResignGame } from "../chess/hooks"
@@ -47,7 +47,14 @@ function GamePage() {
 	const [moves, setMoves] = useState<{ white: string; black?: string }[]>(() => {
 		return loadMoves(storage_keys.move_history)
 	});
-	const [result, setRes] = useState( {state: "ongoing", winner: "" })
+
+
+	// const [result, setRes] = useState( {state: "ongoing", winner: "" })
+	const [result, setRes] = useState(() => {
+		return loadResult(storage_keys.result)
+	})
+
+
 	const [promotion, setPro] = useState({ move: "", x: -1, y: -1, pre: "" })
 
 // react hooks?? what do you call it ----------------------------------------
@@ -76,6 +83,7 @@ function GamePage() {
 	// update local fen & move history on change
 	usePersistState(storage_keys.fen, fen, location.state?.rematchId)
 	usePersistState(storage_keys.move_history, JSON.stringify(moves), location.state?.rematchId)
+	usePersistState(storage_keys.result, JSON.stringify(result), location.state?.rematchId )
 
 	// use player color, don't assume white
 	const {handleResign, resignError,isResigning} = useResignGame(
@@ -163,7 +171,7 @@ function GamePage() {
 						resignError={resignError}
 					/>
 
-					{/* gameover	make better with rematch option and stuff*/}
+					{/* gameover make better with rematch option and stuff*/}
 					< Gameover
 						result={result}
 						settings={settings}
@@ -181,7 +189,4 @@ export default GamePage
 
 // tabading@example.com Hello1295!
 
-// resign assumes player is always white -> think its fixed, keep an eye on it haengt einen zuruk
-// something doesn't work in designaten 
 // change game over screen to include type of win like, "white won" -> checkmate, "Draw" -> stalemate etc.
-// when reloading in gameover screen it dissapears and you're stuck
