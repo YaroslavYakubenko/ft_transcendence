@@ -117,4 +117,152 @@ export async function getLeaderboard(limit: number = 50): Promise<{ id: number; 
 		console.error('Error fetching leaderboard:', error)
 		return []
 	}
-} 
+}
+
+
+// tabading add
+
+// only create game being used now 
+export async function createGame(
+	opponent: 'bot' | 'live', 
+	pieceColor: 'white' | 'black' | 'random',
+	token: string | null
+) {
+	if (!token) {
+		return null
+	}
+
+	const response = await fetch(`http://localhost:8000/create-game/`, {
+		method: "POST",
+		headers: {
+			"Authorization": `Token ${token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			opponent,
+			pieceColor,
+		}),
+	})
+
+	const data = await response.json()
+	if (!response.ok || data.error) {
+		console.error(data.error || "Failed to create game")
+		return null
+	}
+
+	return data
+}
+
+// make move 
+export async function make_move(fen: string, from: string, to: string, gameId?: number | null) {
+	const res = await fetch("http://localhost:8000/make-move/", {
+	method: "POST",
+	headers: {
+		"Content-Type": "application/json",
+	},
+	body: JSON.stringify({
+		fen,
+		from,
+		to,
+		game_id: gameId ?? undefined,
+	}),
+	});
+
+	const data = await res.json();
+
+	if (data.error) {
+		console.error(data.error);
+		return null; // fallback: no update
+	}
+	if (data.log) {
+		console.log("LOG:" ,data.log)
+		return null; // fallback: no update
+	}
+
+	return data;
+}
+
+// promote pawn
+export async function do_promotion(fen: string, move: string, key: string, gameId?: number | null) {
+	const res = await fetch("http://localhost:8000/do-promotion/", {
+	method: "POST",
+	headers: {
+		"Content-Type": "application/json",
+	},
+	body: JSON.stringify({
+		fen,
+		move,
+		key,
+		game_id: gameId ?? undefined,
+	}),
+	});
+
+	const data = await res.json();
+
+	// console.log(data);
+
+	if (data.error) {
+		console.error(data.error);
+		return null; // fallback: no update
+	}
+	if (data.log) {
+		console.log("LOG:" ,data.log)
+		return null; // fallback: no update
+	}
+
+	return data;
+}
+
+// get legal moves to empty and occupied spaces
+export async function legal_moves(fen: string) {
+	const res = await fetch("http://localhost:8000/legal-moves/", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			fen,
+		}),
+	});
+
+	const data = await res.json();
+
+	// console.log(data);
+
+	if (data.error) {
+		console.error(data.error);
+		return null; // fallback: no update
+	}
+	return data;
+}
+
+export async function resign_game(
+	gameId: number | null, 
+	token: string | null
+) {
+	if (!gameId || !token) {
+		console.error("Game ID or token missing");
+		return null;
+	}
+
+	const res = await fetch("http://localhost:8000/resign/", {
+		method: "POST",
+		headers: {
+			"Authorization": `Token ${token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			game_id: gameId,
+
+		}),
+	});
+
+	const data = await res.json();
+
+	if (data.error) {
+		console.error(data.error);
+		return null;
+	}
+
+	return data;
+}

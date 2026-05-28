@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
 import chess
+import random
 from .models import Game, Move
 from django.utils import timezone
 from users.elo_utils import calculate_elo_change, calculate_draw_elo
@@ -28,7 +29,9 @@ def check_promotion(board, _s, _t):
 
 	if piece is None:
 		return False
-
+	# not your turn
+	if piece and piece.color != board.turn:
+		return False
 	if piece.piece_type != chess.PAWN:
 		return False
 
@@ -37,7 +40,6 @@ def check_promotion(board, _s, _t):
 	# white pawn reaching rank 7 (8th rank)
 	if piece.color == chess.WHITE and to_rank == 7:
 		return True
-
 	# black pawn reaching rank 0 (1st rank)
 	if piece.color == chess.BLACK and to_rank == 0:
 		return True
@@ -113,9 +115,6 @@ def make_move(request):
 	board = chess.Board(fen)
 	move = chess.Move.from_uci(_s + _t)
 
-	if move not in board.legal_moves:
-		return Response({"log": "illegal move"})
-
 	if check_promotion(board, _s, _t) == True:
 		return Response({
 			"fen": fen,
@@ -123,6 +122,9 @@ def make_move(request):
 			"winner": "",
 			"promotion": (_s + _t)
 		})
+
+	if move not in board.legal_moves:
+		return Response({"log": "illegal move"})
 
 	board.push(move)
 	res = check_gameover(board)
@@ -134,33 +136,32 @@ def make_move(request):
 	elif res != "ongoing" :
 		win = "Black" if board.turn else "White"
 
-	print("\n\n\king: ", king, "\n\n\n")
+	# print("\n\n\king: ", king, "\n\n\n")
 	
 	# Save move to database if game_id is provided
-	# if game_id:
-	# 	try:
-	# 		game = Game.objects.get(id=game_id)
-	# 		move_count = game.moves.count() + 1
-	# 		Move.objects.create(
-	# 			game=game,
-	# 			from_square=_s,
-	# 			to_square=_t,
-	# 			fen_before=fen,
-	# 			fen_after=board.fen(),
-	# 			move_number=move_count
-	# 		)
-	# 		# Update game FEN and status
-	# 		game.current_fen = board.fen()
-			
-	# 		if res != "ongoing":
-	# 			# Game is over, update stats
-	# 			update_player_stats(game, res)
-	# 		elif game.status == 'pending':
-	# 			game.status = 'ongoing'
-	# 			game.started_at = timezone.now()
-	# 			game.save()
-	# 	except Game.DoesNotExist:
-	# 		pass  # Continue without saving if game doesn't exist
+	if game_id:
+		try:
+			game = Game.objects.get(id=game_id)
+			move_count = game.moves.count() + 1
+			Move.objects.create(
+				game=game,
+				from_square=_s,
+				to_square=_t,
+				fen_before=fen,
+				fen_after=board.fen(),
+				move_number=move_count
+			)
+			# Update game FEN and status
+			game.current_fen = board.fen()		
+			if res != "ongoing":
+				# Game is over, update stats
+				update_player_stats(game, res)
+			elif game.status == 'pending':
+				game.status = 'ongoing'
+				game.started_at = timezone.now()
+				game.save()
+		except Game.DoesNotExist:
+			pass  # Continue without saving if game doesn't exist
 
 	return Response({
 		"fen": board.fen(),
@@ -192,28 +193,27 @@ def do_promotion(request):
 		win = "Black" if board.turn else "White"
 	
 	# Save promotion move to database if game_id is provided
-	# if game_id:
-	# 	try:
-	# 		game = Game.objects.get(id=game_id)
-	# 		move_count = game.moves.count() + 1
-	# 		Move.objects.create(
-	# 			game=game,
-	# 			from_square=_move,
-	# 			to_square=promo_to,
-	# 			promotion_piece=None,  # Could extract from move if needed
-	# 			fen_before=fen,
-	# 			fen_after=board.fen(),
-	# 			move_number=move_count
-	# 		)
-	# 		# Update game FEN and status
-	# 		game.current_fen = board.fen()
-			
-	# 		if res != "ongoing":
-	# 			# Game is over, update stats
-	# 			update_player_stats(game, res)
-	# 		game.save()
-	# 	except Game.DoesNotExist:
-	# 		pass  # Continue without saving if game doesn't exist
+	if game_id:
+		try:
+			game = Game.objects.get(id=game_id)
+			move_count = game.moves.count() + 1
+			Move.objects.create(
+				game=game,
+				from_square=_move,
+				to_square=promo_to,
+				promotion_piece=None,  # Could extract from move if needed
+				fen_before=fen,
+				fen_after=board.fen(),
+				move_number=move_count
+			)
+			# Update game FEN and status
+			game.current_fen = board.fen()	
+			if res != "ongoing":
+				# Game is over, update stats
+				update_player_stats(game, res)
+			game.save()
+		except Game.DoesNotExist:
+			pass  # Continue without saving if game doesn't exist
 	
 	return Response({
 		"fen": board.fen(),
@@ -223,6 +223,7 @@ def do_promotion(request):
 		})
 
 
+# return legal moves to free & occupied spaces
 @api_view(['POST'])
 def legal_moves(request):
 	fen = request.data.get("fen")
@@ -242,13 +243,10 @@ def legal_moves(request):
 		else:
 			moves.setdefault(frm, []).append(to)
 
-	# print(moves['h2'])
 	return Response({
 		"moves": moves,
 		"moves2": moves2,
 		})
-
-# return 2, 1 not occupied, 1 occupied 
 
 
 # when resigning always assumes player 1 is white -> doesn't check pieceColor
@@ -257,6 +255,8 @@ def legal_moves(request):
 def create_game(request):
 	"""Create a new game and return game ID for move/resign tracking."""
 	opponent_type = request.data.get('opponent', 'bot')
+	piece_color = request.data.get('pieceColor', 'random')
+	# print("\n\n\n given color", piece_color, "\n")
 
 	if opponent_type == 'bot':
 		bot_user, _ = User.objects.get_or_create(
@@ -277,19 +277,44 @@ def create_game(request):
 	else:
 		return Response({'error': 'Invalid opponent type'}, status=400)
 
+	if piece_color == 'random':
+		piece_color = random.choice(['white', 'black'])
+
+	if piece_color == 'white':
+		white_player = request.user
+		black_player = opponent
+	else:
+		white_player = opponent
+		black_player = request.user
+
+	# print(" white_player", white_player, "\n")
+	# print(" black_player", black_player, "\n\n\n")
+
+	# this sets request user as white always !!!!!
 	game = Game.objects.create(
-		white_player=request.user,
-		black_player=opponent,
+		white_player=white_player,
+		black_player=black_player,
 		status='pending',
 		result='ongoing',
 	)
 
+	if piece_color == 'white':
+		return Response({
+			'game_id': game.id,
+			'user': 'white',
+			'opp': 'black',
+			'status': game.status,
+			'result': game.result,
+		}, status=201)
+
 	return Response({
 		'game_id': game.id,
+		'user': 'black',
+		'opp': 'white',
 		'status': game.status,
 		'result': game.result,
 	}, status=201)
-
+	
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
