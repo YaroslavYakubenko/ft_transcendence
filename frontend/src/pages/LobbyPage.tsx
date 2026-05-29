@@ -49,6 +49,10 @@ function LobbyPage() {
 			console.debug("lobby handle start game3 | userColor: ", userColor)
 		}
 
+		if (opponent === 'live' && token) {
+			const game = await createGame('live')
+		}
+
 		setIsStarting(false)
 		navigate('/game', {
 			state: {
