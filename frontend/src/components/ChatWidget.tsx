@@ -10,7 +10,6 @@ function ChatWidget() {
 	const [messages, setMessages] = useState<ChatMessage[]>([])
 	const [input, setInput] = useState("")
 	const bottomRef = useRef<HTMLDivElement>(null)
-	const wsRef = useRef<WebSocket | null>(null)
 	const { t } = useTranslation()
 	const { token, user } = useAuth()
 
@@ -28,52 +27,14 @@ function ChatWidget() {
 		bottomRef.current?.scrollIntoView()
 	}, [messages])
 
-	// open / close WebSocket when a friend is selected
+	// react to incoming messages from the persistent WebSocket in AuthContext
 	useEffect(() => {
-		// close any existing connection first
-		if (wsRef.current) {
-			wsRef.current.close()
-			wsRef.current = null
-		}
+	})
 
-		if (!selectedFriend || !token || !user) return
-
-		// room name is sorted by ID so both users always join the same room
-    	const roomName = `dm_${Math.min(user.id, selectedFriend.id)}_${Math.max(user.id, selectedFriend.id)}`
-		const ws = new WebSocket(`wss://localhost:8443/ws/chat/${roomName}/?token=${token}`)
-
-		ws.onopen = () => {
-			console.log(`Cchat connected to room ${roomName}`)
-		}
-
-		ws.onmessage = (e) => {
-			const data = JSON.parse(e.data)
-			setMessages(prev => [...prev, {
-				id: Date.now(),
-				fromId: data.username === (user.username || user.email) ? user.id : selectedFriend.id,
-				toId: data.username === (user.username || user.email) ? selectedFriend.id : user.id,
-				text: data.message,
-				timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit'})
-			}])
-		}
-
-		ws.onerror = (e) => console.error('Chat Websocket error:', e)
-		ws.onclose = () => console.log('Chat Websocket closed')
-
-		wsRef.current = ws
-
-		// clear messages when switching friends
-		setMessages([])
-
-		return () => {
-			ws.close()
-		}
-
-	}, [selectedFriend])
 
 
 	function handleSend() {
-		if (!input.trim() || !selectedFriend || !wsRef.current) 
+		if (!input.trim() || !selectedFriend) 
 			return
 		wsRef.current.send(JSON.stringify({ message: input }))
 		setInput("")

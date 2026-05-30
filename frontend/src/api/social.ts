@@ -15,7 +15,8 @@ export interface Friend extends UserProfile {
 	isOnline: boolean
 }
 
-export interface ChatMessage {
+export interface ChatMessage 
+{
 	id: number
 	fromId: number
 	toId: number

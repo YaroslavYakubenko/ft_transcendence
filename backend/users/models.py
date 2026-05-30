@@ -45,3 +45,4 @@ class Friendship(models.Model):
 
 	class Meta:
 		unique_together = ('from_user', 'to_user') #coulpe has to be unique, you cannot to add the same user twice
+
