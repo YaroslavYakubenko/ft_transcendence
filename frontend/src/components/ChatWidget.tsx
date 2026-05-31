@@ -3,25 +3,24 @@ import { getFriends, type Friend, type ChatMessage } from "../api/social"
 import { useTranslation } from "react-i18next"
 import { useAuth } from "../context/AuthContext"
 
-function ChatWidget() {
+
+// in react every piece of UI is a function
+// you call it and it returns what should be drawn on the screen 
+// inside we have helper functions that only this component needs
+function ChatWidget() 
+{
 	const [isOpen, setIsOpen] = useState(false)
 	const [friends, setFriends] = useState<Friend[]>([])
 	const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null)
-	const [messages, setMessages] = useState<ChatMessage[]>([])
+	const [messages, setMessages] = useState<ChatMessage[]>([])				
 	const [input, setInput] = useState("")
 	const bottomRef = useRef<HTMLDivElement>(null)
 	const { t } = useTranslation()
-	const { token, user } = useAuth()
+	const { token, user, sendChat, lastMessage } = useAuth()
 
 	useEffect(() => {
 		getFriends(token!).then(setFriends).catch(() => {})
 	}, [])
-
-	// useEffect(() => {
-	// 	if (selectedFriend) {
-	// 		getMessages(selectedFriend.id, token!).then(setMessages)
-	// 	}
-	// }, [selectedFriend])
 
 	useEffect(() => {
 		bottomRef.current?.scrollIntoView()
@@ -29,15 +28,40 @@ function ChatWidget() {
 
 	// react to incoming messages from the persistent WebSocket in AuthContext
 	useEffect(() => {
-	})
+		setMessages([])
+	}, [selectedFriend])				// runs when selectedFriend changes
+
+	useEffect(() => {
+		
+		console.log('lastMessage changed:', lastMessage)  // ← add this temporarily
+
+		if (!lastMessage || !user)
+			return
+
+		const isFromFriend = lastMessage.from_user_id === selectedFriend?.id
+		const isFromMe = lastMessage.from_user_id === user.id
+
+		if (!isFromFriend && !isFromMe)
+			return
+
+		setMessages(prev => [...prev, {
+			id: Date.now(),
+			fromId: lastMessage.from_user_id,
+			toId: lastMessage.from_user_id === user.id ? selectedFriend!.id : user.id,
+			text: lastMessage.message,
+			timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+		}])
+	}, [lastMessage])
 
 
 
-	function handleSend() {
+	function handleSend() 
+	{
 		if (!input.trim() || !selectedFriend) 
 			return
-		wsRef.current.send(JSON.stringify({ message: input }))
-		setInput("")
+
+		sendChat(selectedFriend.id, input)				// sends via WebSocket in AuthContext
+		setInput("")									// clear the input box
 	}
 
 	return (

@@ -5,17 +5,28 @@
 // if token exists -> ask backend for user data
 // provide {user, token, login, logout ...} to all children
 
-import { createContext, useContext, useState, useEffect } from "react"
+import { createContext, useContext, useState, useEffect, useRef } from "react"
 import { getMe, logout as apiLogout, deleteAccount as apiDeleteAccount } from "../api/auth"
 
-interface User {
+interface User 
+{
 	id: number
 	email: string
 	username?: string
 	avatarUrl?: string
 }
 
-interface AuthContextType {
+interface IncomingMessage
+{
+	from_user_id: number
+	username: string
+	message: string
+}
+
+// AuthContextType = blue print / declaration
+// there will be a "user", "token" and "last message" field
+interface AuthContextType 
+{
 	user: User | null
 	token: string | null
 	login: (token: string, user: User) => void						// function to login
@@ -92,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 
 		ws.onmessage = (e) => {															// e ist the WebSocket message event
 			const data = JSON.parse(e.data)
-			if (data.type == 'chat')
+			if (data.type === 'chat')
 			{
 				setLastMessage({
 					from_user_id: data.from_user_id,
