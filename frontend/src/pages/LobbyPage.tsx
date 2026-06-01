@@ -17,6 +17,8 @@ function LobbyPage() {
 	const [pieceTheme, setPieceTheme] = useState<'default' | 'simple'>('default')
 	const [isStarting, setIsStarting] = useState(false)
 	const [startError, setStartError] = useState("")
+	const [isSearching, setIsSearching] = useState(false)
+	const [matchmakingWs, setMatchmakingWs] = useState<WebSocket | null>(null)
 	const { t } = useTranslation()
 
 	const handleStartGame = async () => {
@@ -62,6 +64,45 @@ function LobbyPage() {
 				game_id: gameId,
 			},
 		})
+	}
+
+	function handleFindGame() {
+		if (isSearching) {
+			//cancel searching
+			matchmakingWs?.close()
+			setMatchmakingWs(null)
+			setIsSearching(false)
+			return
+		}
+
+		const ws = new WebSocket(`ws://localhost:8000/ws/matchmaking/?token=${token}`)
+		setMatchmakingWs(ws)
+		setIsSearching(true)
+
+		ws.onmessage = (event) => {
+			const data = JSON.parse(event.data)
+
+			if (data.type === 'matched') {
+				ws.close()
+				setMatchmakingWs(null)
+				setIsSearching(false)
+				navigate('/game', {
+					state: {
+						opponent: 'live',
+						timer,
+						boardTheme,
+						pieceTheme,
+						game_id: data.game_id,
+					}
+				})
+			}
+		}
+
+		ws.onerror = () => {
+			setIsSearching(false)
+			setMatchmakingWs(null)
+			setStartError('Could not connect to matchmaking server.')
+		}
 	}
 
 	return (
@@ -202,7 +243,18 @@ function LobbyPage() {
 					>
 						▶ {isStarting ? 'Starting...' : t('lobby.startGame')}
 					</button>
-
+					{opponent === 'live' && (
+						<button
+							onClick={handleFindGame}
+							className={`w-full border rounded-lg py-2.5 text-sm font-medium cursor-pointer mt-2 ${                
+                                                                isSearching                                                                                     
+                                                                        ? 'bg-[#0f0f13] border-[#e2b96f] text-[#e2b96f]'
+                                                                        : 'bg-[#0f0f13] border-[#2e2e40] text-[#f0eeff]'                                        
+                                                        }`}
+						>
+							{isSearching ? '⏳ Searching for opponent...' : '🔍 Find Game'}
+						</button>
+					)}
 					{startError && <p className="text-[#e25f5f] text-xs mt-2 mb-0">{startError}</p>}
 				</div>
 			</div>

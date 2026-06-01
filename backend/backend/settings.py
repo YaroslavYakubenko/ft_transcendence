@@ -169,10 +169,15 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 # In local dev (DEBUG=True) we typically run frontend + backend on plain HTTP localhost.
 # Keep cookies usable for OAuth state in that setup, and harden automatically outside DEBUG.
-SESSION_COOKIE_SAMESITE = 'Lax' if DEBUG else 'None'
-SESSION_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_SAMESITE = 'Lax' if DEBUG else 'None'
-CSRF_COOKIE_SECURE = not DEBUG
+# SESSION_COOKIE_SAMESITE = 'Lax' if DEBUG else 'None'
+# SESSION_COOKIE_SECURE = not DEBUG
+# CSRF_COOKIE_SAMESITE = 'Lax' if DEBUG else 'None'
+# CSRF_COOKIE_SECURE = not DEBUG
+
+SESSION_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SECURE = True
 
 # Reverse proxy / HTTPS handling (Nginx)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
