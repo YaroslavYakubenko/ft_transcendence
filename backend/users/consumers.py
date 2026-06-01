@@ -12,14 +12,21 @@ from django.utils import timezone
 # group_add adds this specific connection to a named group
 # group_discard removes this connection from a named group
 
-
 class OnlineStatusConsumer(AsyncWebsocketConsumer):
 
+	# read token, find user, read game_id
+	# create Websocket group name
+	# load game from database, if game does not exist, reject connection
+	# add socket to the game group
+	# accept Websocket connection 
+	# send current board state to this player
+	# tell the group that this player is connected
     async def connect(self):
         self.user = None
 
         query_string = self.scope.get('query_string', b'').decode()
         token_key = None
+
         for part in query_string.split('&'):
             if part.startswith('token='):
                 token_key = part.split('=')[1]
@@ -99,16 +106,19 @@ class GameConsumer(AsyncWebsocketConsumer):
             return
 
         try:
-            token = await database_sync_to_async(Token.objects.select_related('user').get)(key=token_key)
+			get_token = database_sync_to_async(Token.objects.select_related('user').get)
+			token = await get_token(key=token_key)
             self.user = token.user
+
         except Token.DoesNotExist:
             await self.close()
             return
 
-        self.game_id = self.scope['url_route']['kwargs']['game_id']
-        self.game_group_name = f'game_{self.game_id}'
+        self.game_id = self.scope['url_route']['kwargs']['game_id']	
+        self.game_group_name = 'game_' + str{self.game_id}
 
-        game = await self._get_game()
+		# row from the Game table in the database; returns a python object 
+        game = await self.get_game()
         if game is None:
             await self.close()
             return
@@ -153,7 +163,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         await self.send_json(event)
 
     @database_sync_to_async
-    def _get_game(self):
+    def get_game(self):
         try:
             game = Game.objects.select_related('white_player', 'black_player').get(id=self.game_id)
             if self.user not in (game.white_player, game.black_player):
@@ -171,7 +181,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             await self.send_json({'type': 'error', 'message': 'missing from/to'})
             return
 
-        game = await self._get_game()
+        game = await self.get_game()
         if game is None or game.status == 'completed':
             await self.send_json({'type': 'error', 'message': 'game not found or already over'})
             return
@@ -251,7 +261,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             game.save(update_fields=['current_fen'])
 
     async def _handle_resign(self):
-        game = await self._get_game()
+        game = await self.get_game()
         if game is None or game.status == 'completed':
             return
 
