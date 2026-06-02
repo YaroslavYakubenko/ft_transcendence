@@ -12,15 +12,9 @@ from django.utils import timezone
 # group_add adds this specific connection to a named group
 # group_discard removes this connection from a named group
 
+
 class OnlineStatusConsumer(AsyncWebsocketConsumer):
 
-	# read token, find user, read game_id
-	# create Websocket group name
-	# load game from database, if game does not exist, reject connection
-	# add socket to the game group
-	# accept Websocket connection 
-	# send current board state to this player
-	# tell the group that this player is connected
     async def connect(self):
         self.user = None
 
@@ -59,9 +53,9 @@ class OnlineStatusConsumer(AsyncWebsocketConsumer):
             self.user.is_online = status
             self.user.save(update_fields=['is_online'])
 
+    # called when frontend sends a message through this WebSocket
+    # runs on User A's consumer — handles the send request
     async def receive_json(self, content):
-        # called when frontend sends a message through this WebSocket
-        # runs on User A's consumer — handles the send request
         to_user_id = content.get('to_user_id')
         message = content.get('message', '')
 
@@ -91,8 +85,18 @@ class OnlineStatusConsumer(AsyncWebsocketConsumer):
         })
 
 
+# Handles WebSocket connections for live Chess games
+# Both players connect here; moves are broadcast between them in real time
+# channel_name comes from the base class AsyncWebsocketConsumer, automatically assigned random string by Daphne
 class GameConsumer(AsyncWebsocketConsumer):
 
+    # read token, find user, read game_id
+    # create WebSocket group name
+    # load game from database, if game does not exist, reject connection
+    # add socket to the game group
+    # accept WebSocket connection
+    # send current board state to this player
+    # tell the group that this player is connected
     async def connect(self):
         query_string = self.scope.get('query_string', b'').decode()
         token_key = None
@@ -106,19 +110,17 @@ class GameConsumer(AsyncWebsocketConsumer):
             return
 
         try:
-			get_token = database_sync_to_async(Token.objects.select_related('user').get)
-			token = await get_token(key=token_key)
+            token = await database_sync_to_async(Token.objects.select_related('user').get)(key=token_key)
             self.user = token.user
-
         except Token.DoesNotExist:
             await self.close()
             return
 
-        self.game_id = self.scope['url_route']['kwargs']['game_id']	
-        self.game_group_name = 'game_' + str{self.game_id}
+        self.game_id = self.scope['url_route']['kwargs']['game_id']
+        self.game_group_name = 'game_' + str(self.game_id)
 
-		# row from the Game table in the database; returns a python object 
-        game = await self.get_game()
+        # row from the Game table in the database; returns a python object
+        game = await self.get_game()										
         if game is None:
             await self.close()
             return
@@ -126,8 +128,10 @@ class GameConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add(self.game_group_name, self.channel_name)
         await self.accept()
 
+		# game taken from database through get_game function
+		# send to GamePage.tsx / frontend
         await self.send_json({
-            'type': 'sync',
+            'msg_type': 'sync',
             'fen': game.current_fen,
             'status': game.status,
             'result': game.result,
@@ -135,6 +139,8 @@ class GameConsumer(AsyncWebsocketConsumer):
             'black_player': game.black_player.username or game.black_player.email,
         })
 
+		#broadcast to game_group_name 
+		# GamePage.tsx listens for data.msg_type === 'player_connected'
         await self.channel_layer.group_send(self.game_group_name, {
             'type': 'game_message',
             'msg_type': 'player_connected',
@@ -143,11 +149,12 @@ class GameConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         if hasattr(self, 'game_group_name'):
-            await self.channel_layer.group_discard(self.game_group_name, self.channel_name)
-            await self.channel_layer.group_send(self.game_group_name, {
+            await self.channel_layer.group_discard(self.game_group_name, self.channel_name)				# client just left game_group_name
+            await self.channel_layer.group_send(self.game_group_name, 									# notifies everybody remaining in game_group_name about the disconnect
+			{
                 'type': 'game_message',
                 'msg_type': 'player_disconnected',
-                'username': self.user.username or self.user.email if hasattr(self, 'user') else 'unknown',
+                'username': self.user.username or self.user.email,
             })
 
     async def receive_json(self, content):
@@ -158,6 +165,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         elif msg_type == 'resign':
             await self._handle_resign()
 
+	# called on each connection in the group when group_send fires
     async def game_message(self, event):
         event.pop('type')
         await self.send_json(event)
@@ -166,16 +174,29 @@ class GameConsumer(AsyncWebsocketConsumer):
     def get_game(self):
         try:
             game = Game.objects.select_related('white_player', 'black_player').get(id=self.game_id)
+ 
+            # if black player is the pending placeholder, assign this user
+            if game.black_player.email == 'pending@transcendence.local':
+                game.black_player = self.user
+                game.save(update_fields=['black_player'])
+ 
+            # if white player is the pending placeholder, assign this user
+            elif game.white_player.email == 'pending@transcendence.local':
+                game.white_player = self.user
+                game.save(update_fields=['white_player'])
+ 
             if self.user not in (game.white_player, game.black_player):
                 return None
+
             return game
+
         except Game.DoesNotExist:
             return None
 
     async def _handle_move(self, data):
         frm = data.get('from')
         to = data.get('to')
-        promotion = data.get('promotion', '')
+        promotion = data.get('promotion', '')   # e.g. 'q', 'r', 'b', 'n'
 
         if not frm or not to:
             await self.send_json({'type': 'error', 'message': 'missing from/to'})
@@ -186,6 +207,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             await self.send_json({'type': 'error', 'message': 'game not found or already over'})
             return
 
+        # enforce turn order — white_player moves on white's turn, black_player on black's
         board = chess.Board(game.current_fen)
         is_white_turn = board.turn == chess.WHITE
         if is_white_turn and self.user != game.white_player:
@@ -210,6 +232,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         board.push(move)
         new_fen = board.fen()
 
+        # determine game result
         result = 'ongoing'
         winner = ''
         king_in_check = ''
@@ -265,6 +288,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         if game is None or game.status == 'completed':
             return
 
+        # the player who resigns loses
         if self.user == game.white_player:
             db_result = 'black_win'
             winner = 'Black'
@@ -288,6 +312,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         game.status = 'completed'
         game.ended_at = timezone.now()
         game.save(update_fields=['result', 'status', 'ended_at'])
+        # update player stats / ELO
         game.white_player.refresh_from_db()
         game.black_player.refresh_from_db()
         if result == 'white_win':

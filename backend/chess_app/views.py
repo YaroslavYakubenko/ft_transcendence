@@ -264,16 +264,22 @@ def create_game(request):
 			defaults={'username': 'ChessBot', 'is_active': True},
 		)
 		opponent = bot_user
+
 	elif opponent_type == 'live':
 		opponent_id = request.data.get('opponent_id')
-		if not opponent_id:
-			return Response({'error': 'opponent_id is required for live games'}, status=400)
-		try:
-			opponent = User.objects.get(id=opponent_id)
-		except User.DoesNotExist:
-			return Response({'error': 'Opponent not found'}, status=404)
-		if opponent == request.user:
-			return Response({'error': 'Cannot create a game against yourself'}, status=400)
+
+		if opponent_id:
+			try:
+				opponent = User.objects.get(id=opponent_id)
+			except User.DoesNotExist:
+				return Response({'error': 'Opponent not found'}, status=404)
+		
+		#no opponent yet, use placeholder
+		else:
+			opponent = User.objects.create(
+				username='Pending',
+				email='pending@transcendence.de',
+			)
 	else:
 		return Response({'error': 'Invalid opponent type'}, status=400)
 

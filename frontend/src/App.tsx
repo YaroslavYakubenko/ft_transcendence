@@ -18,6 +18,8 @@ import ChatWidget from './components/ChatWidget'
 import OAuthCallbackPage from './pages/OAuthCallbackPage'
 import PublicOnlyRoute from './components/PublicOnlyRoute'
 
+import PlayerConnectPage from './pages/WaitingRoomPage'
+
 function AuthenticatedWidgets() {
     const { isLoggedIn } = useAuth()
     if (!isLoggedIn) return null
@@ -75,6 +77,13 @@ function App() {
                             <FriendsPage/>
                         </ProtectedRoute>
                     } />
+
+					<Route path="/waiting_room" element={
+                        <ProtectedRoute>
+                            <PlayerConnectPage/>
+                        </ProtectedRoute>
+                    } />
+
                     <Route path="*" element={<NotFoundPage/>} />
                 </Routes>
                 <AuthenticatedWidgets />
