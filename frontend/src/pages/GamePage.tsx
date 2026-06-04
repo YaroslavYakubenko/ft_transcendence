@@ -155,16 +155,12 @@ function GamePage() {
 				setRes({ state: 'resign', winner: data.winner })
 		}
 	
-		return function cleanup()
-		{
-			socket.close()
-			wsRef.current = null
-		}
+		
 	}, [multiplayer, gameId, token])										// run this useEffect again if one of these values changes
 
 
 	// send a move over WS for live games, fall back to HTTP for bot games
-	const sendMove = async (from: string, to: string, currentFen: string) => {
+	const sendMove = async (currentFen: string, from: string, to: string) => {
 
 		const socket = wsRef.current
 		const socketIsOpen = socket?.readyState === WebSocket.OPEN

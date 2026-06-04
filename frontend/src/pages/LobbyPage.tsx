@@ -32,14 +32,15 @@ function LobbyPage() {
                 userColor: 'white',
                 boardTheme,
                 pieceTheme,
-                game_id: parseInt(joinGameId),
+                gameId: parseInt(joinGameId),
             },
         })
     }
 
     // Player 1 — create a new game
     const handleStartGame = async () => {
-        setStartError("")
+        console.log("opponent:", opponent)  // ← add this
+		setStartError("")
         setIsStarting(true)
 
         let gameId: number | undefined

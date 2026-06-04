@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate # check email + password and return object or none
-from .models import User, Friendship
+from .models import User, Friendship, ChatMessage
 from .serializers import RegisterSerializer, UserSerializer, FriendSerializer
 from chess_app.models import Game
 import requests #for http request to GitHub API
@@ -139,6 +139,62 @@ def add_friend(request, user_id):
 def remove_friend(request, user_id):
 	Friendship.objects.filter(from_user=request.user, to_user__id=user_id).delete() # search friend and delete
 	return Response(status=status.HTTP_204_NO_CONTENT)
+
+# Frontend sends recipient ID and message
+# Backend checks the data and finds recipient
+# Backend saves the message in ChatMessage
+# Backend returns the saved message to the frontend
+@api_view(['POST'])								# this endpoint only accepts POST requests
+@permission_classes([IsAuthenticated])			# only logged in users can use this endpoint
+def send_chat_message(request):					# when frontend calls the URL for sending chat messages, Django runs this function
+	to_user_id = request.data.get('to_user_id')
+	message = request.data.get('message', '').strip()
+
+	if not to_user_id or not message:
+		return Response({'error': 'Missing recipient or message'}, status=status.HTTP_400_BAD_REQUEST)
+	
+	try:
+		recipient = User.objects.get(id=to_user_id)
+	except User.DoesNotExist:
+		return Response({'error': 'Recipient not found'}, status=status.HTTP_404_NOT_FOUND)
+
+	chat_message = ChatMessage.objects.create(
+		sender=request.user,
+		recipient=recipient,
+		message=message,
+	)
+
+	return Response({
+		'id': chat_message.id,
+		'from_user_id': chat_message.sender.id,
+		'to_user_id': chat_message.recipient.id,
+		'message': chat_message.message,
+		'created_at': chat_message.created_at,
+	}, status=status.HTTP_201_CREATED)
+
+# loads the saved chat history between the logged-in user and one friend
+# request = HTTP request from the frontend
+# models.Q = Django helper for making more complex database filters (sender & friend or friend & recipient)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chat_messages(request, friend_id):
+	messages = ChatMessage.objects.filter(
+		models.Q(sender=request.user, recipient_id=friend_id) |
+		models.Q(sender_id=friend_id, recipient=request.user)
+	).order_by('created_at')
+
+	data = []
+
+	for msg in messages:
+		data.append({
+			'id': msg.id,
+			'fromId': msg.sender.id,
+			'toId': msg.recipient.id,
+			'text': msg.message,
+			'timestamp': msg.created_at.strftime('%H:%M'),
+		})
+	return Response(data)
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])

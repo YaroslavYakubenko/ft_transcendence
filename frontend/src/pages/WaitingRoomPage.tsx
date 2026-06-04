@@ -16,21 +16,20 @@ function WaitingRoomPage() {
 	const settings: GameSettings = location.state ?? DEFAULT_SETTINGS
 
 
-	function finish_connect() {
-		console.debug(settings);
-			navigate('/game', {
-				state: {
-					opponent: "bot",
-					difficulty: settings.difficulty,
-					timer: settings.timer,
-					pieceColor: settings.pieceColor,
-					userColor: settings.userColor,
-					boardTheme: settings.boardTheme,
-					pieceTheme: settings.pieceTheme,
-					game_id: location.state.gameId,
-				},
-			})
-		}
+function finish_connect() {
+	navigate('/game', {
+		state: {
+			opponent: "live",
+			difficulty: settings.difficulty,
+			timer: settings.timer,
+			pieceColor: settings.pieceColor,
+			userColor: settings.userColor,
+			boardTheme: settings.boardTheme,
+			pieceTheme: settings.pieceTheme,
+			game_id: settings.game_id,
+		},
+	})
+}
 
 
 	return(

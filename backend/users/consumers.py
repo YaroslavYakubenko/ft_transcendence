@@ -1,5 +1,6 @@
 import chess
-from channels.generic.websocket import AsyncWebsocketConsumer
+import json
+from channels.generic.websocket import AsyncJsonWebsocketConsumer, AsyncWebsocketConsumer
 from rest_framework.authtoken.models import Token
 from channels.db import database_sync_to_async
 from chess_app.models import Game, Move
@@ -55,7 +56,10 @@ class OnlineStatusConsumer(AsyncWebsocketConsumer):
 
     # called when frontend sends a message through this WebSocket
     # runs on User A's consumer — handles the send request
-    async def receive_json(self, content):
+    async def receive(self, text_data):
+
+        content = json.loads(text_data)
+        
         to_user_id = content.get('to_user_id')
         message = content.get('message', '')
 
@@ -77,18 +81,18 @@ class OnlineStatusConsumer(AsyncWebsocketConsumer):
 
     async def chat_message(self, event):
         # runs on User B's consumer — delivers message to browser
-        await self.send_json({
+        await self.send(text_data=json.dumps({
             'type': 'chat',
             'message': event['message'],
             'from_user_id': event['from_user_id'],
             'username': event['username'],
-        })
+        }))
 
 
 # Handles WebSocket connections for live Chess games
 # Both players connect here; moves are broadcast between them in real time
 # channel_name comes from the base class AsyncWebsocketConsumer, automatically assigned random string by Daphne
-class GameConsumer(AsyncWebsocketConsumer):
+class GameConsumer(AsyncJsonWebsocketConsumer):
 
     # read token, find user, read game_id
     # create WebSocket group name
@@ -128,8 +132,8 @@ class GameConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add(self.game_group_name, self.channel_name)
         await self.accept()
 
-		# game taken from database through get_game function
-		# send to GamePage.tsx / frontend
+        # game taken from database through get_game function
+        # send to GamePage.tsx / frontend
         await self.send_json({
             'msg_type': 'sync',
             'fen': game.current_fen,
@@ -139,8 +143,8 @@ class GameConsumer(AsyncWebsocketConsumer):
             'black_player': game.black_player.username or game.black_player.email,
         })
 
-		#broadcast to game_group_name 
-		# GamePage.tsx listens for data.msg_type === 'player_connected'
+        #broadcast to game_group_name 
+        # GamePage.tsx listens for data.msg_type === 'player_connected'
         await self.channel_layer.group_send(self.game_group_name, {
             'type': 'game_message',
             'msg_type': 'player_connected',
@@ -151,7 +155,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         if hasattr(self, 'game_group_name'):
             await self.channel_layer.group_discard(self.game_group_name, self.channel_name)				# client just left game_group_name
             await self.channel_layer.group_send(self.game_group_name, 									# notifies everybody remaining in game_group_name about the disconnect
-			{
+            {
                 'type': 'game_message',
                 'msg_type': 'player_disconnected',
                 'username': self.user.username or self.user.email,
@@ -165,32 +169,41 @@ class GameConsumer(AsyncWebsocketConsumer):
         elif msg_type == 'resign':
             await self._handle_resign()
 
-	# called on each connection in the group when group_send fires
+    # called on each connection in the group when group_send fires
     async def game_message(self, event):
         event.pop('type')
         await self.send_json(event)
 
     @database_sync_to_async
     def get_game(self):
+        pending_email = 'pending@transcendence.de'
+
         try:
             game = Game.objects.select_related('white_player', 'black_player').get(id=self.game_id)
- 
-            # if black player is the pending placeholder, assign this user
-            if game.black_player.email == 'pending@transcendence.local':
+
+            print(f"game {self.game_id}: white={game.white_player.email} black={game.black_player.email} user={self.user.email}")
+
+            # If this user is already white or black, allow connection.
+            if self.user in (game.white_player, game.black_player):
+                return game
+
+            # If black is still pending, assign this user as black.
+            if game.black_player.email == pending_email:
                 game.black_player = self.user
                 game.save(update_fields=['black_player'])
- 
-            # if white player is the pending placeholder, assign this user
-            elif game.white_player.email == 'pending@transcendence.local':
+                return game
+
+            # If white is still pending, assign this user as white.
+            if game.white_player.email == pending_email:
                 game.white_player = self.user
                 game.save(update_fields=['white_player'])
- 
-            if self.user not in (game.white_player, game.black_player):
-                return None
+                return game
 
-            return game
+            print("USER NOT IN GAME")
+            return None
 
         except Game.DoesNotExist:
+            print("GAME DOES NOT EXIST")
             return None
 
     async def _handle_move(self, data):

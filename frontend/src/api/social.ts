@@ -71,11 +71,10 @@ export async function getUserProfile(userId: number, token: string): Promise<Use
 }
 
 // Chat API
-
+export async function sendMessage(_toId: number, _text: string, _token: string): Promise<ChatMessage> {
+	// chat not implemented yet
+}
 export async function getMessages(_withUserId: number, _token: string): Promise<ChatMessage[]> {
 	return []
 }
 
-export async function sendMessage(_toId: number, _text: string, _token: string): Promise<void> {
-	// chat not implemented yet
-}

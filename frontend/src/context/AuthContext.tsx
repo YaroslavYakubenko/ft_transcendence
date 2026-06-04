@@ -82,25 +82,41 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 	}
 
 	// if there's a token in localStorage, set User (user stays logged in after a page refresh)
-	useEffect(() => {																
-		if (token) {
-			getMe(token)
-			.then(user => setUser(user))
-			.catch(() => {
+	useEffect(() => {
+		if (!token)
+		{
+			setUser(null)
+			return
+		}
+
+		getMe(token)
+			.then(function(user){
+				setUser(user)
+			})
+			.catch(function(){
 				localStorage.removeItem('token')
 				setToken(null)
+				setUser(null)
 			})
-		}
-	}, [])
+
+	}, [token])
 
 	// if user logs in, token appears -> WebSocket opens
 	// if user logs out, token becomes null -> WebSocket closes
 	useEffect(() => {
 		if (!token)
+		{
+			if (wsRef.current)
+			{
+				wsRef.current.close()
+				wsRef.current = null
+			}
 			return
+		}
 
 		const ws = new WebSocket(`wss://localhost:8443/ws/status/?token=${token}`)
-
+		wsRef.current = ws
+		
 		ws.onmessage = (e) => {															// e ist the WebSocket message event
 			const data = JSON.parse(e.data)
 			if (data.type === 'chat')
@@ -113,13 +129,27 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 			}
 		}
 
-		ws.onerror = (e) => console.error('Status WS error:', e)
-		wsRef.current = ws
+	ws.onerror = function(e)
+	{
+		console.error('Status WS error:', e)
+	}
 
-		return () => {
-			ws.close()
-			wsRef.current = null
-		}
+	ws.onclose = function(e)
+	{
+		console.log("Status WS closed:", {
+			code: e.code,
+			reason: e.reason,
+			wasClean: e.wasClean,
+		})
+	}
+
+	// return function cleanup()
+	// {
+	// 	ws.close()
+
+	// 	if (wsRef.current === ws)
+	// 		wsRef.current = null
+	// }
 	}, [token])
 
 	function sendChat(to_user_id: number, message: string)

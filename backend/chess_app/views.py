@@ -276,7 +276,7 @@ def create_game(request):
 		
 		#no opponent yet, use placeholder
 		else:
-			opponent = User.objects.create(
+			opponent, _ = User.objects.get_or_create(
 				username='Pending',
 				email='pending@transcendence.de',
 			)
