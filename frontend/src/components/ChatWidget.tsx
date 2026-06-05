@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import { getFriends, type Friend, type ChatMessage } from "../api/social"
+import { getFriends, getMessages, sendMessage, type Friend, type ChatMessage } from "../api/social"
 import { useTranslation } from "react-i18next"
 import { useAuth } from "../context/AuthContext"
 
@@ -12,7 +12,8 @@ function ChatWidget()
 	const [isOpen, setIsOpen] = useState(false)
 	const [friends, setFriends] = useState<Friend[]>([])
 	const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null)
-	const [messages, setMessages] = useState<ChatMessage[]>([])				
+	const [messages, setMessages] = useState<ChatMessage[]>([])							// setMessages = updates messages; React rerenders when setMessages changes messages
+
 	const [input, setInput] = useState("")
 	const bottomRef = useRef<HTMLDivElement>(null)
 	const { t } = useTranslation()
@@ -28,8 +29,22 @@ function ChatWidget()
 
 	// react to incoming messages from the persistent WebSocket in AuthContext
 	useEffect(() => {
-		setMessages([])
-	}, [selectedFriend])				// runs when selectedFriend changes
+		if (!selectedFriend || !token)
+		{
+			setMessages([])
+			return
+		}
+		
+		getMessages(selectedFriend.id, token)
+			.then(function(data) {
+				setMessages(data)
+			})
+			.catch(function(error) {
+				console.error("Could not load messages:", error)
+				setMessages([])
+			})
+
+	}, [selectedFriend, token])				// runs when selectedFriend or token changes
 
 	useEffect(() => {
 		
@@ -57,11 +72,28 @@ function ChatWidget()
 
 	function handleSend() 
 	{
-		if (!input.trim() || !selectedFriend) 
+		console.log("handleSend called", {
+			input,
+			selectedFriend,
+			token,
+		})
+
+		if (!input.trim() || !selectedFriend || !token) 
 			return
 
-		sendChat(selectedFriend.id, input)				// sends via WebSocket in AuthContext
-		setInput("")									// clear the input box
+		const text = input.trim()
+		sendMessage(selectedFriend.id, text, token)
+			.then(function(savedMessage){
+				setMessages(prev => [...prev, savedMessage])
+				setInput("")
+
+				sendChat(selectedFriend.id, input)				// sends via WebSocket in AuthContext
+
+			})
+			.catch(function(error) {
+				console.error("Could not send message:", error)
+			})
+		// setInput("")									// clear the input box
 	}
 
 	return (

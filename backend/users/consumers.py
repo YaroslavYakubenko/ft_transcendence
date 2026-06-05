@@ -77,7 +77,7 @@ class OnlineStatusConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_send('inbox_' + str(to_user_id), chat_data)
 
         # echo back to sender so they see their own message
-        await self.channel_layer.group_send('inbox_' + str(self.user.id), chat_data)
+        # await self.channel_layer.group_send('inbox_' + str(self.user.id), chat_data)
 
     async def chat_message(self, event):
         # runs on User B's consumer — delivers message to browser

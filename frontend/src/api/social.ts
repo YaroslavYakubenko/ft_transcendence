@@ -1,4 +1,4 @@
-
+// frontend API helper file
 
 const API = import.meta.env.VITE_API_URL
 
@@ -70,11 +70,50 @@ export async function getUserProfile(userId: number, token: string): Promise<Use
 	return { ...data, wins: 0, losses: 0, avatarUrl: data.avatar || null }
 }
 
-// Chat API
-export async function sendMessage(_toId: number, _text: string, _token: string): Promise<ChatMessage> {
-	// chat not implemented yet
+// Chat API to communicate with Django backend endpoints 
+// POST /api/chat/send
+export async function sendMessage(toId: number, text: string, token: string): Promise<ChatMessage> {
+	const res = await fetch(`${API}/chat/send/`, 
+	{
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			'Authorization': `Token ${token}`,
+		},
+		body: JSON.stringify({
+			to_user_id: toId,
+			message: text,
+		}),
+	})
+
+	if (!res.ok)
+		throw new Error('Failed to send message')
+
+	const data = await res.json()
+
+	return {
+		id: data.from_user_id,
+		toId: data.to_user_id,
+		text: data.message,
+		timestamp: new Date(data.created_at).toLocaleTimeString([], {
+			hour: '2-digit',
+			minute: '2-digit'
+		}),
+	}
 }
-export async function getMessages(_withUserId: number, _token: string): Promise<ChatMessage[]> {
-	return []
+
+// GET /api/chat/<friendId>/
+export async function getMessages(withUserId: number, token: string): Promise<ChatMessage[]> {
+	const res = await fetch(`${API}/chat/${withUserId}/`, {
+		method: 'GET',
+		headers: {
+			'Authorization': `Token ${token}`,
+		},
+	})
+
+	if (!res.ok)
+		throw new Error('Failed to load messages')
+
+	return res.json()
 }
 
