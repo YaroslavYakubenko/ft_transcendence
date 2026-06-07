@@ -6,6 +6,7 @@ from channels.db import database_sync_to_async
 from chess_app.models import Game, Move
 from chess_app.views import update_player_stats
 from django.utils import timezone
+from users.models import ChatMessage
 
 # self is the consumer instance
 # Django Channels creates an object (self) for each WebSocket connection
@@ -40,19 +41,52 @@ class OnlineStatusConsumer(AsyncWebsocketConsumer):
 
         self.inbox = 'inbox_' + str(self.user.id)
         await self.channel_layer.group_add(self.inbox, self.channel_name)
-
+        await self.channel_layer.group_add('presence', self.channel_name)
         await database_sync_to_async(self.setOnline)(True)
         await self.accept()
+
+        print("PRESENCE ONLINE:", self.user.id, self.user.email, flush=True)
+
+    
+        await self.channel_layer.group_send('presence', {
+            'type': 'presence_msg',
+            'user_id': self.user.id,
+            'is_online': True,
+        })
+
+    async def presence_msg(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'presence',
+            'user_id': event['user_id'],
+            'is_online': event['is_online'],
+        }))
 
     async def disconnect(self, close_code):
         if self.user is not None:
             await self.channel_layer.group_discard(self.inbox, self.channel_name)
+            await self.channel_layer.group_discard('presence', self.channel_name)
             await database_sync_to_async(self.setOnline)(False)
+
+            print("PRESENCE OFFLINE:", self.user.id, self.user.email)
+            await self.channel_layer.group_send('presence', {
+                'type': 'presence_msg',
+                'user_id': self.user.id,
+                'is_online': False,
+        })
 
     def setOnline(self, status):
         if self.user is not None:
             self.user.is_online = status
             self.user.save(update_fields=['is_online'])
+
+    #save ChatMessage to database
+    @database_sync_to_async
+    def save_chat_message(self, to_user_id, message):
+        return ChatMessage.objects.create(
+            sender = self.user,
+            recipient_id=to_user_id,
+            message=message,
+        )
 
     # called when frontend sends a message through this WebSocket
     # runs on User A's consumer — handles the send request
@@ -66,26 +100,34 @@ class OnlineStatusConsumer(AsyncWebsocketConsumer):
         if not to_user_id or not message:
             return
 
+        saved_message = await self.save_chat_message(to_user_id, message)
+
         chat_data = {
             'type': 'chat_message',
-            'message': message,
+            'id': saved_message.id,
+            'message': saved_message.message,
             'from_user_id': self.user.id,
+            'to_user_id': int(to_user_id),
             'username': self.user.username or self.user.email,
+            'created_at': saved_message.created_at.isoformat(),
         }
 
         # deliver to recipient's inbox
         await self.channel_layer.group_send('inbox_' + str(to_user_id), chat_data)
 
         # echo back to sender so they see their own message
-        # await self.channel_layer.group_send('inbox_' + str(self.user.id), chat_data)
+        await self.channel_layer.group_send('inbox_' + str(self.user.id), chat_data)
 
     async def chat_message(self, event):
         # runs on User B's consumer — delivers message to browser
         await self.send(text_data=json.dumps({
-            'type': 'chat',
-            'message': event['message'],
-            'from_user_id': event['from_user_id'],
-            'username': event['username'],
+        'type': 'chat',
+        'id': event['id'],
+        'message': event['message'],
+        'from_user_id': event['from_user_id'],
+        'to_user_id': event['to_user_id'],
+        'username': event['username'],
+        'created_at': event['created_at'],
         }))
 
 

@@ -17,11 +17,24 @@ function ChatWidget()
 	const [input, setInput] = useState("")
 	const bottomRef = useRef<HTMLDivElement>(null)
 	const { t } = useTranslation()
-	const { token, user, sendChat, lastMessage } = useAuth()
+	const { token, user, sendChat, lastMessage, friendsUpdate } = useAuth()
 
 	useEffect(() => {
 		getFriends(token!).then(setFriends).catch(() => {})
 	}, [])
+
+	useEffect(() => {
+		if (!friendsUpdate)
+			return
+
+		setFriends(prev =>
+			prev.map(friend =>
+			friend.id === friendsUpdate.user_id
+				? { ...friend, isOnline: friendsUpdate.is_online }
+				: friend
+		)
+	)
+	}, [friendsUpdate])
 
 	useEffect(() => {
 		bottomRef.current?.scrollIntoView()
@@ -82,13 +95,12 @@ function ChatWidget()
 			return
 
 		const text = input.trim()
-		sendMessage(selectedFriend.id, text, token)
-			.then(function(savedMessage){
+		sendMessage(selectedFriend.id, text, token)				// HTTP function that sends message to backend
+			.then(function(savedMessage){						// the message returned by the backend
 				setMessages(prev => [...prev, savedMessage])
 				setInput("")
 
-				sendChat(selectedFriend.id, input)				// sends via WebSocket in AuthContext
-
+				sendChat(selectedFriend.id, input)				// sends via WebSocket
 			})
 			.catch(function(error) {
 				console.error("Could not send message:", error)

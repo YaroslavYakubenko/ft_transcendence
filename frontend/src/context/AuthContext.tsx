@@ -23,6 +23,12 @@ interface IncomingMessage
 	message: string
 }
 
+interface FriendsUpdate
+{
+	user_id: number
+	is_online: boolean
+}
+
 // AuthContextType = blue print / declaration
 // there will be a "user", "token" and "last message" field
 interface AuthContextType 
@@ -36,6 +42,7 @@ interface AuthContextType
 	isLoggedIn: boolean
 	sendChat: (to_user_id: number, message: string) => void			// function to send a message
 	lastMessage: IncomingMessage | null
+	friendsUpdate: FriendsUpdate | null
 }
 
 // creates actual context object
@@ -51,6 +58,8 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 	)
 
 	const [lastMessage, setLastMessage] = useState<IncomingMessage | null>(null)
+	const [friendsUpdate, setFriendsUpdate] = useState<FriendsUpdate | null>(null)
+
 	const wsRef = useRef<WebSocket | null>(null)
 
 	const login = (token: string, user: User) => {
@@ -119,12 +128,23 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 		
 		ws.onmessage = (e) => {															// e ist the WebSocket message event
 			const data = JSON.parse(e.data)
+			console.log("STATUS WS MESSAGE:", data)
+
 			if (data.type === 'chat')
 			{
 				setLastMessage({
 					from_user_id: data.from_user_id,
 					username: data.username,
 					message: data.message,
+				})
+			}
+
+			else if (data.type == 'presence')
+			{
+				console.log("FRIEND STATUS UPDATE:", data)
+				setFriendsUpdate({
+					user_id: data.user_id,
+					is_online: data.is_online,
 				})
 			}
 		}
@@ -143,13 +163,6 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 		})
 	}
 
-	// return function cleanup()
-	// {
-	// 	ws.close()
-
-	// 	if (wsRef.current === ws)
-	// 		wsRef.current = null
-	// }
 	}, [token])
 
 	function sendChat(to_user_id: number, message: string)
@@ -171,6 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 			isLoggedIn: !!token,
 			sendChat,
 			lastMessage,
+			friendsUpdate,
 		}}>
 			{children}
 		</AuthContext.Provider>

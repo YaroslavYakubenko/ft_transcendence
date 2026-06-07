@@ -92,7 +92,8 @@ export async function sendMessage(toId: number, text: string, token: string): Pr
 	const data = await res.json()
 
 	return {
-		id: data.from_user_id,
+		id: data.id,
+		fromId: data.from_user_id,
 		toId: data.to_user_id,
 		text: data.message,
 		timestamp: new Date(data.created_at).toLocaleTimeString([], {
