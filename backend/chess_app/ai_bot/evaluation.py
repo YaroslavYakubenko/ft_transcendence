@@ -3,27 +3,46 @@
 import chess
 
 PIECE_VALUES = {
-    chess.PAWN: 100,
-    chess.KNIGHT: 320,
-    chess.BISHOP: 330,
-    chess.ROOK: 500,
-    chess.QUEEN: 900,
-    chess.KING: 0,
+	chess.PAWN: 100,
+	chess.KNIGHT: 320,
+	chess.BISHOP: 330,
+	chess.ROOK: 500,
+	chess.QUEEN: 900,
+	chess.KING: 0,
 }
 
+KNIGHT_TABLE = [
+	-50, -40, -30, -30, -30, -30, -40, -50,
+	-40, -20,   0,   0,   0,   0, -20, -40,
+	-30,   0,  10,  15,  15,  10,   0, -30,
+	-30,   5,  15,  20,  20,  15,   5, -30,
+	-30,   0,  15,  20,  20,  15,   0, -30,
+	-30,   5,  10,  15,  15,  10,   5, -30,
+	-40, -20,   0,   5,   5,   0, -20, -40,
+	-50, -40, -30, -30, -30, -30, -40, -50,
+]
+
 def evaluate_fen(fen: str) -> int:
-    board = chess.Board(fen)
+	#board = chess.Board(fen)
 
-    if board.is_checkmate():
-        return -99999 if board.turn == chess.WHITE else 99999
+	if board.is_checkmate():
+		return -99999 if board.turn == chess.WHITE else 99999
 
-    if board.is_stalemate() or board.is_insufficient_material():
-        return 0
+	if board.is_stalemate() or board.is_insufficient_material():
+		return 0
 
-    score = 0
+	score = 0
 
-    for piece_type, value in PIECE_VALUES.items():
-        score += len(board.pieces(piece_type, chess.WHITE)) * value
-        score -= len(board.pieces(piece_type, chess.BLACK)) * value
+# Evaluate material balance
+	for piece_type, value in PIECE_VALUES.items():
+		score += len(board.pieces(piece_type, chess.WHITE)) * value
+		score -= len(board.pieces(piece_type, chess.BLACK)) * value
 
-    return score
+# Evaluate knight position
+	for square in board.pieces(chess.KNIGHT, chess.WHITE):
+		score += KNIGHT_TABLE[square]
+
+	for square in board.pieces(chess.KNIGHT, chess.BLACK):
+		score -= KNIGHT_TABLE[chess.square_mirror(square)]
+
+	return score
