@@ -82,31 +82,16 @@ function ChatWidget()
 	}, [lastMessage])
 
 
+function handleSend() 
+{
+	if (!input.trim() || !selectedFriend || !token) 
+		return
 
-	function handleSend() 
-	{
-		console.log("handleSend called", {
-			input,
-			selectedFriend,
-			token,
-		})
+	const text = input.trim()
 
-		if (!input.trim() || !selectedFriend || !token) 
-			return
-
-		const text = input.trim()
-		sendMessage(selectedFriend.id, text, token)				// HTTP function that sends message to backend
-			.then(function(savedMessage){						// the message returned by the backend
-				setMessages(prev => [...prev, savedMessage])
-				setInput("")
-
-				sendChat(selectedFriend.id, input)				// sends via WebSocket
-			})
-			.catch(function(error) {
-				console.error("Could not send message:", error)
-			})
-		// setInput("")									// clear the input box
-	}
+	sendChat(selectedFriend.id, text)
+	setInput("")
+}
 
 	return (
 		<div className="fixed bottom-6 right-6 rtl:right-auto rtl:left-6 z-50 flex flex-col items-end rtl:items-start gap-3">

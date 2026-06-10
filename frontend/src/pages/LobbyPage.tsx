@@ -39,7 +39,6 @@ function LobbyPage() {
 
     // Player 1 — create a new game
     const handleStartGame = async () => {
-        console.log("opponent:", opponent)  // ← add this
 		setStartError("")
         setIsStarting(true)
 
