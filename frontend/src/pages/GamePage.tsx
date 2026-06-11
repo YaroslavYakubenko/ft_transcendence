@@ -112,14 +112,15 @@ function GamePage() {
 	//	}
 	useEffect(() => 
 	{
-		console.log("multi:", multiplayer)
-		console.log("gameId:", gameId)
-		console.log("token:", token)
+		// console.log("multi:", multiplayer)
+		// console.log("gameId:", gameId)
+		// console.log("token:", token)
 		if (!multiplayer || !gameId || !token) 
 			return
 
 		// opens a live connection to your backend
-		const socketUrl = `wss://localhost:8443/ws/game/${gameId}/?token=${token}`
+		const WS_URL = (import.meta as any).env.VITE_WS_URL
+		const socketUrl = `${WS_URL}/ws/game/${gameId}/?token=${token}`
 		const socket = new WebSocket(socketUrl)
 		wsRef.current = socket
 		// onmessage and event belong to WebSocket, when the socket receives a message, run this function

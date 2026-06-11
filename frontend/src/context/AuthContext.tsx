@@ -122,8 +122,8 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 			}
 			return
 		}
-
-		const ws = new WebSocket(`wss://localhost:8443/ws/status/?token=${token}`)
+		const WS_URL = (import.meta as any).env.VITE_WS_URL
+		const ws = new WebSocket(`${WS_URL}/ws/status/?token=${token}`)
 		wsRef.current = ws
 		
 		ws.onmessage = (e) => {															// e ist the WebSocket message event
