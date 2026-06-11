@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { Chessboard } from "react-chessboard"
 import { useAuth } from "../context/AuthContext"
 import { useLocation } from "react-router-dom"
@@ -18,9 +18,11 @@ import { START_FEN, DEFAULT_SETTINGS, getStorageKeys, type GameSettings } from "
 import { usePersistState, useRematchReset, usePlayerColor, useRestartGame, useResignGame } from "../chess/hooks"
 import { appendMove, getBoardCoordinates, createOnPieceDrag, createOnPieceDrop, getGameId } from "../chess/utils"
 
+
 function GamePage() {
 	const { user, token } = useAuth()
 	const location = useLocation()
+	const wsRef = useRef<WebSocket | null>(null)							// creates a React ref that will store the WebSocket connection
 
 // variables ----------------------------------------
 
@@ -28,8 +30,11 @@ function GamePage() {
 	const settings: GameSettings = location.state ?? DEFAULT_SETTINGS
 	const theme = BOARD_THEMES[settings.boardTheme]
 	const pieces = PIECE_THEMES[settings.pieceTheme]
+	// const gameId = 428
 	const gameId = getGameId(location.state)
 	const storage_keys = getStorageKeys(gameId) // for local storage persistance
+	const multiplayer = settings.opponent === 'live'
+
 
 	// highlight/ special squares ----------------------------------------
 	const [highlightSquares, setHighlightSquares] = useState<string[]>([])
@@ -47,22 +52,19 @@ function GamePage() {
 	const [moves, setMoves] = useState<{ white: string; black?: string }[]>(() => {
 		return loadMoves(storage_keys.move_history)
 	});
-
-
-	// const [result, setRes] = useState( {state: "ongoing", winner: "" })
 	const [result, setRes] = useState(() => {
 		return loadResult(storage_keys.result)
 	})
-
-
 	const [promotion, setPro] = useState({ move: "", x: -1, y: -1, pre: "" })
+	const [opponentConnected, setOpponentConnected] = useState(false);
+	const [liveColor, setLiveColor] = useState<'white' | 'black' | null>(null)
 
 // react hooks?? what do you call it ----------------------------------------
 
 	// const playerColor = usePlayerColor( settings.pieceColor, storage_keys.piece_color )
 	const restartGame  = useRestartGame(settings, settings.pieceColor, token)
+	const playerColor = usePlayerColor( settings.userColor, storage_keys.piece_color )
 
-	let playerColor = usePlayerColor( settings.userColor, storage_keys.piece_color )
 	// when given rematch id reset board to starting positions
 	useRematchReset({
 		rematchId: location.state?.rematchId,
@@ -80,16 +82,109 @@ function GamePage() {
 		},
 	})
 
-	// update local fen & move history on change
+	// update local fen & move history & state on change
 	usePersistState(storage_keys.fen, fen, location.state?.rematchId)
 	usePersistState(storage_keys.move_history, JSON.stringify(moves), location.state?.rematchId)
 	usePersistState(storage_keys.result, JSON.stringify(result), location.state?.rematchId )
 
-	// use player color, don't assume white
 	const {handleResign, resignError,isResigning} = useResignGame(
 		storage_keys, token, gameId,
 		setFen, setMoves, setRes
 	)
+
+
+	// WebSocket for live games ----------------------------------------
+	// 	{
+	// 		data: '{"msg_type":"move","fen":"some-fen"}',
+	// 		type: "message",
+	// 		target: WebSocket,
+	// 		origin: "ws://localhost:8000",
+	// 		lastEventId: "",
+	// 		source: null,
+	// 		ports: []
+	// }
+
+	// event.data might contain '{"msg_type":"move","fen":"new-board-position"}'
+	// JSON.parse turns it into a Javascript object 
+	// 	{
+	// 		msg_type: "move",
+	// 		fen: "new-board-position"
+	//	}
+	useEffect(() => 
+	{
+		// console.log("multi:", multiplayer)
+		// console.log("gameId:", gameId)
+		// console.log("token:", token)
+		if (!multiplayer || !gameId || !token) 
+			return
+
+		// opens a live connection to your backend
+		const WS_URL = (import.meta as any).env.VITE_WS_URL
+		const socketUrl = `${WS_URL}/ws/game/${gameId}/?token=${token}`
+		const socket = new WebSocket(socketUrl)
+		wsRef.current = socket
+		// onmessage and event belong to WebSocket, when the socket receives a message, run this function
+		// event is the whole message package
+		socket.onmessage = function(event)
+		{
+			const data = JSON.parse(event.data)
+					
+			console.log("msg type:", data.msg_type)
+			if (data.msg_type === 'sync')
+			{
+				setFen(data.fen)
+
+				if(user?.username == data.white_player) 
+					setLiveColor('white')
+				else
+					setLiveColor('black')
+			}
+
+			else if (data.msg_type === 'player_connected')
+				setOpponentConnected(true)
+			
+			else if (data.msg_type === 'move') 
+			{
+				setFen(data.fen)
+				setCheckSquare(data.king_in_check || null)
+				
+				if (data.result !== 'ongoing') 
+					setRes({ state: data.result, winner: data.winner })
+			}
+
+			else if (data.msg_type === 'resign') 
+				setRes({ state: 'resign', winner: data.winner })
+		}
+	
+		
+	}, [multiplayer, gameId, token])										// run this useEffect again if one of these values changes
+
+
+	// send a move over WS for live games, fall back to HTTP for bot games
+	const sendMove = async (currentFen: string, from: string, to: string) => {
+
+		const socket = wsRef.current
+		const socketIsOpen = socket?.readyState === WebSocket.OPEN
+
+		if (multiplayer && socketIsOpen)
+		{
+			const moveMessage = 
+			{
+				type: "move", 
+				from: from, 
+				to: to,
+			}
+
+			const messageText = JSON.stringify(moveMessage)
+			socket.send(messageText)
+
+			return null
+		}
+
+		// non-multiplayer games
+		return make_move(currentFen, from, to, gameId)
+	}
+
 
 // Piece movement actions ----------------------------------------
 
@@ -100,7 +195,7 @@ function GamePage() {
 	});
 	const onPieceDrop = createOnPieceDrop({
 		fen, gameId, playerColor,
-		make_move,
+		make_move: sendMove,
 		getBoardCoordinates,
 		appendMove,
 		setMoves, setFen, setRes, setPro,
@@ -141,7 +236,7 @@ function GamePage() {
 									squareStyles: customSquareStyles,
 								}} />
 
-							{/* promotion, see if clicking outside selector could close it, works weird right now */}
+							{/* promotion */}
 							<PromotionSelector
 								promotion={promotion}
 								pieces={pieces}
@@ -189,4 +284,6 @@ export default GamePage
 
 // tabading@example.com Hello1295!
 
-// change game over screen to include type of win like, "white won" -> checkmate, "Draw" -> stalemate etc.
+// implement draw button once websockets are in -> question opponent if they agree
+// if live player not bot/ pending widget -> display game id, waiting for opponent.
+// -> update opponent

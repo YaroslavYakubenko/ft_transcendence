@@ -8,13 +8,17 @@ https://docs.djangoproject.com/en/6.0/howto/deployment/asgi/
 """
 
 import os
+import django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+django.setup()
+
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter      # routers = like a switch / case on connection ty
 from channels.auth import AuthMiddlewareStack                   # middleware = wraps handler, like a decorator in C++
 import users.routing                                            # our WebSocket URL table (like a routing table)
 
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+
 
 # ProtocolTypeRouter = the front door - decides WHERE to send each connection based on its TYPE
 application = ProtocolTypeRouter({

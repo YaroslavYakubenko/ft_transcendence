@@ -1,4 +1,3 @@
-
 import { PROMOTION_PIECES, SQUARE_SIZE } from "../chess/constants"
 import type { PieceHandlerArgs, PieceDropHandlerArgs } from "react-chessboard"
 
@@ -120,6 +119,7 @@ export function createOnPieceDrop({
 			return false;
 
 		make_move(fen, sourceSquare, targetSquare, gameId).then((data: any) => {
+			console.log("game ID: ", gameId)
 			if (!data) return;
 
 			// get position of the promotion menue 
@@ -165,5 +165,3 @@ export function getGameId(state: unknown): number | null {
 
 	return typeof gameId === "number" ? gameId : null
 }
-
-
