@@ -119,7 +119,7 @@ function GamePage() {
 			return
 
 		// opens a live connection to your backend
-		const WS_URL = (import.meta as any).env.VITE_WS_URL
+		const WS_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:8443`
 		const socketUrl = `${WS_URL}/ws/game/${gameId}/?token=${token}`
 		const socket = new WebSocket(socketUrl)
 		wsRef.current = socket
@@ -155,7 +155,13 @@ function GamePage() {
 			else if (data.msg_type === 'resign') 
 				setRes({ state: 'resign', winner: data.winner })
 		}
-	
+		socket.onclose = () => {
+			if (!multiplayer) return
+			setTimeout(() => {
+				const newSocket = new WebSocket(socketUrl)
+				wsRef.current = newSocket
+			}, 3000)
+		}
 		
 	}, [multiplayer, gameId, token])										// run this useEffect again if one of these values changes
 
