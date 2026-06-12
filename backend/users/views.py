@@ -118,8 +118,9 @@ def get_user(request, user_id): # view someone else's profile
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_friends(request): # view who added whom
-	friendships = Friendship.objects.filter(from_user=request.user) # search all friends
-	serializer = FriendSerializer(friendships, many=True, context={'request': request}) # many=True is a list, converts 
+	from django.db.models import Q
+	friendships = Friendship.objects.filter(Q(from_user=request.user) | Q(to_user=request.user))
+	serializer = FriendSerializer(friendships, many=True, context={'request': request})
 	return Response(serializer.data)
 
 @api_view(['POST'])
@@ -131,7 +132,8 @@ def add_friend(request, user_id):
 		return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 	if to_user == request.user:
 		return Response({'error': 'Cannot add yourself'}, status=status.HTTP_400_BAD_REQUEST)
-	Friendship.objects.get_or_create(from_user=request.user, to_user=to_user) # create friendship in DB
+	Friendship.objects.get_or_create(from_user=request.user, to_user=to_user)
+	Friendship.objects.get_or_create(from_user=to_user, to_user=request.user)
 	return Response(status=status.HTTP_201_CREATED)
 
 @api_view(['DELETE'])
