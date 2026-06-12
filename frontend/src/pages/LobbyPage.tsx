@@ -29,10 +29,9 @@ function LobbyPage() {
                 difficulty,
                 timer,
                 pieceColor,
-                userColor: 'white',
                 boardTheme,
                 pieceTheme,
-                gameId: parseInt(joinGameId),
+                game_id: parseInt(joinGameId),
             },
         })
     }

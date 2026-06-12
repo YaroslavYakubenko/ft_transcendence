@@ -85,13 +85,12 @@ export function buildOAuthUrl(provider: OAuthProvider, state: string): string {
 }
 
 export async function getOAuthState(provider: OAuthProvider): Promise<string> {
-	const res = await fetch(`${API}/auth/oauth/state/?provider=${encodeURIComponent(provider)}`, {
-		credentials: 'include'
-	})
-	if (!res.ok) throw new Error(await getErrorMessage(res, 'Failed to initialize OAuth state'))
-	const data = await res.json()
-	if (!data.state) throw new Error('Missing OAuth state')
-	return data.state
+	const array = new Uint8Array(18)
+	crypto.getRandomValues(array)
+	const nonce = Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('')
+	const state = `${provider}:${nonce}`
+	sessionStorage.setItem(`oauth_state_${provider}`, state)
+	return state
 }
 
 export async function oauthLogin(provider: OAuthProvider, code: string, state: string): Promise<LoginResponse> {

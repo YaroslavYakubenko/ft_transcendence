@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { useMemo } from "react"
 import { sideChoice } from "../chess/utils"
@@ -107,6 +107,51 @@ export function useResignGame(storage_keys: any, token: string | null, gameId: n
 	}
 
 	return { handleResign, resignError, isResigning }
+}
+
+export function useChessTimer(
+	timerSetting: string,
+	fen: string,
+	isGameOver: boolean,
+	effectiveColor: 'white' | 'black' | null,
+	onTimeout: (loser: 'white' | 'black') => void
+) {
+	const initialSeconds = timerSetting === 'none' ? null : parseInt(timerSetting) * 60
+	const [whiteTime, setWhiteTime] = useState<number | null>(initialSeconds)
+	const [blackTime, setBlackTime] = useState<number | null>(initialSeconds)
+	const onTimeoutRef = useRef(onTimeout)
+	useEffect(() => { onTimeoutRef.current = onTimeout })
+
+	const fenTurn = fen.split(' ')[1] ?? 'w'
+
+	useEffect(() => {
+		if (initialSeconds === null || isGameOver) return
+
+		const whiteTurn = fenTurn === 'w'
+		console.log('[Timer] fenTurn:', fenTurn, '→ ticking:', whiteTurn ? 'white' : 'black')
+
+		const id = setInterval(() => {
+			if (whiteTurn) {
+				setWhiteTime(t => {
+					if (t === null || t <= 0) return t
+					if (t === 1) { onTimeoutRef.current('white'); return 0 }
+					return t - 1
+				})
+			} else {
+				setBlackTime(t => {
+					if (t === null || t <= 0) return t
+					if (t === 1) { onTimeoutRef.current('black'); return 0 }
+					return t - 1
+				})
+			}
+		}, 1000)
+
+		return () => clearInterval(id)
+	}, [fenTurn, isGameOver])
+
+	const playerTime = effectiveColor === 'white' ? whiteTime : effectiveColor === 'black' ? blackTime : null
+	const opponentTime = effectiveColor === 'white' ? blackTime : effectiveColor === 'black' ? whiteTime : null
+	return { playerTime, opponentTime }
 }
 
 export function useRestartGame(

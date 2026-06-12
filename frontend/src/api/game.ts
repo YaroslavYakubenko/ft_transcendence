@@ -22,7 +22,8 @@ export interface Achievement {
 	unlocked: boolean
 }
 
-const API_BASE_URL = 'http://localhost:8000/api'
+const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/$/, '')
+const GAME_BASE_URL = (import.meta.env.VITE_GAME_BASE_URL ?? 'http://localhost:8000').replace(/\/$/, '')
 
 export async function getUserStats(userId: number): Promise<UserStats> {
 	try {
@@ -132,7 +133,7 @@ export async function createGame(
 		return null
 	}
 
-	const response = await fetch(`http://localhost:8000/create-game/`, {
+	const response = await fetch(`${GAME_BASE_URL}/create-game/`, {
 		method: "POST",
 		headers: {
 			"Authorization": `Token ${token}`,
@@ -155,7 +156,7 @@ export async function createGame(
 
 // make move 
 export async function make_move(fen: string, from: string, to: string, gameId?: number | null) {
-	const res = await fetch("http://localhost:8000/make-move/", {
+	const res = await fetch(`${GAME_BASE_URL}/make-move/`, {
 	method: "POST",
 	headers: {
 		"Content-Type": "application/json",
@@ -184,7 +185,7 @@ export async function make_move(fen: string, from: string, to: string, gameId?: 
 
 // promote pawn
 export async function do_promotion(fen: string, move: string, key: string, gameId?: number | null) {
-	const res = await fetch("http://localhost:8000/do-promotion/", {
+	const res = await fetch(`${GAME_BASE_URL}/do-promotion/`, {
 	method: "POST",
 	headers: {
 		"Content-Type": "application/json",
@@ -215,7 +216,7 @@ export async function do_promotion(fen: string, move: string, key: string, gameI
 
 // get legal moves to empty and occupied spaces
 export async function legal_moves(fen: string) {
-	const res = await fetch("http://localhost:8000/legal-moves/", {
+	const res = await fetch(`${GAME_BASE_URL}/legal-moves/`, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
@@ -245,7 +246,7 @@ export async function resign_game(
 		return null;
 	}
 
-	const res = await fetch("http://localhost:8000/resign/", {
+	const res = await fetch(`${GAME_BASE_URL}/resign/`, {
 		method: "POST",
 		headers: {
 			"Authorization": `Token ${token}`,

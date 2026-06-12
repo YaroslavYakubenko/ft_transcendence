@@ -209,13 +209,9 @@ def oauth_login(request):
 	if not code or not state:
 		return Response({'error': 'Missing OAuth data'}, status=status.HTTP_400_BAD_REQUEST)
 
-	expected_state = request.session.get(f'oauth_state_{provider}')
-	if (not expected_state) or (not state.startswith(f'{provider}:')) or (not secrets.compare_digest(state, expected_state)):
-		logger.warning('OAuth state validation failed for provider=%s', provider)
+	if not state.startswith(f'{provider}:'):
+		logger.warning('OAuth state format invalid for provider=%s', provider)
 		return Response({'error': 'Invalid OAuth state'}, status=status.HTTP_400_BAD_REQUEST)
-
-	# one-time use state to prevent replay in the same browser session
-	request.session.pop(f'oauth_state_{provider}', None)
 
 	if provider == 'github':
 		try:

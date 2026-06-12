@@ -16,7 +16,7 @@ function WaitingRoomPage() {
 
 	const location = useLocation()
 	const settings: GameSettings = location.state ?? DEFAULT_SETTINGS
-	const { token } = useAuth()
+	const { token, user } = useAuth()
 
 	useEffect(() => {
 		if (!settings.game_id || !token)
@@ -27,7 +27,8 @@ function WaitingRoomPage() {
 
 		socket.onmessage = (event) => {
 			const data = JSON.parse(event.data)
-			if (data.msg_type === 'player_connected') {
+			const myIdentifier = user?.username || user?.email
+			if (data.msg_type === 'player_connected' && data.username !== myIdentifier) {
 				navigate('/game', {
 					state: {
 						opponent: "live",

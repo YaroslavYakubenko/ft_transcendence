@@ -28,15 +28,26 @@ export default function MoveHistoryPanel({
 			<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl p-3 flex-1 overflow-y-auto max-h-[500px]">
 				<p className="text-[#8896a4] text-xs mb-2 m-0">{t("game.movesHistory")}</p>
 
+				{/* Column headers */}
+				<div className="grid grid-cols-[1.5rem_1fr_1fr] gap-1 mb-1">
+					<span />
+					<span className="text-[#f0eeff] text-xs font-semibold text-center">⬜</span>
+					<span className="text-[#1a1a24] bg-[#f0eeff] text-xs font-semibold text-center rounded">⬛</span>
+				</div>
+
 				{moves.length === 0 ? (
 					<p className="text-[#2e2e40] text-xs">{t("game.noMoves")}</p>
 				) : (
-					<div className="text-[#f0eeff] text-xs space-y-1">
+					<div className="text-xs space-y-1">
 						{moves.map((movePair, i) => (
-							<div key={i} className="flex gap-2">
-								<span className="text-[#8896a4] min-w-[1.5rem]">{i + 1}.</span>
-								<span className="text-[#e2b96f]">{movePair.white}</span>
-								{movePair.black && <span className="text-[#8896a4]">{movePair.black}</span>}
+							<div key={i} className="grid grid-cols-[1.5rem_1fr_1fr] gap-1 items-center">
+								<span className="text-[#8896a4]">{i + 1}.</span>
+								<span className="text-[#e2b96f] bg-[#12121a] rounded px-1 py-0.5 text-center">
+									{movePair.white}
+								</span>
+								<span className="text-[#a0a8b8] bg-[#12121a] rounded px-1 py-0.5 text-center">
+									{movePair.black ?? ''}
+								</span>
 							</div>
 						))}
 					</div>

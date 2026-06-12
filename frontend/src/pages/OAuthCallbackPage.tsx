@@ -26,6 +26,14 @@ function OAuthCallbackPage() {
 		if (sessionStorage.getItem(handledKey)) {
 			return
 		}
+
+		const savedState = sessionStorage.getItem(`oauth_state_${provider}`)
+		if (!savedState || savedState !== state) {
+			setError('Invalid OAuth state. Please try again.')
+			return
+		}
+		sessionStorage.removeItem(`oauth_state_${provider}`)
+
 		sessionStorage.setItem(handledKey, '1')
 
 		oauthLogin(provider, code, state)

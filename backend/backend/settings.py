@@ -163,20 +163,15 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173", #list of adrresses to allow (our frontend)
-    "http://127.0.0.1:5173"
+    "https://localhost:8443",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 CORS_ALLOW_CREDENTIALS = True
-# In local dev (DEBUG=True) we typically run frontend + backend on plain HTTP localhost.
-# Keep cookies usable for OAuth state in that setup, and harden automatically outside DEBUG.
-# SESSION_COOKIE_SAMESITE = 'Lax' if DEBUG else 'None'
-# SESSION_COOKIE_SECURE = not DEBUG
-# CSRF_COOKIE_SAMESITE = 'Lax' if DEBUG else 'None'
-# CSRF_COOKIE_SECURE = not DEBUG
 
-SESSION_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SECURE = True
 
 # Reverse proxy / HTTPS handling (Nginx)

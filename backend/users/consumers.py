@@ -176,6 +176,8 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 
         # game taken from database through get_game function
         # send to GamePage.tsx / frontend
+        is_white = self.user == game.white_player
+        opponent = game.black_player if is_white else game.white_player
         await self.send_json({
             'msg_type': 'sync',
             'fen': game.current_fen,
@@ -183,6 +185,9 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
             'result': game.result,
             'white_player': game.white_player.username or game.white_player.email,
             'black_player': game.black_player.username or game.black_player.email,
+            'your_color': 'white' if is_white else 'black',
+            'opponent_id': opponent.id,
+            'opponent_name': opponent.username or opponent.email,
         })
 
         #broadcast to game_group_name 

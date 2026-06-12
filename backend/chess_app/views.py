@@ -8,6 +8,8 @@ from .models import Game, Move
 from django.utils import timezone
 from users.elo_utils import calculate_elo_change, calculate_draw_elo
 from users.models import User
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 def check_gameover(board):
 
@@ -343,12 +345,14 @@ def resign_game(request):
 	# Determine which player resigned
 	if game.white_player == request.user:
 		# White player resigned, black wins
-		game.result = 'Black'
+		game.result = 'black_win'
+		winner_label = 'Black'
 		resigner = game.white_player
 		winner = game.black_player
 	elif game.black_player == request.user:
 		# Black player resigned, white wins
-		game.result = 'White'
+		game.result = 'white_win'
+		winner_label = 'White'
 		resigner = game.black_player
 		winner = game.white_player
 	else:
@@ -373,6 +377,20 @@ def resign_game(request):
 	game.status = 'completed'
 	game.ended_at = timezone.now()
 	game.save()
+
+	# Notify both players via WebSocket
+	channel_layer = get_channel_layer()
+	async_to_sync(channel_layer.group_send)(
+		f'game_{game_id}',
+		{
+			'type': 'game_message',
+			'msg_type': 'resign',
+			'resigned_player': resigner.username or resigner.email,
+			'result': 'resign',
+			'winner': winner_label,
+			'fen': game.current_fen,
+		}
+	)
 
 	return Response({
 		"status": "success",

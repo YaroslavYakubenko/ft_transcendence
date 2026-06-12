@@ -38,20 +38,20 @@ function FriendsPage() {
 				<div className="flex flex-col gap-3 w-full max-w-md">
 					{friends.map(friend => (
 						<div key={friend.id} className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl px-6 py-4 flex items-center justify-between">
-							<div className="flex items-center gap-4">
+							<div className="flex items-center gap-4 min-w-0">
 								{friend.avatarUrl ? (
-									<img src={friend.avatarUrl} alt="avatar" className="w-10 h-10 rounded-full object-cover" />
+									<img src={friend.avatarUrl} alt="avatar" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
 								) : (
-									<div className="w-10 h-10 rounded-full bg-[#e2b96f] flex items-center justify-center text-[#0f0f13] font-bold">
+									<div className="w-10 h-10 rounded-full bg-[#e2b96f] flex items-center justify-center text-[#0f0f13] font-bold flex-shrink-0">
 										{(friend.username || friend.email)[0].toUpperCase()}
 									</div>
 								)}
-								<div>
-									<p className="font-semibold">{friend.username || friend.email}</p>
+								<div className="min-w-0">
+									<p className="font-semibold truncate">{friend.username || friend.email}</p>
 									<p className="text-xs text-[#8892a4]">{friend.isOnline ? "🟢 " + t('friends.online') : "⚫ " + t('friends.offline')}</p>
 								</div>
 							</div>
-							<div className="flex gap-2">
+							<div className="flex gap-2 flex-shrink-0">
 								<button
 									onClick={() => navigate(`/users/${friend.id}`)}
 									className="text-sm px-3 py-1 border border-[#2e2e40] rounded-lg hover:border-[#e2b96f] cursor-pointer"

@@ -15,12 +15,14 @@ import PromotionSelector from "../components/PromotionSelector"
 import { loadFen, loadMoves, loadResult } from "../chess/storage"
 import { PIECE_THEMES, BOARD_THEMES, createSquareStyles } from "../chess/themes"
 import { START_FEN, DEFAULT_SETTINGS, getStorageKeys, type GameSettings } from "../chess/constants"
-import { usePersistState, useRematchReset, usePlayerColor, useRestartGame, useResignGame } from "../chess/hooks"
+import { usePersistState, useRematchReset, usePlayerColor, useRestartGame, useResignGame, useChessTimer } from "../chess/hooks"
 import { appendMove, getBoardCoordinates, createOnPieceDrag, createOnPieceDrop, getGameId } from "../chess/utils"
 
 
 function GamePage() {
 	const { user, token } = useAuth()
+	const userRef = useRef(user)
+	useEffect(() => { userRef.current = user }, [user])
 	const location = useLocation()
 	const wsRef = useRef<WebSocket | null>(null)							// creates a React ref that will store the WebSocket connection
 
@@ -58,6 +60,8 @@ function GamePage() {
 	const [promotion, setPro] = useState({ move: "", x: -1, y: -1, pre: "" })
 	const [opponentConnected, setOpponentConnected] = useState(false);
 	const [liveColor, setLiveColor] = useState<'white' | 'black' | null>(null)
+	const liveColorRef = useRef<'white' | 'black' | null>(null)
+	const [opponent, setOpponent] = useState<{ id: number; name: string } | null>(null)
 
 // react hooks?? what do you call it ----------------------------------------
 
@@ -92,6 +96,17 @@ function GamePage() {
 		setFen, setMoves, setRes
 	)
 
+	const effectiveColor = (multiplayer && liveColor) ? liveColor : playerColor
+	// For multiplayer, don't assign panel times until liveColor is confirmed from sync
+	const colorForTimer: 'white' | 'black' | null = (!multiplayer || liveColor !== null) ? effectiveColor : null
+	const { playerTime, opponentTime } = useChessTimer(
+		settings.timer,
+		fen,
+		result.state !== 'ongoing',
+		colorForTimer,
+		(loser) => setRes({ state: 'timeout', winner: loser === 'white' ? 'Black' : 'White' })
+	)
+
 
 	// WebSocket for live games ----------------------------------------
 	// 	{
@@ -115,8 +130,10 @@ function GamePage() {
 		// console.log("multi:", multiplayer)
 		// console.log("gameId:", gameId)
 		// console.log("token:", token)
-		if (!multiplayer || !gameId || !token) 
+		if (!multiplayer || !gameId || !token)
 			return
+
+		let isClosed = false
 
 		// opens a live connection to your backend
 		const WS_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:8443`
@@ -127,42 +144,54 @@ function GamePage() {
 		// event is the whole message package
 		socket.onmessage = function(event)
 		{
+			if (isClosed) return
+
 			const data = JSON.parse(event.data)
-					
+
 			console.log("msg type:", data.msg_type)
 			if (data.msg_type === 'sync')
 			{
 				setFen(data.fen)
 
-				if(user?.username == data.white_player) 
-					setLiveColor('white')
-				else
-					setLiveColor('black')
+				const color = (data.your_color === 'white' ? 'white' : 'black') as 'white' | 'black'
+				setLiveColor(color)
+				liveColorRef.current = color
+
+				if (data.opponent_id && data.opponent_name)
+					setOpponent({ id: data.opponent_id, name: data.opponent_name })
 			}
 
 			else if (data.msg_type === 'player_connected')
 				setOpponentConnected(true)
-			
-			else if (data.msg_type === 'move') 
+
+			else if (data.msg_type === 'move')
 			{
 				setFen(data.fen)
 				setCheckSquare(data.king_in_check || null)
-				
-				if (data.result !== 'ongoing') 
+
+				const isWhiteMove = data.fen.split(' ')[1] === 'b'
+				const notation = data.from + data.to + (data.promotion || '')
+				setMoves((prev: any) => appendMove(prev, notation, isWhiteMove))
+
+				if (data.result !== 'ongoing')
 					setRes({ state: data.result, winner: data.winner })
 			}
 
-			else if (data.msg_type === 'resign') 
+			else if (data.msg_type === 'resign')
 				setRes({ state: 'resign', winner: data.winner })
 		}
 		socket.onclose = () => {
-			if (!multiplayer) return
+			if (!multiplayer || isClosed) return
 			setTimeout(() => {
 				const newSocket = new WebSocket(socketUrl)
 				wsRef.current = newSocket
 			}, 3000)
 		}
 		
+		return () => {
+			isClosed = true
+			socket.close()
+		}
 	}, [multiplayer, gameId, token])										// run this useEffect again if one of these values changes
 
 
@@ -211,7 +240,7 @@ function GamePage() {
 	const chessboardOptions =
 	{
 		position: fen,
-		boardOrientation: playerColor,
+		boardOrientation: (multiplayer && liveColor) ? liveColor : playerColor,
 		darkSquareStyle: { backgroundColor: theme.dark },
 		lightSquareStyle: { backgroundColor: theme.light },
 		pieces: pieces,
@@ -232,6 +261,8 @@ function GamePage() {
 						{/* Opponent panel */}
 						<OpponentPanel
 							settings={settings}
+							opponent={opponent}
+							time={opponentTime}
 						/>
 
 						{/* Board */}
@@ -260,6 +291,7 @@ function GamePage() {
 						< PlayerPanel
 							settings={settings}
 							user={user}
+							time={playerTime}
 						/>
 
 					</div>
