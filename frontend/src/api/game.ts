@@ -23,7 +23,7 @@ export interface Achievement {
 }
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/$/, '')
-const GAME_BASE_URL = (import.meta.env.VITE_GAME_BASE_URL ?? 'http://localhost:8000').replace(/\/$/, '')
+const GAME_BASE_URL = window.location.origin
 
 export async function getUserStats(userId: number): Promise<UserStats> {
 	try {

@@ -167,7 +167,7 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 
 	function sendChat(to_user_id: number, message: string)
 	{
-		if (!wsRef.current)
+		if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN)
 			return;
 
 		wsRef.current.send(JSON.stringify({to_user_id, message}))
