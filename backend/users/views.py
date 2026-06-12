@@ -118,8 +118,7 @@ def get_user(request, user_id): # view someone else's profile
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_friends(request): # view who added whom
-	from django.db.models import Q
-	friendships = Friendship.objects.filter(Q(from_user=request.user) | Q(to_user=request.user))
+	friendships = Friendship.objects.filter(from_user=request.user)
 	serializer = FriendSerializer(friendships, many=True, context={'request': request})
 	return Response(serializer.data)
 

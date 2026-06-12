@@ -44,3 +44,6 @@ python-chess
 # ASGI / WebSocket server and channels
 channels==4.2.2
 daphne
+
+# Redis channel layer for WebSocket message routing between workers
+channels-redis

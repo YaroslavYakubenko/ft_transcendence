@@ -19,15 +19,15 @@ function WaitingRoomPage() {
 	const { token, user } = useAuth()
 
 	useEffect(() => {
-		if (!settings.game_id || !token)
+		if (!settings.game_id || !token || !user)
 			return
 
+		const myIdentifier = user.username || user.email
 		const WS_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:8443`
 		const socket = new WebSocket(`${WS_URL}/ws/game/${settings.game_id}/?token=${token}`)
 
 		socket.onmessage = (event) => {
 			const data = JSON.parse(event.data)
-			const myIdentifier = user?.username || user?.email
 			if (data.msg_type === 'player_connected' && data.username !== myIdentifier) {
 				navigate('/game', {
 					state: {
@@ -44,7 +44,7 @@ function WaitingRoomPage() {
 			}
 		}
 		return () => { socket.close() }
-	}, [settings.game_id, token])
+	}, [settings.game_id, token, user])
 
 	return (
 		<div className="bg-[#0f0f13] min-h-screen flex flex-col">

@@ -43,40 +43,21 @@ class UserSerializer(serializers.ModelSerializer): # return the current user's d
 		return obj.oauth_avatar or ''
 
 class FriendSerializer(serializers.ModelSerializer): # return the list of friends
-	id = serializers.SerializerMethodField()
-	email = serializers.SerializerMethodField()
-	username = serializers.SerializerMethodField()
+	id = serializers.IntegerField(source='to_user.id')
+	email = serializers.EmailField(source='to_user.email')
+	username = serializers.CharField(source='to_user.username')
 	avatar = serializers.SerializerMethodField()
-	is_online = serializers.SerializerMethodField()
+	is_online = serializers.BooleanField(source='to_user.is_online')
 
 	class Meta:
 		model = Friendship
 		fields = ('id', 'email', 'username', 'avatar', 'is_online')
 
-	def _get_friend(self, obj):
-		request = self.context.get('request')
-		if request and obj.from_user == request.user:
-			return obj.to_user
-		return obj.from_user
-
-	def get_id(self, obj):
-		return self._get_friend(obj).id
-
-	def get_email(self, obj):
-		return self._get_friend(obj).email
-
-	def get_username(self, obj):
-		return self._get_friend(obj).username
-
-	def get_is_online(self, obj):
-		return self._get_friend(obj).is_online
-
 	def get_avatar(self, obj):
-		friend = self._get_friend(obj)
 		request = self.context.get('request')
-		if friend.avatar and request:
-			return request.build_absolute_uri(friend.avatar.url)
-		return friend.oauth_avatar or ''
+		if obj.to_user.avatar and request:
+			return request.build_absolute_uri(obj.to_user.avatar.url)
+		return obj.to_user.oauth_avatar or ''
 
 
 class UserStatsSerializer(serializers.ModelSerializer):

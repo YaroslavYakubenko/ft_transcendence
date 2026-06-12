@@ -10,6 +10,16 @@
 # Each service has health checks and depends_on to ensure proper startup order.
 
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: transcendence_redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   db:
     image: postgres:16
     container_name: transcendence_db
@@ -61,6 +71,8 @@ services:
     # Ensure DB container starts first (entrypoint still waits for readiness)
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     
     healthcheck:
