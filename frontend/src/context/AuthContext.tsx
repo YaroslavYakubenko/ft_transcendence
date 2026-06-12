@@ -122,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 			}
 			return
 		}
-		const WS_URL = (import.meta as any).env.VITE_WS_URL
+		const WS_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:8443`
 		const ws = new WebSocket(`${WS_URL}/ws/status/?token=${token}`)
 		wsRef.current = ws
 		
