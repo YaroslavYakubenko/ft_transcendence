@@ -115,54 +115,54 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 	useEffect(() => {
 		if (!token)
 		{
-			if (wsRef.current)
-			{
-				wsRef.current.close()
-				wsRef.current = null
-			}
+			wsRef.current?.close()
+			wsRef.current = null
 			return
 		}
-		const WS_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:8443`
-		const ws = new WebSocket(`${WS_URL}/ws/status/?token=${token}`)
-		wsRef.current = ws
-		
-		ws.onmessage = (e) => {															// e ist the WebSocket message event
-			const data = JSON.parse(e.data)
-			console.log("STATUS WS MESSAGE:", data)
 
-			if (data.type === 'chat')
-			{
-				setLastMessage({
-					from_user_id: data.from_user_id,
-					username: data.username,
-					message: data.message,
-				})
+		let isClosed = false
+		const WS_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:8443`
+		const socketUrl = `${WS_URL}/ws/status/?token=${token}`
+
+		function connect() {
+			if (isClosed) return
+
+			const ws = new WebSocket(socketUrl)
+			wsRef.current = ws
+
+			ws.onmessage = (e) => {
+				const data = JSON.parse(e.data)
+
+				if (data.type === 'chat')
+				{
+					setLastMessage({
+						from_user_id: data.from_user_id,
+						username: data.username,
+						message: data.message,
+					})
+				}
+				else if (data.type === 'presence')
+				{
+					setFriendsUpdate({
+						user_id: data.user_id,
+						is_online: data.is_online,
+					})
+				}
 			}
 
-			else if (data.type == 'presence')
-			{
-				console.log("FRIEND STATUS UPDATE:", data)
-				setFriendsUpdate({
-					user_id: data.user_id,
-					is_online: data.is_online,
-				})
+			ws.onclose = () => {
+				if (isClosed) return
+				setTimeout(connect, 3000)
 			}
 		}
 
-	ws.onerror = function(e)
-	{
-		console.error('Status WS error:', e)
-	}
+		connect()
 
-	ws.onclose = function(e)
-	{
-		console.log("Status WS closed:", {
-			code: e.code,
-			reason: e.reason,
-			wasClean: e.wasClean,
-		})
-	}
-
+		return () => {
+			isClosed = true
+			wsRef.current?.close()
+			wsRef.current = null
+		}
 	}, [token])
 
 	function sendChat(to_user_id: number, message: string)

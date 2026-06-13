@@ -134,101 +134,101 @@ function GamePage() {
 	// 		msg_type: "move",
 	// 		fen: "new-board-position"
 	//	}
-	useEffect(() => 
+	useEffect(() =>
 	{
-		// console.log("multi:", multiplayer)
-		// console.log("gameId:", gameId)
-		// console.log("token:", token)
 		if (!multiplayer || !gameId || !token)
 			return
 
 		let isClosed = false
 
-		// opens a live connection to your backend
 		const WS_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:8443`
 		const socketUrl = `${WS_URL}/ws/game/${gameId}/?token=${token}`
-		const socket = new WebSocket(socketUrl)
-		wsRef.current = socket
-		// onmessage and event belong to WebSocket, when the socket receives a message, run this function
-		// event is the whole message package
-		socket.onmessage = function(event)
-		{
+
+		function connect() {
 			if (isClosed) return
 
-			const data = JSON.parse(event.data)
+			const socket = new WebSocket(socketUrl)
+			wsRef.current = socket
 
-			if (data.msg_type === 'sync')
+			socket.onmessage = function(event)
 			{
-				setFen(data.fen)
+				if (isClosed) return
 
-				const color = (data.your_color === 'white' ? 'white' : 'black') as 'white' | 'black'
-				setLiveColor(color)
-				liveColorRef.current = color
+				const data = JSON.parse(event.data)
 
-				if (data.opponent_id && data.opponent_name)
-					setOpponent({ id: data.opponent_id, name: data.opponent_name })
+				if (data.msg_type === 'sync')
+				{
+					setFen(data.fen)
 
-				if (data.timer)
-					setActiveTimer(data.timer)
+					const color = (data.your_color === 'white' ? 'white' : 'black') as 'white' | 'black'
+					setLiveColor(color)
+					liveColorRef.current = color
 
-				// Override any stale localStorage result — DB is the source of truth
-				if (data.status !== 'completed')
-					setRes({ state: 'ongoing', winner: '' })
+					if (data.opponent_id && data.opponent_name)
+						setOpponent({ id: data.opponent_id, name: data.opponent_name })
+
+					if (data.timer)
+						setActiveTimer(data.timer)
+
+					// Override any stale localStorage result — DB is the source of truth
+					if (data.status !== 'completed')
+						setRes({ state: 'ongoing', winner: '' })
+				}
+
+				else if (data.msg_type === 'player_connected')
+					setOpponentConnected(true)
+
+				else if (data.msg_type === 'move')
+				{
+					setFen(data.fen)
+					setCheckSquare(data.king_in_check || null)
+
+					const isWhiteMove = data.fen.split(' ')[1] === 'b'
+					const notation = data.from + data.to + (data.promotion || '')
+					setMoves((prev: any) => appendMove(prev, notation, isWhiteMove))
+
+					if (data.result !== 'ongoing')
+						setRes({ state: data.result, winner: data.winner })
+				}
+
+				else if (data.msg_type === 'resign')
+					setRes({ state: 'resign', winner: data.winner })
+
+				else if (data.msg_type === 'draw_offer')
+					setDrawState(prev => {
+						if (prev === 'offer_sent') {
+							// Both players offered simultaneously — auto-accept
+							const socket = wsRef.current
+							if (socket?.readyState === WebSocket.OPEN)
+								socket.send(JSON.stringify({ type: 'draw_response', accepted: true }))
+							return 'idle'
+						}
+						return 'offer_received'
+					})
+
+				else if (data.msg_type === 'draw_accepted')
+				{
+					setDrawState('idle')
+					setRes({ state: 'draw', winner: '' })
+				}
+
+				else if (data.msg_type === 'draw_declined')
+					setDrawState('idle')
 			}
 
-			else if (data.msg_type === 'player_connected')
-				setOpponentConnected(true)
-
-			else if (data.msg_type === 'move')
-			{
-				setFen(data.fen)
-				setCheckSquare(data.king_in_check || null)
-
-				const isWhiteMove = data.fen.split(' ')[1] === 'b'
-				const notation = data.from + data.to + (data.promotion || '')
-				setMoves((prev: any) => appendMove(prev, notation, isWhiteMove))
-
-				if (data.result !== 'ongoing')
-					setRes({ state: data.result, winner: data.winner })
+			socket.onclose = () => {
+				if (isClosed) return
+				setTimeout(connect, 3000)
 			}
-
-			else if (data.msg_type === 'resign')
-				setRes({ state: 'resign', winner: data.winner })
-
-			else if (data.msg_type === 'draw_offer')
-				setDrawState(prev => {
-					if (prev === 'offer_sent') {
-						// Both players offered simultaneously — auto-accept
-						const socket = wsRef.current
-						if (socket?.readyState === WebSocket.OPEN)
-							socket.send(JSON.stringify({ type: 'draw_response', accepted: true }))
-						return 'idle'
-					}
-					return 'offer_received'
-				})
-
-			else if (data.msg_type === 'draw_accepted')
-			{
-				setDrawState('idle')
-				setRes({ state: 'draw', winner: '' })
-			}
-
-			else if (data.msg_type === 'draw_declined')
-				setDrawState('idle')
 		}
-		socket.onclose = () => {
-			if (!multiplayer || isClosed) return
-			setTimeout(() => {
-				const newSocket = new WebSocket(socketUrl)
-				wsRef.current = newSocket
-			}, 3000)
-		}
-		
+
+		connect()
+
 		return () => {
 			isClosed = true
-			socket.close()
+			wsRef.current?.close()
 		}
-	}, [multiplayer, gameId, token])										// run this useEffect again if one of these values changes
+	}, [multiplayer, gameId, token])
 
 
 	// send a move over WS for live games, fall back to HTTP for bot games
