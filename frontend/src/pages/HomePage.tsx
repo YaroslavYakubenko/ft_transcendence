@@ -46,6 +46,10 @@ function HomePage() {
 						<div className="text-xs text-[#8892a4] mt-1">{t('home.losses')}</div>
 					</div>
 					<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl px-8 py-6 text-center">
+						<div className="text-2xl font-semibold text-[#8892a4]">{stats?.draws ?? 0}</div>
+						<div className="text-xs text-[#8892a4] mt-1">{t('home.draws')}</div>
+					</div>
+					<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl px-8 py-6 text-center">
 						<div className="text-2xl font-semibold text-[#e2b96f]">#{stats?.rank ?? '-'}</div>
 						<div className="text-xs text-[#8892a4] mt-1">{t('home.rank')}</div>
 					</div>

@@ -16,7 +16,7 @@ import { loadFen, loadMoves, loadResult } from "../chess/storage"
 import { PIECE_THEMES, BOARD_THEMES, createSquareStyles } from "../chess/themes"
 import { START_FEN, DEFAULT_SETTINGS, getStorageKeys, type GameSettings } from "../chess/constants"
 import { usePersistState, useRematchReset, usePlayerColor, useRestartGame, useResignGame, useChessTimer } from "../chess/hooks"
-import { appendMove, getBoardCoordinates, createOnPieceDrag, createOnPieceDrop, getGameId } from "../chess/utils"
+import { appendMove, getBoardCoordinates, createOnPieceDrag, createOnPieceDrop, getGameId, requiresPromotion } from "../chess/utils"
 
 
 function GamePage() {
@@ -63,6 +63,7 @@ function GamePage() {
 	const [activeTimer, setActiveTimer] = useState(settings.timer)
 	const liveColorRef = useRef<'white' | 'black' | null>(null)
 	const [opponent, setOpponent] = useState<{ id: number; name: string } | null>(null)
+	const [drawState, setDrawState] = useState<'idle' | 'offer_sent' | 'offer_received'>('idle')
 
 // react hooks?? what do you call it ----------------------------------------
 
@@ -156,7 +157,6 @@ function GamePage() {
 
 			const data = JSON.parse(event.data)
 
-			console.log("msg type:", data.msg_type)
 			if (data.msg_type === 'sync')
 			{
 				setFen(data.fen)
@@ -194,6 +194,27 @@ function GamePage() {
 
 			else if (data.msg_type === 'resign')
 				setRes({ state: 'resign', winner: data.winner })
+
+			else if (data.msg_type === 'draw_offer')
+				setDrawState(prev => {
+					if (prev === 'offer_sent') {
+						// Both players offered simultaneously — auto-accept
+						const socket = wsRef.current
+						if (socket?.readyState === WebSocket.OPEN)
+							socket.send(JSON.stringify({ type: 'draw_response', accepted: true }))
+						return 'idle'
+					}
+					return 'offer_received'
+				})
+
+			else if (data.msg_type === 'draw_accepted')
+			{
+				setDrawState('idle')
+				setRes({ state: 'draw', winner: '' })
+			}
+
+			else if (data.msg_type === 'draw_declined')
+				setDrawState('idle')
 		}
 		socket.onclose = () => {
 			if (!multiplayer || isClosed) return
@@ -218,14 +239,14 @@ function GamePage() {
 
 		if (multiplayer && socketIsOpen)
 		{
-			const moveMessage = 
-			{
-				type: "move", 
-				from: from, 
-				to: to,
+			// show promotion dialog locally before sending via WS
+			if (requiresPromotion(currentFen, from, to)) {
+				const { x, y } = getBoardCoordinates(to, effectiveColor, currentFen)
+				setPro({ move: from + to, x, y, pre: currentFen.split(' ')[1] })
+				return null
 			}
 
-			const messageText = JSON.stringify(moveMessage)
+			const messageText = JSON.stringify({ type: "move", from, to })
 			socket.send(messageText)
 
 			return null
@@ -235,6 +256,41 @@ function GamePage() {
 		return make_move(currentFen, from, to, gameId)
 	}
 
+	const handleWsPromotion = (promo: string) => {
+		const from = promotion.move.substring(0, 2)
+		const to = promotion.move.substring(2, 4)
+		const socket = wsRef.current
+		if (socket?.readyState === WebSocket.OPEN) {
+			socket.send(JSON.stringify({ type: 'move', from, to, promotion: promo }))
+		}
+	}
+
+
+// Draw actions ----------------------------------------
+
+	const handleDrawOffer = () => {
+		const socket = wsRef.current
+		if (socket?.readyState === WebSocket.OPEN) {
+			socket.send(JSON.stringify({ type: 'draw_offer' }))
+			setDrawState('offer_sent')
+		}
+	}
+
+	const handleDrawAccept = () => {
+		const socket = wsRef.current
+		if (socket?.readyState === WebSocket.OPEN) {
+			socket.send(JSON.stringify({ type: 'draw_response', accepted: true }))
+			setDrawState('idle')
+		}
+	}
+
+	const handleDrawDecline = () => {
+		const socket = wsRef.current
+		if (socket?.readyState === WebSocket.OPEN) {
+			socket.send(JSON.stringify({ type: 'draw_response', accepted: false }))
+			setDrawState('idle')
+		}
+	}
 
 // Piece movement actions ----------------------------------------
 
@@ -242,9 +298,10 @@ function GamePage() {
 		fen,
 		setHighlightSquares, setHighlightSquares2,
 		legal_moves,
+		effectiveColor,
 	});
 	const onPieceDrop = createOnPieceDrop({
-		fen, gameId, playerColor,
+		fen, gameId, playerColor: effectiveColor,
 		make_move: sendMove,
 		getBoardCoordinates,
 		appendMove,
@@ -298,6 +355,7 @@ function GamePage() {
 								setRes={setRes}
 								setPro={setPro}
 								do_promotion={do_promotion}
+								onWsPromotion={multiplayer ? handleWsPromotion : undefined}
 							/>
 
 						</div>
@@ -317,6 +375,11 @@ function GamePage() {
 						onResign={handleResign}
 						isResigning={isResigning}
 						resignError={resignError}
+						isGameOver={result.state !== 'ongoing'}
+						drawState={multiplayer && result.state === 'ongoing' ? drawState : undefined}
+						onDrawOffer={multiplayer && result.state === 'ongoing' ? handleDrawOffer : undefined}
+						onDrawAccept={multiplayer && result.state === 'ongoing' ? handleDrawAccept : undefined}
+						onDrawDecline={multiplayer && result.state === 'ongoing' ? handleDrawDecline : undefined}
 					/>
 
 					{/* gameover make better with rematch option and stuff*/}

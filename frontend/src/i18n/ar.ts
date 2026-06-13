@@ -48,6 +48,7 @@ export default {
     	welcome: "اًبحرم",
     	wins: "تاراصتنا",
     	losses: "رئاسخ",
+    	draws: "تايواستم",
     	rank: "بيترتلا",
     	playNow: "نآلا بعلا",
     },

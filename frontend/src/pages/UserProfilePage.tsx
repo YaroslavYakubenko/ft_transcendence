@@ -20,7 +20,7 @@ function UserProfilePage() {
 	useEffect(() => {
 		if (id) {
 			getUserProfile(Number(id), token!).then(setProfile).catch(() => setNotFound(true))
-			getUserStats(Number(id)).then(setStats)
+			getUserStats(Number(id)).then(setStats).catch(() => {})
 			getFriends(token!).then(friends => {
 				setIsFriend(friends.some(f => f.id === Number(id)))
 			})

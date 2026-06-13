@@ -12,6 +12,11 @@ type Props = {
 	onResign: () => void
 	isResigning: boolean
 	resignError?: string
+	isGameOver?: boolean
+	drawState?: 'idle' | 'offer_sent' | 'offer_received'
+	onDrawOffer?: () => void
+	onDrawAccept?: () => void
+	onDrawDecline?: () => void
 }
 
 export default function MoveHistoryPanel({
@@ -19,6 +24,11 @@ export default function MoveHistoryPanel({
 	onResign,
 	isResigning,
 	resignError,
+	isGameOver = false,
+	drawState = 'idle',
+	onDrawOffer,
+	onDrawAccept,
+	onDrawDecline,
 }: Props) {
 	const { t } = useTranslation()
 
@@ -57,16 +67,40 @@ export default function MoveHistoryPanel({
 			{/* Resign button */}
 			<button
 				onClick={onResign}
-				disabled={isResigning}
-				className="w-full bg-[#0f0f13] border border-[#e25f5f] text-[#e25f5f] rounded-lg text-sm cursor-pointer hover:bg-[#e25f5f] hover:text-[#f0eeff]"
+				disabled={isResigning || isGameOver}
+				className="w-full bg-[#0f0f13] border border-[#e25f5f] text-[#e25f5f] rounded-lg text-sm cursor-pointer hover:bg-[#e25f5f] hover:text-[#f0eeff] disabled:opacity-40 disabled:cursor-default disabled:hover:bg-[#0f0f13] disabled:hover:text-[#e25f5f]"
 			>
 				{isResigning ? "Resigning..." : t("game.resign")}
 			</button>
 
 			{/* Draw button */}
-			<button className="w-full bg-[#0f0f13] border border-[#2e2e40] text-[#8892a4] rounded-lg text-sm cursor-pointer hover:border-[#e2b96f] hover:text-[#e2b96f]">
-				{t("game.draw")}
-			</button>
+			{drawState === 'offer_received' ? (
+				<div className="flex flex-col gap-1">
+					<p className="text-[#e2b96f] text-xs text-center m-0">Draw offered</p>
+					<div className="flex gap-1">
+						<button
+							onClick={onDrawAccept}
+							className="flex-1 bg-[#0f0f13] border border-[#81b64c] text-[#81b64c] rounded-lg text-xs cursor-pointer hover:bg-[#81b64c] hover:text-[#f0eeff]"
+						>
+							Accept
+						</button>
+						<button
+							onClick={onDrawDecline}
+							className="flex-1 bg-[#0f0f13] border border-[#e25f5f] text-[#e25f5f] rounded-lg text-xs cursor-pointer hover:bg-[#e25f5f] hover:text-[#f0eeff]"
+						>
+							Decline
+						</button>
+					</div>
+				</div>
+			) : (
+				<button
+					onClick={drawState === 'idle' ? onDrawOffer : undefined}
+					disabled={drawState === 'offer_sent' || !onDrawOffer}
+					className="w-full bg-[#0f0f13] border border-[#2e2e40] text-[#8892a4] rounded-lg text-sm cursor-pointer hover:border-[#e2b96f] hover:text-[#e2b96f] disabled:opacity-50 disabled:cursor-default disabled:hover:border-[#2e2e40] disabled:hover:text-[#8892a4]"
+				>
+					{drawState === 'offer_sent' ? 'Draw offered...' : t("game.draw")}
+				</button>
+			)}
 
 			{/* Error */}
 			{resignError && (

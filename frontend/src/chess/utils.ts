@@ -2,6 +2,31 @@ import { PROMOTION_PIECES, SQUARE_SIZE } from "../chess/constants"
 import type { PieceHandlerArgs, PieceDropHandlerArgs } from "react-chessboard"
 
 
+function getPieceAt(fen: string, square: string): string | null {
+	const file = square.charCodeAt(0) - 97   // 'a'=0 … 'h'=7
+	const rank = parseInt(square[1]) - 1     // '1'=0 … '8'=7
+	const rows = fen.split(' ')[0].split('/')
+	const row = rows[7 - rank]               // FEN: rank 8 is index 0
+	let col = 0
+	for (const ch of row) {
+		if (ch >= '1' && ch <= '8') {
+			col += parseInt(ch)
+		} else {
+			if (col === file) return ch
+			col++
+		}
+	}
+	return null
+}
+
+export function requiresPromotion(fen: string, from: string, to: string): boolean {
+	const turn = fen.split(' ')[1]
+	const toRank = to[1]
+	if (turn === 'w' && toRank === '8') return getPieceAt(fen, from) === 'P'
+	if (turn === 'b' && toRank === '1') return getPieceAt(fen, from) === 'p'
+	return false
+}
+
 export function sideChoice(pieceColor: "white" | "black" | "random"): "white" | "black"
 {
 	if (pieceColor === "random")
@@ -76,21 +101,35 @@ export function createOnPieceDrag({
 	setHighlightSquares,
 	setHighlightSquares2,
 	legal_moves,
+	effectiveColor,
 }: any) {
 	return ({ isSparePiece, piece, square }: PieceHandlerArgs) => {
 		console.debug("DEBUG: DRAG BEGIN:", isSparePiece, piece, square);
 
-		if (!square) {
+		if (!square || !piece) {
 			setHighlightSquares([]);
 			setHighlightSquares2([]);
 			return;
 		}
-		// saved as var in case of needing debug statements, doesn't work otherwise can remove later
-		const currentFen = fen;
-		// gets highlights through legal moves 
-		legal_moves(currentFen).then((data: any) => {
-			if (!piece) return;
-			// saved as vars in case of needing debug statements, doesn't work otherwise
+
+		const fenTurn = fen.split(' ')[1]              // 'w' or 'b'
+		const pieceColor = (piece as unknown as string)[0]  // 'w' or 'b'
+
+		// Only show highlights for the side whose turn it is
+		if (pieceColor !== fenTurn) {
+			setHighlightSquares([]);
+			setHighlightSquares2([]);
+			return;
+		}
+
+		// In multiplayer, only show highlights for your own pieces
+		if (effectiveColor && pieceColor !== effectiveColor[0]) {
+			setHighlightSquares([]);
+			setHighlightSquares2([]);
+			return;
+		}
+
+		legal_moves(fen).then((data: any) => {
 			const newhigh = data.moves[square] || [];
 			setHighlightSquares(newhigh);
 			const newhigh2 = data.moves2[square] || [];
@@ -119,7 +158,6 @@ export function createOnPieceDrop({
 			return false;
 
 		make_move(fen, sourceSquare, targetSquare, gameId).then((data: any) => {
-			console.log("game ID: ", gameId)
 			if (!data) return;
 
 			// get position of the promotion menue 

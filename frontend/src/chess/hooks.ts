@@ -103,7 +103,8 @@ export function useResignGame(storage_keys: any, token: string | null, gameId: n
 			return
 		}
 
-		setRes({ state: "Resign", winner: data.result })
+		const winner = data.result === 'black_win' ? 'Black' : 'White'
+		setRes({ state: "resign", winner })
 	}
 
 	return { handleResign, resignError, isResigning }
@@ -138,7 +139,6 @@ export function useChessTimer(
 		if (initialSeconds === null || isGameOver) return
 
 		const whiteTurn = fenTurn === 'w'
-		console.log('[Timer] fenTurn:', fenTurn, '→ ticking:', whiteTurn ? 'white' : 'black')
 
 		const id = setInterval(() => {
 			if (whiteTurn) {

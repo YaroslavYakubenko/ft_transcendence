@@ -59,7 +59,7 @@ function LobbyPage() {
                 setStartError("Could not create tracked game. Starting local game without stats/resign tracking.")
             }
 
-            if (game.user !== pieceColor) {
+            if (game?.user && game.user !== pieceColor) {
                 userColor = game.user
                 setPieceColor(game.user)
             }
@@ -78,7 +78,7 @@ function LobbyPage() {
                 setStartError("Could not create tracked game.")
             }
 
-            if (game.user !== pieceColor) {
+            if (game?.user && game.user !== pieceColor) {
                 userColor = game.user
                 setPieceColor(game.user)
             }

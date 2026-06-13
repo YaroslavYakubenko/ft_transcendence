@@ -48,6 +48,7 @@ export default {
     	welcome: "Добро пожаловать",
     	wins: "Победы",
     	losses: "Поражения",
+    	draws: "Ничьи",
     	rank: "Ранг",
     	playNow: "Играть",
     },

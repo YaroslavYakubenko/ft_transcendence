@@ -3,6 +3,7 @@
 export interface UserStats {
 	wins: number
 	losses: number
+	draws: number
 	rank: number
 	elo: number
 }
@@ -43,13 +44,13 @@ export async function getUserStats(userId: number): Promise<UserStats> {
 		return {
 			wins: data.wins || 0,
 			losses: data.losses || 0,
+			draws: data.draws || 0,
 			rank: data.rank || 0,
 			elo: data.elo || 1200,
 		}
 	} catch (error) {
 		console.error('Error fetching user stats:', error)
-		// Return default stats on error
-		return { wins: 0, losses: 0, rank: 0, elo: 1200 }
+		return { wins: 0, losses: 0, draws: 0, rank: 0, elo: 1200 }
 	}
 }
 

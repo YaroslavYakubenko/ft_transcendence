@@ -15,6 +15,7 @@ type Props = {
 	setRes: React.Dispatch<React.SetStateAction<{ state: string; winner: string }>>
 	setPro: React.Dispatch<React.SetStateAction<{ move: string; x: number; y: number; pre: string }>>
 	do_promotion: (fen: string, move: string, promo: string) => Promise<PromotionResponse | null>
+	onWsPromotion?: (promo: string) => void
 }
 
 type PromotionResponse = {
@@ -33,11 +34,18 @@ export default function PromotionSelector({
 	setRes,
 	setPro,
 	do_promotion,
+	onWsPromotion,
 }: Props) {
 	if (!promotion.move) return null
 
 
 	const handlePromotion = (promo: string) => {
+		if (onWsPromotion) {
+			onWsPromotion(promo)
+			setPro({ move: "", x: -1, y: -1, pre: "" })
+			return
+		}
+
 		do_promotion( fen, promotion.move, promo).then((data) => {
 			if (!data) return
 

@@ -216,6 +216,10 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
             await self._handle_move(content)
         elif msg_type == 'resign':
             await self._handle_resign()
+        elif msg_type == 'draw_offer':
+            await self._handle_draw_offer()
+        elif msg_type == 'draw_response':
+            await self._handle_draw_response(content.get('accepted', False))
 
     # called on each connection in the group when group_send fires
     async def game_message(self, event):
@@ -382,5 +386,43 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
         else:
             game.white_player.losses += 1
             game.black_player.wins += 1
+        game.white_player.save()
+        game.black_player.save()
+
+    async def _handle_draw_offer(self):
+        game = await self.get_game()
+        if game is None or game.status == 'completed':
+            return
+        await self.channel_layer.group_send(self.game_group_name, {
+            'type': 'game_message',
+            'msg_type': 'draw_offer',
+            'from_player': self.user.username or self.user.email,
+        })
+
+    async def _handle_draw_response(self, accepted):
+        if accepted:
+            game = await self.get_game()
+            if game is None or game.status == 'completed':
+                return
+            await database_sync_to_async(self._finish_draw)(game)
+            await self.channel_layer.group_send(self.game_group_name, {
+                'type': 'game_message',
+                'msg_type': 'draw_accepted',
+            })
+        else:
+            await self.channel_layer.group_send(self.game_group_name, {
+                'type': 'game_message',
+                'msg_type': 'draw_declined',
+            })
+
+    def _finish_draw(self, game):
+        game.result = 'draw'
+        game.status = 'completed'
+        game.ended_at = timezone.now()
+        game.save(update_fields=['result', 'status', 'ended_at'])
+        game.white_player.refresh_from_db()
+        game.black_player.refresh_from_db()
+        game.white_player.draws += 1
+        game.black_player.draws += 1
         game.white_player.save()
         game.black_player.save()

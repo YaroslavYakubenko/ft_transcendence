@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 
 import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
@@ -17,33 +17,52 @@ function WaitingRoomPage() {
 	const location = useLocation()
 	const settings: GameSettings = location.state ?? DEFAULT_SETTINGS
 	const { token, user } = useAuth()
+	const socketRef = useRef<WebSocket | null>(null)
 
 	useEffect(() => {
 		if (!settings.game_id || !token || !user)
 			return
 
+		let isClosed = false
 		const myIdentifier = user.username || user.email
 		const WS_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:8443`
-		const socket = new WebSocket(`${WS_URL}/ws/game/${settings.game_id}/?token=${token}`)
+		const socketUrl = `${WS_URL}/ws/game/${settings.game_id}/?token=${token}`
 
-		socket.onmessage = (event) => {
-			const data = JSON.parse(event.data)
-			if (data.msg_type === 'player_connected' && data.username !== myIdentifier) {
-				navigate('/game', {
-					state: {
-						opponent: "live",
-						difficulty: settings.difficulty,
-						timer: settings.timer,
-						pieceColor: settings.pieceColor,
-						userColor: settings.userColor,
-						boardTheme: settings.boardTheme,
-						pieceTheme: settings.pieceTheme,
-						game_id: settings.game_id,
-					},
-				})
+		function connect() {
+			if (isClosed) return
+			const socket = new WebSocket(socketUrl)
+			socketRef.current = socket
+
+			socket.onmessage = (event) => {
+				const data = JSON.parse(event.data)
+				if (data.msg_type === 'player_connected' && data.username !== myIdentifier) {
+					navigate('/game', {
+						state: {
+							opponent: "live",
+							difficulty: settings.difficulty,
+							timer: settings.timer,
+							pieceColor: settings.pieceColor,
+							userColor: settings.userColor,
+							boardTheme: settings.boardTheme,
+							pieceTheme: settings.pieceTheme,
+							game_id: settings.game_id,
+						},
+					})
+				}
+			}
+
+			socket.onclose = () => {
+				if (isClosed) return
+				setTimeout(connect, 3000)
 			}
 		}
-		return () => { socket.close() }
+
+		connect()
+
+		return () => {
+			isClosed = true
+			socketRef.current?.close()
+		}
 	}, [settings.game_id, token, user])
 
 	return (
@@ -60,6 +79,12 @@ function WaitingRoomPage() {
 					<div className="text-lg text-gray-400 animate-pulse">
 						Waiting for opponent...
 					</div>
+					<button
+						onClick={() => navigate('/lobby')}
+						className="px-6 py-2 bg-transparent border border-[#2e2e40] text-[#8892a4] rounded-lg text-sm cursor-pointer hover:border-[#e25f5f] hover:text-[#e25f5f]"
+					>
+						Cancel
+					</button>
 				</div>
 			</div>
 			<Footer />

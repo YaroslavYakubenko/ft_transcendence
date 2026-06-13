@@ -60,9 +60,6 @@ function ChatWidget()
 	}, [selectedFriend, token])				// runs when selectedFriend or token changes
 
 	useEffect(() => {
-		
-		console.log('lastMessage changed:', lastMessage)  // ← add this temporarily
-
 		if (!lastMessage || !user)
 			return
 

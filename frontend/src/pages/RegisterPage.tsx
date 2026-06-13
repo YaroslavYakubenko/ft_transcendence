@@ -43,8 +43,12 @@ function RegisterPage() {
 			setIsLoading(true)
 			const { token, user } = await apiRegister(email, password)
 			login(token, user)
-		} catch {
-			setError(t('register.registrationFailed'))
+		} catch (err) {
+			if (err instanceof Error && err.message) {
+				setError(err.message)
+			} else {
+				setError(t('register.registrationFailed'))
+			}
 		} finally {
 			setIsLoading(false)
 		}

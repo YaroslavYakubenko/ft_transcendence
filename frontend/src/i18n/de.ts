@@ -48,6 +48,7 @@ export default {
     	welcome: "Willkommen",
     	wins: "Siege",
     	losses: "Niederlagen",
+    	draws: "Unentschieden",
     	rank: "Rang",
     	playNow: "Jetzt spielen",
     },

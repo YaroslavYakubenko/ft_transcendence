@@ -67,7 +67,7 @@ export async function getUserProfile(userId: number, token: string): Promise<Use
 	})
 	if (!res.ok) throw new Error('User not found')
 	const data = await res.json()
-	return { ...data, wins: 0, losses: 0, avatarUrl: data.avatar || null }
+	return { ...data, wins: data.wins || 0, losses: data.losses || 0, avatarUrl: data.avatar || null }
 }
 
 // Chat API to communicate with Django backend endpoints 
@@ -115,6 +115,13 @@ export async function getMessages(withUserId: number, token: string): Promise<Ch
 	if (!res.ok)
 		throw new Error('Failed to load messages')
 
-	return res.json()
+	const data = await res.json()
+	return data.map((msg: any) => ({
+		id: msg.id,
+		fromId: msg.from_user_id,
+		toId: msg.to_user_id,
+		text: msg.message,
+		timestamp: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+	}))
 }
 
