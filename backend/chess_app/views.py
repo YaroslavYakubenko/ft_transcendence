@@ -258,6 +258,7 @@ def create_game(request):
 	"""Create a new game and return game ID for move/resign tracking."""
 	opponent_type = request.data.get('opponent', 'bot')
 	piece_color = request.data.get('pieceColor', 'random')
+	timer = request.data.get('timer', 'none')
 	# print("\n\n\n given color", piece_color, "\n")
 
 	if opponent_type == 'bot':
@@ -304,6 +305,7 @@ def create_game(request):
 		black_player=black_player,
 		status='pending',
 		result='ongoing',
+		timer=timer,
 	)
 
 	if piece_color == 'white':

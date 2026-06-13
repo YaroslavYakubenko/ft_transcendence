@@ -31,14 +31,24 @@ export default function Gameover({
 			return
 		}
 
-		navigate("/game", {
-			state: {
-				...settings,
-				userColor: res.user,
-				game_id: res.gameId,
-				rematchId: res.gameId,
-			},
-		})
+		if (settings.opponent === 'live') {
+			navigate('/waiting_room', {
+				state: {
+					...settings,
+					userColor: res.user,
+					game_id: res.gameId,
+				},
+			})
+		} else {
+			navigate("/game", {
+				state: {
+					...settings,
+					userColor: res.user,
+					game_id: res.gameId,
+					rematchId: res.gameId,
+				},
+			})
+		}
 	}
 
 	return (

@@ -188,6 +188,7 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
             'your_color': 'white' if is_white else 'black',
             'opponent_id': opponent.id,
             'opponent_name': opponent.username or opponent.email,
+            'timer': game.timer,
         })
 
         #broadcast to game_group_name 

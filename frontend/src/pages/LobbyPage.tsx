@@ -23,6 +23,12 @@ function LobbyPage() {
     // Player 2 — join an existing game by ID
     function handleJoinGame() {
         if (!joinGameId.trim()) return
+        const id = parseInt(joinGameId)
+        // Clear stale cached game state so we start fresh
+        localStorage.removeItem(`result_${id}`)
+        localStorage.removeItem(`chess_fen_${id}`)
+        localStorage.removeItem(`move_history_${id}`)
+        localStorage.removeItem(`piece_color_${id}`)
         navigate('/game', {
             state: {
                 opponent: 'live',
@@ -31,7 +37,7 @@ function LobbyPage() {
                 pieceColor,
                 boardTheme,
                 pieceTheme,
-                game_id: parseInt(joinGameId),
+                game_id: id,
             },
         })
     }
@@ -45,7 +51,7 @@ function LobbyPage() {
         let userColor = pieceColor
 
         if (opponent === 'bot' && token) {
-            const game = await createGame(opponent, pieceColor, token)
+            const game = await createGame(opponent, pieceColor, token, timer)
 
             if (game?.game_id) {
                 gameId = game.game_id
@@ -60,10 +66,14 @@ function LobbyPage() {
         }
 
         if (opponent === 'live' && token) {
-            const game = await createGame("live", pieceColor, token)
+            const game = await createGame("live", pieceColor, token, timer)
 
             if (game?.game_id) {
                 gameId = game.game_id
+                localStorage.removeItem(`result_${game.game_id}`)
+                localStorage.removeItem(`chess_fen_${game.game_id}`)
+                localStorage.removeItem(`move_history_${game.game_id}`)
+                localStorage.removeItem(`piece_color_${game.game_id}`)
             } else {
                 setStartError("Could not create tracked game.")
             }

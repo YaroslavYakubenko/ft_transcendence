@@ -125,9 +125,10 @@ export async function getLeaderboard(limit: number = 50): Promise<{ id: number; 
 
 // only create game being used now 
 export async function createGame(
-	opponent: 'bot' | 'live', 
+	opponent: 'bot' | 'live',
 	pieceColor: 'white' | 'black' | 'random',
-	token: string | null
+	token: string | null,
+	timer: 'none' | '3' | '5' | '10' = 'none'
 ) {
 	if (!token) {
 		return null
@@ -142,6 +143,7 @@ export async function createGame(
 		body: JSON.stringify({
 			opponent,
 			pieceColor,
+			timer,
 		}),
 	})
 

@@ -122,6 +122,16 @@ export function useChessTimer(
 	const onTimeoutRef = useRef(onTimeout)
 	useEffect(() => { onTimeoutRef.current = onTimeout })
 
+	// Sync times when timerSetting changes (e.g. P2 receives timer from sync message)
+	const prevTimerRef = useRef(timerSetting)
+	useEffect(() => {
+		if (prevTimerRef.current === timerSetting) return
+		prevTimerRef.current = timerSetting
+		const secs = timerSetting === 'none' ? null : parseInt(timerSetting) * 60
+		setWhiteTime(secs)
+		setBlackTime(secs)
+	}, [timerSetting])
+
 	const fenTurn = fen.split(' ')[1] ?? 'w'
 
 	useEffect(() => {
@@ -147,7 +157,7 @@ export function useChessTimer(
 		}, 1000)
 
 		return () => clearInterval(id)
-	}, [fenTurn, isGameOver])
+	}, [fenTurn, isGameOver, timerSetting])
 
 	const playerTime = effectiveColor === 'white' ? whiteTime : effectiveColor === 'black' ? blackTime : null
 	const opponentTime = effectiveColor === 'white' ? blackTime : effectiveColor === 'black' ? whiteTime : null
@@ -155,21 +165,32 @@ export function useChessTimer(
 }
 
 export function useRestartGame(
-	settings: any, 
+	settings: any,
 	pieceColor: 'white' | 'black' | 'random',
-	token: string | null
+	token: string | null,
+	timer?: string
 ) {
 	const restartGame = async () => {
 		let gameId: number | undefined
 		let user
+		const activeTimer = (timer || settings.timer || 'none') as 'none' | '3' | '5' | '10'
 
 		if (settings.opponent === "bot" && token) {
-			const game = await createGame(settings.opponent, pieceColor, token)
+			const game = await createGame(settings.opponent, pieceColor, token, activeTimer)
 			if (game?.game_id) {
 				gameId = game.game_id
 			}
-			// console.log("useRestartGame | game user color:", game.user)
 			user = game.user
+		} else if (settings.opponent === "live" && token) {
+			const game = await createGame("live", pieceColor, token, activeTimer)
+			if (game?.game_id) {
+				gameId = game.game_id
+				localStorage.removeItem(`result_${game.game_id}`)
+				localStorage.removeItem(`chess_fen_${game.game_id}`)
+				localStorage.removeItem(`move_history_${game.game_id}`)
+				localStorage.removeItem(`piece_color_${game.game_id}`)
+			}
+			user = game?.user
 		}
 		return {gameId, user}
 	}

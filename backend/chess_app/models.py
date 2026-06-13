@@ -25,6 +25,14 @@ class Game(models.Model):
 	status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
 	result = models.CharField(max_length=20, choices=RESULT_CHOICES, default='ongoing')
 	
+	TIMER_CHOICES = [
+		('none', 'No Timer'),
+		('3', '3 min'),
+		('5', '5+3'),
+		('10', '10+5'),
+	]
+
+	timer = models.CharField(max_length=10, choices=TIMER_CHOICES, default='none')
 	current_fen = models.TextField(default='rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
 	
 	created_at = models.DateTimeField(auto_now_add=True)

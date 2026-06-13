@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react"
 import { Chessboard } from "react-chessboard"
 import { useAuth } from "../context/AuthContext"
 import { useLocation } from "react-router-dom"
-import { make_move, legal_moves, do_promotion } from "../api/game"
+import { make_move, legal_moves, do_promotion, resign_game } from "../api/game"
 
 import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
@@ -60,13 +60,14 @@ function GamePage() {
 	const [promotion, setPro] = useState({ move: "", x: -1, y: -1, pre: "" })
 	const [opponentConnected, setOpponentConnected] = useState(false);
 	const [liveColor, setLiveColor] = useState<'white' | 'black' | null>(null)
+	const [activeTimer, setActiveTimer] = useState(settings.timer)
 	const liveColorRef = useRef<'white' | 'black' | null>(null)
 	const [opponent, setOpponent] = useState<{ id: number; name: string } | null>(null)
 
 // react hooks?? what do you call it ----------------------------------------
 
 	// const playerColor = usePlayerColor( settings.pieceColor, storage_keys.piece_color )
-	const restartGame  = useRestartGame(settings, settings.pieceColor, token)
+	const restartGame  = useRestartGame(settings, settings.pieceColor, token, activeTimer)
 	const playerColor = usePlayerColor( settings.userColor, storage_keys.piece_color )
 
 	// when given rematch id reset board to starting positions
@@ -96,15 +97,22 @@ function GamePage() {
 		setFen, setMoves, setRes
 	)
 
+	const effectiveSettings = { ...settings, timer: activeTimer }
 	const effectiveColor = (multiplayer && liveColor) ? liveColor : playerColor
 	// For multiplayer, don't assign panel times until liveColor is confirmed from sync
 	const colorForTimer: 'white' | 'black' | null = (!multiplayer || liveColor !== null) ? effectiveColor : null
 	const { playerTime, opponentTime } = useChessTimer(
-		settings.timer,
+		activeTimer,
 		fen,
 		result.state !== 'ongoing',
 		colorForTimer,
-		(loser) => setRes({ state: 'timeout', winner: loser === 'white' ? 'Black' : 'White' })
+		async (loser) => {
+			setRes({ state: 'timeout', winner: loser === 'white' ? 'Black' : 'White' })
+			// Only the losing player notifies the backend so stats update once
+			if (loser === colorForTimer && gameId && token) {
+				await resign_game(gameId, token)
+			}
+		}
 	)
 
 
@@ -159,6 +167,13 @@ function GamePage() {
 
 				if (data.opponent_id && data.opponent_name)
 					setOpponent({ id: data.opponent_id, name: data.opponent_name })
+
+				if (data.timer)
+					setActiveTimer(data.timer)
+
+				// Override any stale localStorage result — DB is the source of truth
+				if (data.status !== 'completed')
+					setRes({ state: 'ongoing', winner: '' })
 			}
 
 			else if (data.msg_type === 'player_connected')
@@ -260,7 +275,7 @@ function GamePage() {
 
 						{/* Opponent panel */}
 						<OpponentPanel
-							settings={settings}
+							settings={effectiveSettings}
 							opponent={opponent}
 							time={opponentTime}
 						/>
@@ -289,7 +304,7 @@ function GamePage() {
 
 						{/* Player panel */}
 						< PlayerPanel
-							settings={settings}
+							settings={effectiveSettings}
 							user={user}
 							time={playerTime}
 						/>
@@ -307,7 +322,7 @@ function GamePage() {
 					{/* gameover make better with rematch option and stuff*/}
 					< Gameover
 						result={result}
-						settings={settings}
+						settings={effectiveSettings}
 						restartGame={restartGame}
 					/>
 
