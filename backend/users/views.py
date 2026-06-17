@@ -220,8 +220,8 @@ def oauth_login(request):
 			token_res = requests.post(
 				'https://github.com/login/oauth/access_token',
 				data={
-					'client_id': settings.GITHUB_CLIENT_ID,
-					'client_secret': settings.GITHUB_CLIENT_SECRET,
+					'client_id': settings.GITHUB_CLIENT_ID_IP if '10.12.13.3' in redirect_uri else settings.GITHUB_CLIENT_ID,
+					'client_secret': settings.GITHUB_CLIENT_SECRET_IP if '10.12.13.3' in redirect_uri else settings.GITHUB_CLIENT_SECRET,
 					'code': code, # one-time code
 					'redirect_uri': redirect_uri,
 				},
@@ -286,8 +286,8 @@ def oauth_login(request):
 				'https://api.intra.42.fr/oauth/token',
 				data={
 					'grant_type': 'authorization_code',
-					'client_id': settings.FORTY_TWO_CLIENT_ID,
-					'client_secret': settings.FORTY_TWO_CLIENT_SECRET,
+					'client_id': settings.FORTY_TWO_CLIENT_ID_IP if '10.12.13.3' in redirect_uri else settings.FORTY_TWO_CLIENT_ID,
+					'client_secret': settings.FORTY_TWO_CLIENT_SECRET_IP if '10.12.13.3' in redirect_uri else settings.FORTY_TWO_CLIENT_SECRET,
 					'code': code,
 					'redirect_uri': redirect_uri,
 				},

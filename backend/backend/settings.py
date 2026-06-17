@@ -192,9 +192,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField' # This is a setting that te
 # our oauth keys
 GITHUB_CLIENT_ID = os.environ.get('GITHUB_CLIENT_ID', '')
 GITHUB_CLIENT_SECRET = os.environ.get('GITHUB_CLIENT_SECRET', '')
+GITHUB_CLIENT_ID_IP = os.environ.get('GITHUB_CLIENT_ID_IP', '')
+GITHUB_CLIENT_SECRET_IP = os.environ.get('GITHUB_CLIENT_SECRET_IP', '')
 
 FORTY_TWO_CLIENT_ID = os.environ.get('FORTY_TWO_CLIENT_ID', '')
 FORTY_TWO_CLIENT_SECRET = os.environ.get('FORTY_TWO_CLIENT_SECRET', '')
+FORTY_TWO_CLIENT_ID_IP = os.environ.get('FORTY_TWO_CLIENT_ID_IP', '')
+FORTY_TWO_CLIENT_SECRET_IP = os.environ.get('FORTY_TWO_CLIENT_SECRET_IP', '')
 OAUTH_REDIRECT_URI = os.environ.get('OAUTH_REDIRECT_URI', 'http://localhost:5173/oauth/callback')
 
 # User uploaded files
