@@ -104,7 +104,7 @@ export function createOnPieceDrag({
 	effectiveColor,
 }: any) {
 	return ({ isSparePiece, piece, square }: PieceHandlerArgs) => {
-		console.debug("DEBUG: DRAG BEGIN:", isSparePiece, piece, square);
+		console.log("DEBUG: DRAG BEGIN:", isSparePiece, piece, square);
 
 		if (!square || !piece) {
 			setHighlightSquares([]);
@@ -113,17 +113,11 @@ export function createOnPieceDrag({
 		}
 
 		const fenTurn = fen.split(' ')[1]              // 'w' or 'b'
-		const pieceColor = (piece as unknown as string)[0]  // 'w' or 'b'
+		const pieceType = typeof piece === 'string' ? piece : (piece as any).pieceType
+		const pieceColor = pieceType?.[0]              // 'w' or 'b'
 
 		// Only show highlights for the side whose turn it is
 		if (pieceColor !== fenTurn) {
-			setHighlightSquares([]);
-			setHighlightSquares2([]);
-			return;
-		}
-
-		// In multiplayer, only show highlights for your own pieces
-		if (effectiveColor && pieceColor !== effectiveColor[0]) {
 			setHighlightSquares([]);
 			setHighlightSquares2([]);
 			return;
