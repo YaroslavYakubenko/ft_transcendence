@@ -96,7 +96,7 @@ export async function getAchievements(_userId: number): Promise<Achievement[]> {
 	]
 }
 
-export async function getLeaderboard(limit: number = 50): Promise<{ id: number; username: string; wins: number; losses: number; elo: number; rank: number }[]> {
+export async function getLeaderboard(limit: number = 50): Promise<{ id: number; username: string; email: string; wins: number; losses: number; elo: number; rank: number }[]> {
 	try {
 		const response = await fetch(
 			`${API_BASE_URL}/leaderboard/?limit=${limit}`,

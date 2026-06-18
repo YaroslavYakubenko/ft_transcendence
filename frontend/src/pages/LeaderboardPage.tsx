@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next"
 type LeaderboardEntry = {
 	id: number
 	username: string
+	email: string
 	wins: number
 	losses: number
 	elo: number
@@ -47,7 +48,7 @@ function LeaderboardPage() {
 									onClick={() => navigate(`/users/${player.id}`)}
 								>
 									<td className="px-6 py-4 text-[#e2b96f] font-semibold">{player.rank}</td>
-									<td className="px-6 py-4">{player.username}</td>
+									<td className="px-6 py-4">{player.username || player.email}</td>
 									<td className="px-6 py-4 text-green-400">{player.wins}</td>
 									<td className="px-6 py-4 text-[#e25f5f]">{player.losses}</td>
 									<td className="px-6 py-4 text-[#8892a4]">{player.elo}</td>
