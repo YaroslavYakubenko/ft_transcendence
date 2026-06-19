@@ -24,6 +24,7 @@ function WaitingRoomPage() {
 			return
 
 		let isClosed = false
+		let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
 		const myIdentifier = user.username || user.email
 		const WS_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:8443`
 		const socketUrl = `${WS_URL}/ws/game/${settings.game_id}/?token=${token}`
@@ -53,7 +54,7 @@ function WaitingRoomPage() {
 
 			socket.onclose = () => {
 				if (isClosed) return
-				setTimeout(connect, 3000)
+				reconnectTimeout = setTimeout(connect, 3000)
 			}
 		}
 
@@ -61,6 +62,7 @@ function WaitingRoomPage() {
 
 		return () => {
 			isClosed = true
+			if (reconnectTimeout) clearTimeout(reconnectTimeout)
 			socketRef.current?.close()
 		}
 	}, [settings.game_id, token, user])

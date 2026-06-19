@@ -21,7 +21,9 @@ function LeaderboardPage() {
 	const { t } = useTranslation()
 
 	useEffect(() => {
-		getLeaderboard().then(setPlayers)
+		const controller = new AbortController()
+		getLeaderboard(50, controller.signal).then(setPlayers).catch(() => {})
+		return () => controller.abort()
 	}, [])
 
 	return (

@@ -26,11 +26,13 @@ export default function OpponentPanel({ settings, opponent, time }: Props) {
 
 	useEffect(() => {
 		if (!opponent || !token) return
-		getFriends(token).then(friends => {
+		const controller = new AbortController()
+		getFriends(token, controller.signal).then(friends => {
 			if (friends.some(f => f.id === opponent.id))
 				setAdded(true)
 		}).catch(() => {})
-	}, [opponent?.id])
+		return () => controller.abort()
+	}, [opponent?.id, token])
 
 	const isLive = settings.opponent === 'live'
 

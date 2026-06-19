@@ -16,8 +16,10 @@ function HomePage() {
 
 	useEffect(() => {
 		if (!user) return
-		getUserStats(user.id).then(setStats).catch(() => {})
-		getMatchHistory(user.id).then((data) => setMatches(data.slice(0, 5))).catch(() => {})
+		const controller = new AbortController()
+		getUserStats(user.id, controller.signal).then(setStats).catch(() => {})
+		getMatchHistory(user.id, 1, controller.signal).then((data) => setMatches(data.slice(0, 5))).catch(() => {})
+		return () => controller.abort()
 	}, [user])
 
 	return (

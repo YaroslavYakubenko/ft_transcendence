@@ -16,11 +16,14 @@ function ChatWidget()
 
 	const [input, setInput] = useState("")
 	const bottomRef = useRef<HTMLDivElement>(null)
+	const lastProcessedMessage = useRef<typeof lastMessage>(null)
 	const { t } = useTranslation()
 	const { token, user, sendChat, lastMessage, friendsUpdate } = useAuth()
 
 	useEffect(() => {
-		getFriends(token!).then(setFriends).catch(() => {})
+		const controller = new AbortController()
+		getFriends(token!, controller.signal).then(setFriends).catch(() => {})
+		return () => controller.abort()
 	}, [])
 
 	useEffect(() => {
@@ -48,20 +51,25 @@ function ChatWidget()
 			return
 		}
 		
-		getMessages(selectedFriend.id, token)
+		const controller = new AbortController()
+		getMessages(selectedFriend.id, token, controller.signal)
 			.then(function(data) {
 				setMessages(data)
 			})
 			.catch(function(error) {
-				console.error("Could not load messages:", error)
+				if (error.name !== 'AbortError')
+					console.error("Could not load messages:", error)
 				setMessages([])
 			})
 
+		return () => controller.abort()
 	}, [selectedFriend, token])				// runs when selectedFriend or token changes
 
 	useEffect(() => {
-		if (!lastMessage || !user)
+		if (!lastMessage || !user || lastMessage === lastProcessedMessage.current)
 			return
+
+		lastProcessedMessage.current = lastMessage
 
 		const isFromFriend = lastMessage.from_user_id === selectedFriend?.id
 		const isFromMe = lastMessage.from_user_id === user.id
@@ -76,7 +84,7 @@ function ChatWidget()
 			text: lastMessage.message,
 			timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 		}])
-	}, [lastMessage])
+	}, [lastMessage, selectedFriend, user])
 
 
 function handleSend() 

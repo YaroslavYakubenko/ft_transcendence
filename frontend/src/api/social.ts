@@ -26,9 +26,10 @@ export interface ChatMessage
 
 // Friends API
 
-export async function getFriends(token: string): Promise<Friend[]> {
+export async function getFriends(token: string, signal?: AbortSignal): Promise<Friend[]> {
 	const res = await fetch(`${API}/friends/`, {
-		headers: { 'Authorization': `Token ${token}` }
+		headers: { 'Authorization': `Token ${token}` },
+		signal,
 	})
 	if (!res.ok) throw new Error('Failed to fetch friends')
 	const data = await res.json()
@@ -104,12 +105,13 @@ export async function sendMessage(toId: number, text: string, token: string): Pr
 }
 
 // GET /api/chat/<friendId>/
-export async function getMessages(withUserId: number, token: string): Promise<ChatMessage[]> {
+export async function getMessages(withUserId: number, token: string, signal?: AbortSignal): Promise<ChatMessage[]> {
 	const res = await fetch(`${API}/chat/${withUserId}/`, {
 		method: 'GET',
 		headers: {
 			'Authorization': `Token ${token}`,
 		},
+		signal,
 	})
 
 	if (!res.ok)

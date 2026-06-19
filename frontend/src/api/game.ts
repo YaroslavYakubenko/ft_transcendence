@@ -26,7 +26,7 @@ export interface Achievement {
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/$/, '')
 const GAME_BASE_URL = window.location.origin
 
-export async function getUserStats(userId: number): Promise<UserStats> {
+export async function getUserStats(userId: number, signal?: AbortSignal): Promise<UserStats> {
 	try {
 		const response = await fetch(`${API_BASE_URL}/users/${userId}/stats/`, {
 			method: 'GET',
@@ -34,12 +34,13 @@ export async function getUserStats(userId: number): Promise<UserStats> {
 				'Authorization': `Token ${localStorage.getItem('token')}`,
 				'Content-Type': 'application/json',
 			},
+			signal,
 		})
-		
+
 		if (!response.ok) {
 			throw new Error(`Failed to fetch user stats: ${response.statusText}`)
 		}
-		
+
 		const data = await response.json()
 		return {
 			wins: data.wins || 0,
@@ -49,12 +50,13 @@ export async function getUserStats(userId: number): Promise<UserStats> {
 			elo: data.elo || 1200,
 		}
 	} catch (error) {
+		if (error instanceof Error && error.name === 'AbortError') throw error
 		console.error('Error fetching user stats:', error)
 		return { wins: 0, losses: 0, draws: 0, rank: 0, elo: 1200 }
 	}
 }
 
-export async function getMatchHistory(userId: number, page: number = 1): Promise<MatchRecord[]> {
+export async function getMatchHistory(userId: number, page: number = 1, signal?: AbortSignal): Promise<MatchRecord[]> {
 	try {
 		const response = await fetch(
 			`${API_BASE_URL}/users/${userId}/matches/?page=${page}`,
@@ -64,13 +66,14 @@ export async function getMatchHistory(userId: number, page: number = 1): Promise
 					'Authorization': `Token ${localStorage.getItem('token')}`,
 					'Content-Type': 'application/json',
 				},
+				signal,
 			}
 		)
-		
+
 		if (!response.ok) {
 			throw new Error(`Failed to fetch match history: ${response.statusText}`)
 		}
-		
+
 		const data = await response.json()
 		return (data.matches || []).map((match: any) => ({
 			id: match.id,
@@ -80,6 +83,7 @@ export async function getMatchHistory(userId: number, page: number = 1): Promise
 			duration: match.duration,
 		}))
 	} catch (error) {
+		if (error instanceof Error && error.name === 'AbortError') throw error
 		console.error('Error fetching match history:', error)
 		return []
 	}
@@ -96,7 +100,7 @@ export async function getAchievements(_userId: number): Promise<Achievement[]> {
 	]
 }
 
-export async function getLeaderboard(limit: number = 50): Promise<{ id: number; username: string; email: string; wins: number; losses: number; elo: number; rank: number }[]> {
+export async function getLeaderboard(limit: number = 50, signal?: AbortSignal): Promise<{ id: number; username: string; email: string; wins: number; losses: number; elo: number; rank: number }[]> {
 	try {
 		const response = await fetch(
 			`${API_BASE_URL}/leaderboard/?limit=${limit}`,
@@ -106,16 +110,18 @@ export async function getLeaderboard(limit: number = 50): Promise<{ id: number; 
 					'Authorization': `Token ${localStorage.getItem('token')}`,
 					'Content-Type': 'application/json',
 				},
+				signal,
 			}
 		)
-		
+
 		if (!response.ok) {
 			throw new Error(`Failed to fetch leaderboard: ${response.statusText}`)
 		}
-		
+
 		const data = await response.json()
 		return data.leaderboard || []
 	} catch (error) {
+		if (error instanceof Error && error.name === 'AbortError') throw error
 		console.error('Error fetching leaderboard:', error)
 		return []
 	}

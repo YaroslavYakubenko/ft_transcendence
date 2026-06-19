@@ -14,7 +14,9 @@ function FriendsPage() {
 	const { token } = useAuth()
 
 	useEffect(() => {
-		getFriends(token!).then(setFriends).catch(() => setError(t('friends.fetchFailed')))
+		const controller = new AbortController()
+		getFriends(token!, controller.signal).then(setFriends).catch(() => setError(t('friends.fetchFailed')))
+		return () => controller.abort()
 	}, [])
 
 	async function handleRemove(userId: number) {

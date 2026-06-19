@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { updateMe } from "../api/auth"
@@ -16,6 +16,13 @@ function EditProfilePage() {
 	const [confirmPassword, setConfirmPassword] = useState('')
 	const [error, setError] = useState('')
 	const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatarUrl || null)
+	const blobUrlRef = useRef<string | null>(null)
+
+	useEffect(() => {
+		return () => {
+			if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
+		}
+	}, [])
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 	const [showPassword, setShowPassword] = useState(false)
 	const [showConfirm, setShowConfirm] = useState(false)
@@ -72,7 +79,11 @@ function EditProfilePage() {
 						onChange={(e) => {
 							const file = e.target.files?.[0] || null
 							setAvatar(file)
-							if (file) setAvatarPreview(URL.createObjectURL(file))
+							if (file) {
+								if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
+								blobUrlRef.current = URL.createObjectURL(file)
+								setAvatarPreview(blobUrlRef.current)
+							}
 						}}
 						className="hidden"
 					/>

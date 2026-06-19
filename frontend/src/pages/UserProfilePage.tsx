@@ -18,14 +18,15 @@ function UserProfilePage() {
 	const { token, user: currentUser } = useAuth()
 
 	useEffect(() => {
-		if (id) {
-			getUserProfile(Number(id), token!).then(setProfile).catch(() => setNotFound(true))
-			getUserStats(Number(id)).then(setStats).catch(() => {})
-			getFriends(token!).then(friends => {
-				setIsFriend(friends.some(f => f.id === Number(id)))
-			})
-		}
-	}, [id])
+		if (!id) return
+		const controller = new AbortController()
+		getUserProfile(Number(id), token!).then(setProfile).catch(() => setNotFound(true))
+		getUserStats(Number(id), controller.signal).then(setStats).catch(() => {})
+		getFriends(token!, controller.signal).then(friends => {
+			setIsFriend(friends.some(f => f.id === Number(id)))
+		}).catch(() => {})
+		return () => controller.abort()
+	}, [id, token])
 
 	if (notFound) return <div className="bg-[#0f0f13] min-h-screen text-[#e25f5f] flex items-center justify-center">{t('common.userNotFound')}</div>
 	if (!profile) return <div className="bg-[#0f0f13] min-h-screen text-[#f0eeff] flex items-center justify-center">{t('common.loading')}</div>

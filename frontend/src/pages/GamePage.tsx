@@ -140,6 +140,7 @@ function GamePage() {
 			return
 
 		let isClosed = false
+		let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
 
 		const WS_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:8443`
 		const socketUrl = `${WS_URL}/ws/game/${gameId}/?token=${token}`
@@ -218,7 +219,7 @@ function GamePage() {
 
 			socket.onclose = () => {
 				if (isClosed) return
-				setTimeout(connect, 3000)
+				reconnectTimeout = setTimeout(connect, 3000)
 			}
 		}
 
@@ -226,6 +227,7 @@ function GamePage() {
 
 		return () => {
 			isClosed = true
+			if (reconnectTimeout) clearTimeout(reconnectTimeout)
 			wsRef.current?.close()
 		}
 	}, [multiplayer, gameId, token])

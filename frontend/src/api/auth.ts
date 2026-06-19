@@ -58,9 +58,10 @@ export async function register(email: string, _password: string): Promise<LoginR
 		return { token: data.token, user }
 }
 
-export async function getMe(_token: string): Promise<User> {
+export async function getMe(_token: string, signal?: AbortSignal): Promise<User> {
 	const res = await fetch(`${API}/auth/me/`, {
-		headers: { 'Authorization': `Token ${_token}` }
+		headers: { 'Authorization': `Token ${_token}` },
+		signal,
 	})
 	if (!res.ok) throw new Error('Unauthorized')
 	const data = await res.json()

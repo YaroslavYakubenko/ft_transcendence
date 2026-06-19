@@ -98,16 +98,19 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 			return
 		}
 
-		getMe(token)
+		const controller = new AbortController()
+		getMe(token, controller.signal)
 			.then(function(user){
 				setUser(user)
 			})
-			.catch(function(){
+			.catch(function(error){
+				if (error.name === 'AbortError') return
 				localStorage.removeItem('token')
 				setToken(null)
 				setUser(null)
 			})
 
+		return () => controller.abort()
 	}, [token])
 
 	// if user logs in, token appears -> WebSocket opens
@@ -121,6 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 		}
 
 		let isClosed = false
+		let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
 		const WS_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:8443`
 		const socketUrl = `${WS_URL}/ws/status/?token=${token}`
 
@@ -152,7 +156,7 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 
 			ws.onclose = () => {
 				if (isClosed) return
-				setTimeout(connect, 3000)
+				reconnectTimeout = setTimeout(connect, 3000)
 			}
 		}
 
@@ -160,6 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 
 		return () => {
 			isClosed = true
+			if (reconnectTimeout) clearTimeout(reconnectTimeout)
 			wsRef.current?.close()
 			wsRef.current = null
 		}

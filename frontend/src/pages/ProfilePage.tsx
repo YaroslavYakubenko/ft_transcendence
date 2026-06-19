@@ -17,9 +17,11 @@ function ProfilePage() {
 
     useEffect(() => {
       if (!user) return
-      getUserStats(user.id).then(setStats).catch(() => {})
-      getMatchHistory(user.id).then(setMatches).catch(() => {})
+      const controller = new AbortController()
+      getUserStats(user.id, controller.signal).then(setStats).catch(() => {})
+      getMatchHistory(user.id, 1, controller.signal).then(setMatches).catch(() => {})
       getAchievements(user.id).then(setAchievements).catch(() => {})
+      return () => controller.abort()
     }, [user])
 
     return (
