@@ -222,24 +222,24 @@ function LobbyPage() {
                         </div>
                     </div>
 
-                    {/* piece theme */}
-                    <div className="mb-6">
-                        <p className="text-[#8892a4] text-xs mb-2">{t('lobby.pieceTheme')}</p>
-                        <div className="flex gap-3">
-                            {([
-                                { value: 'default', label: `♚ ${t('lobby.default')}` },
-                                { value: 'simple', label: `♔ ${t('lobby.simple')}` },
-                            ] as const).map((opt) => (
-                                <button
-                                    key={opt.value}
-                                    onClick={() => setPieceTheme(opt.value)}
-                                    className={`flex-1 py-2 rounded-lg text-sm border cursor-pointer ${pieceTheme === opt.value ? 'bg-[#e2b96f] text-[#0f0f13] border-[#e2b96f] font-medium' : 'bg-[#0f0f13] text-[#f0eeff] border-[#2e2e40]'}`}
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+					{/* piece theme */}
+					<div className="mb-6">
+						<p className="text-[#8892a4] text-xs mb-2">{t('lobby.pieceTheme')}</p>
+						<div className="flex gap-3">
+								{([
+									{ value: 'default', label: <img src="/imgs/Chess_klt45.svg.png" className="w-12 h-12 object-contain"/> },
+									{ value: 'simple', label: <img src="/imgs/wk.png" className="w-12 h-12 object-contain"/> },
+								] as const).map((opt) => (
+									<button
+										key={opt.value}
+										onClick={() => setPieceTheme(opt.value)}
+										className={`w-14 h-14 flex items-center justify-center rounded-lg border cursor-pointer text-sm ${pieceTheme === opt.value ? 'bg-[#e2b96f] text-[#0f0f13] border-[#e2b96f] font-medium' : 'bg-[#0f0f13] text-[#f0eeff] border-[#2e2e40]'}`}
+									>
+										{opt.label}
+									</button>
+								))}
+						</div>
+					</div>
 
                     {/* Start game */}
                     <button
