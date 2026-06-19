@@ -154,6 +154,8 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 				}
 			}
 
+			ws.onerror = () => {}
+
 			ws.onclose = () => {
 				if (isClosed) return
 				reconnectTimeout = setTimeout(connect, 3000)

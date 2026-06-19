@@ -15,7 +15,9 @@ function FriendsPage() {
 
 	useEffect(() => {
 		const controller = new AbortController()
-		getFriends(token!, controller.signal).then(setFriends).catch(() => setError(t('friends.fetchFailed')))
+		getFriends(token!, controller.signal).then(setFriends).catch((err) => {
+			if (err.name !== 'AbortError') setError(t('friends.fetchFailed'))
+		})
 		return () => controller.abort()
 	}, [])
 
