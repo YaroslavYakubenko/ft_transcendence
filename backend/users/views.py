@@ -202,10 +202,10 @@ def get_chat_messages(request, friend_id):
 	for msg in messages:
 		data.append({
 			'id': msg.id,
-			'fromId': msg.sender.id,
-			'toId': msg.recipient.id,
-			'text': msg.message,
-			'timestamp': msg.created_at.strftime('%H:%M'),
+			'from_user_id': msg.sender.id,
+			'to_user_id': msg.recipient.id,
+			'message': msg.message,
+			'created_at': msg.created_at.isoformat(),
 		})
 	return Response(data)
 
@@ -233,8 +233,8 @@ def oauth_login(request):
 			token_res = requests.post(
 				'https://github.com/login/oauth/access_token',
 				data={
-					'client_id': settings.GITHUB_CLIENT_ID_IP if '10.12.13.3' in redirect_uri else settings.GITHUB_CLIENT_ID,
-					'client_secret': settings.GITHUB_CLIENT_SECRET_IP if '10.12.13.3' in redirect_uri else settings.GITHUB_CLIENT_SECRET,
+					'client_id': settings.GITHUB_CLIENT_ID_IP if 'localhost' not in redirect_uri else settings.GITHUB_CLIENT_ID,
+					'client_secret': settings.GITHUB_CLIENT_SECRET_IP if 'localhost' not in redirect_uri else settings.GITHUB_CLIENT_SECRET,
 					'code': code, # one-time code
 					'redirect_uri': redirect_uri,
 				},
@@ -299,8 +299,8 @@ def oauth_login(request):
 				'https://api.intra.42.fr/oauth/token',
 				data={
 					'grant_type': 'authorization_code',
-					'client_id': settings.FORTY_TWO_CLIENT_ID_IP if '10.12.13.3' in redirect_uri else settings.FORTY_TWO_CLIENT_ID,
-					'client_secret': settings.FORTY_TWO_CLIENT_SECRET_IP if '10.12.13.3' in redirect_uri else settings.FORTY_TWO_CLIENT_SECRET,
+					'client_id': settings.FORTY_TWO_CLIENT_ID_IP if 'localhost' not in redirect_uri else settings.FORTY_TWO_CLIENT_ID,
+					'client_secret': settings.FORTY_TWO_CLIENT_SECRET_IP if 'localhost' not in redirect_uri else settings.FORTY_TWO_CLIENT_SECRET,
 					'code': code,
 					'redirect_uri': redirect_uri,
 				},

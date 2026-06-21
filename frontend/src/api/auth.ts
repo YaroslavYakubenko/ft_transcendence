@@ -80,12 +80,12 @@ export async function logout(_token: string): Promise<void> {
 export function buildOAuthUrl(provider: OAuthProvider, state: string): string {
 	const redirectUri = getRedirectUri()
 	if (provider === 'github') {
-		const githubClientId = window.location.hostname === '10.12.13.3'
+		const githubClientId = window.location.hostname === '10.11.11.2'
 			? import.meta.env.VITE_GITHUB_CLIENT_ID_IP
 			: import.meta.env.VITE_GITHUB_CLIENT_ID
 		return `https://github.com/login/oauth/authorize?client_id=${githubClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email&state=${encodeURIComponent(state)}`
 	}
-	const fortyTwoClientId = window.location.hostname === '10.12.13.3'
+	const fortyTwoClientId = window.location.hostname === '10.11.11.2'
 		? import.meta.env.VITE_FORTY_TWO_CLIENT_ID_IP
 		: import.meta.env.VITE_FORTY_TWO_CLIENT_ID
 	return `https://api.intra.42.fr/oauth/authorize?client_id=${fortyTwoClientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=public&state=${encodeURIComponent(state)}`

@@ -166,7 +166,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://localhost:8443",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://10.12.13.3:8443",
+    "https://10.11.11.2:8443",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
@@ -199,7 +199,7 @@ FORTY_TWO_CLIENT_ID = os.environ.get('FORTY_TWO_CLIENT_ID', '')
 FORTY_TWO_CLIENT_SECRET = os.environ.get('FORTY_TWO_CLIENT_SECRET', '')
 FORTY_TWO_CLIENT_ID_IP = os.environ.get('FORTY_TWO_CLIENT_ID_IP', '')
 FORTY_TWO_CLIENT_SECRET_IP = os.environ.get('FORTY_TWO_CLIENT_SECRET_IP', '')
-OAUTH_REDIRECT_URI = os.environ.get('OAUTH_REDIRECT_URI', 'http://localhost:5173/oauth/callback')
+OAUTH_REDIRECT_URI = os.environ.get('OAUTH_REDIRECT_URI', 'http://localhost:8443/oauth/callback')
 
 # User uploaded files
 MEDIA_URL = '/media/'
