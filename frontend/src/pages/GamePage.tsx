@@ -3,6 +3,8 @@ import { Chessboard } from "react-chessboard"
 import { useAuth } from "../context/AuthContext"
 import { useLocation } from "react-router-dom"
 import { make_move, legal_moves, do_promotion, resign_game } from "../api/game"
+import { useToast } from "../context/ToastContext"
+import { useTranslation } from "react-i18next"
 
 import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
@@ -21,6 +23,8 @@ import { appendMove, getBoardCoordinates, createOnPieceDrag, createOnPieceDrop, 
 
 function GamePage() {
 	const { user, token } = useAuth()
+	const { showToast } = useToast()
+	const { t } = useTranslation()
 	const userRef = useRef(user)
 	useEffect(() => { userRef.current = user }, [user])
 	const location = useLocation()
@@ -63,6 +67,7 @@ function GamePage() {
 	const [activeTimer, setActiveTimer] = useState(settings.timer)
 	const liveColorRef = useRef<'white' | 'black' | null>(null)
 	const [opponent, setOpponent] = useState<{ id: number; name: string } | null>(null)
+	const opponentRef = useRef<{ id: number; name: string } | null>(null)
 	const [drawState, setDrawState] = useState<'idle' | 'offer_sent' | 'offer_received'>('idle')
 
 // react hooks?? what do you call it ----------------------------------------
@@ -165,8 +170,11 @@ function GamePage() {
 					setLiveColor(color)
 					liveColorRef.current = color
 
-					if (data.opponent_id && data.opponent_name)
-						setOpponent({ id: data.opponent_id, name: data.opponent_name })
+					if (data.opponent_id && data.opponent_name) {
+						const opp = { id: data.opponent_id, name: data.opponent_name }
+						setOpponent(opp)
+						opponentRef.current = opp
+					}
 
 					if (data.timer)
 						setActiveTimer(data.timer)
@@ -176,8 +184,11 @@ function GamePage() {
 						setRes({ state: 'ongoing', winner: '' })
 				}
 
-				else if (data.msg_type === 'player_connected')
+				else if (data.msg_type === 'player_connected') {
 					setOpponentConnected(true)
+					if (!opponentRef.current)
+						showToast(t('toast.opponentJoined'))
+				}
 
 				else if (data.msg_type === 'move')
 				{
@@ -204,6 +215,7 @@ function GamePage() {
 								socket.send(JSON.stringify({ type: 'draw_response', accepted: true }))
 							return 'idle'
 						}
+						showToast(t('toast.drawOffered'))
 						return 'offer_received'
 					})
 
@@ -213,8 +225,10 @@ function GamePage() {
 					setRes({ state: 'draw', winner: '' })
 				}
 
-				else if (data.msg_type === 'draw_declined')
+				else if (data.msg_type === 'draw_declined') {
 					setDrawState('idle')
+					showToast(t('toast.drawDeclined'), 'error')
+				}
 			}
 
 			socket.onclose = () => {

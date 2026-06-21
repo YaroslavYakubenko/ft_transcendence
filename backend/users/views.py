@@ -13,6 +13,8 @@ import logging
 from django.conf import settings #to read our settings.py
 from django.http import JsonResponse # for docker health check
 from django.db import connection
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 from django.db import models
 
 
@@ -133,12 +135,23 @@ def add_friend(request, user_id):
 		return Response({'error': 'Cannot add yourself'}, status=status.HTTP_400_BAD_REQUEST)
 	Friendship.objects.get_or_create(from_user=request.user, to_user=to_user)
 	Friendship.objects.get_or_create(from_user=to_user, to_user=request.user)
+	channel_layer = get_channel_layer()
+	async_to_sync(channel_layer.group_send)(f'inbox_{user_id}', {
+		'type': 'friend_added_msg',
+		'added_by_id': request.user.id,
+	})
 	return Response(status=status.HTTP_201_CREATED)
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def remove_friend(request, user_id):
-	Friendship.objects.filter(from_user=request.user, to_user__id=user_id).delete() # search friend and delete
+	Friendship.objects.filter(from_user=request.user, to_user__id=user_id).delete()
+	Friendship.objects.filter(from_user__id=user_id, to_user=request.user).delete()
+	channel_layer = get_channel_layer()
+	async_to_sync(channel_layer.group_send)(f'inbox_{user_id}', {
+		'type': 'friend_removed_msg',
+		'removed_by_id': request.user.id,
+	})
 	return Response(status=status.HTTP_204_NO_CONTENT)
 
 # Frontend sends recipient ID and message

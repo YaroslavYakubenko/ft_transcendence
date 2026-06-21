@@ -185,6 +185,18 @@ export default {
         section6Title: "Changes to Terms",
         section6Text: "We reserve the right to update these Terms of Service at any time. Continued use of the platform after changes constitutes your acceptance of the new terms.",
 	},
+	toast: {
+		profileUpdated: "Profile updated successfully",
+		profileUpdateFailed: "Failed to update profile",
+		friendAdded: "Friend added",
+		friendRemoved: "Friend removed",
+		friendAddFailed: "Failed to add friend",
+		friendRemoveFailed: "Failed to remove friend",
+		registered: "Account created successfully",
+		opponentJoined: "Opponent has joined!",
+		drawOffered: "Opponent offered a draw",
+		drawDeclined: "Your draw offer was declined",
+	},
 	achievements: {
         1: { name: "First Win", description: "Win your first game" },
         2: { name: "On a Roll", description: "Win 3 games in a row" },

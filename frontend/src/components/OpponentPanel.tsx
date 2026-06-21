@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { useAuth } from "../context/AuthContext"
 import { addFriend, getFriends } from "../api/social"
+import { useToast } from "../context/ToastContext"
 
 function formatTime(seconds: number | null, fallback: string): string {
 	if (seconds === null) return fallback
@@ -19,7 +20,8 @@ type Props = {
 
 export default function OpponentPanel({ settings, opponent, time }: Props) {
 	const { t } = useTranslation()
-	const { token } = useAuth()
+	const { token, friendRemoved, friendAdded } = useAuth()
+	const { showToast } = useToast()
 	const navigate = useNavigate()
 	const [added, setAdded] = useState(false)
 	const [adding, setAdding] = useState(false)
@@ -34,6 +36,18 @@ export default function OpponentPanel({ settings, opponent, time }: Props) {
 		return () => controller.abort()
 	}, [opponent?.id, token])
 
+	useEffect(() => {
+		if (!friendRemoved || !opponent) return
+		if (friendRemoved.removed_by_id === opponent.id)
+			setAdded(false)
+	}, [friendRemoved])
+
+	useEffect(() => {
+		if (!friendAdded || !opponent) return
+		if (friendAdded.added_by_id === opponent.id)
+			setAdded(true)
+	}, [friendAdded])
+
 	const isLive = settings.opponent === 'live'
 
 	const handleAddFriend = async () => {
@@ -42,6 +56,7 @@ export default function OpponentPanel({ settings, opponent, time }: Props) {
 		try {
 			await addFriend(opponent.id, token)
 			setAdded(true)
+			showToast(t('toast.friendAdded'))
 		} catch {
 			// already friends or error — still mark as added
 			setAdded(true)

@@ -5,6 +5,7 @@ import { Link } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
+import { useToast } from "../context/ToastContext"
 
 function RegisterPage() {
 	const [email, setEmail] = useState('')
@@ -20,6 +21,7 @@ function RegisterPage() {
 	const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password)
 	const { login } = useAuth()
 	const { t } = useTranslation()
+	const { showToast } = useToast()
 
 	async function handleRegister() {
 		setError('')
@@ -42,6 +44,7 @@ function RegisterPage() {
 		try {
 			setIsLoading(true)
 			const { token, user } = await apiRegister(email, password)
+			showToast(t('toast.registered'))
 			login(token, user)
 		} catch (err) {
 			if (err instanceof Error && err.message) {

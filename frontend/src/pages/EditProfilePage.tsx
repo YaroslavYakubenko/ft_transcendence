@@ -5,6 +5,7 @@ import { updateMe } from "../api/auth"
 import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
 import { useTranslation } from "react-i18next"
+import { useToast } from "../context/ToastContext"
 
 function EditProfilePage() {
 	const { user, token, updateUser, deleteAccount } = useAuth()
@@ -27,6 +28,7 @@ function EditProfilePage() {
 	const [showPassword, setShowPassword] = useState(false)
 	const [showConfirm, setShowConfirm] = useState(false)
 	const { t } = useTranslation()
+	const { showToast } = useToast()
 
 	const hasMinLength = password.length >= 8
 	const hasUppercase = /[A-Z]/.test(password)
@@ -50,9 +52,10 @@ function EditProfilePage() {
 		try {
 			const updatedUser = await updateMe(token!, { username, email, avatar, ...(password && { password }) })
 			updateUser(updatedUser)
+			showToast(t('toast.profileUpdated'))
 			navigate('/profile')
 		} catch {
-			setError(t('profile.updateFailed'))
+			showToast(t('toast.profileUpdateFailed'), 'error')
 		}
 	}
 

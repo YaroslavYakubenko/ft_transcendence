@@ -29,6 +29,16 @@ interface FriendsUpdate
 	is_online: boolean
 }
 
+interface FriendRemoved
+{
+	removed_by_id: number
+}
+
+interface FriendAdded
+{
+	added_by_id: number
+}
+
 // AuthContextType = blue print / declaration
 // there will be a "user", "token" and "last message" field
 interface AuthContextType 
@@ -43,6 +53,8 @@ interface AuthContextType
 	sendChat: (to_user_id: number, message: string) => void			// function to send a message
 	lastMessage: IncomingMessage | null
 	friendsUpdate: FriendsUpdate | null
+	friendRemoved: FriendRemoved | null
+	friendAdded: FriendAdded | null
 }
 
 // creates actual context object
@@ -59,6 +71,8 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 
 	const [lastMessage, setLastMessage] = useState<IncomingMessage | null>(null)
 	const [friendsUpdate, setFriendsUpdate] = useState<FriendsUpdate | null>(null)
+	const [friendRemoved, setFriendRemoved] = useState<FriendRemoved | null>(null)
+	const [friendAdded, setFriendAdded] = useState<FriendAdded | null>(null)
 
 	const wsRef = useRef<WebSocket | null>(null)
 
@@ -152,6 +166,14 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 						is_online: data.is_online,
 					})
 				}
+				else if (data.type === 'friend_removed')
+				{
+					setFriendRemoved({ removed_by_id: data.removed_by_id })
+				}
+				else if (data.type === 'friend_added')
+				{
+					setFriendAdded({ added_by_id: data.added_by_id })
+				}
 			}
 
 			ws.onerror = () => {}
@@ -192,6 +214,8 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 			sendChat,
 			lastMessage,
 			friendsUpdate,
+			friendRemoved,
+			friendAdded,
 		}}>
 			{children}
 		</AuthContext.Provider>

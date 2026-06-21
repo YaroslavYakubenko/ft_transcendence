@@ -179,6 +179,18 @@ export default {
 		section6Title: "التغييرات في الشروط",
 		section6Text: "نحتفظ بالحق في تحديث شروط الخدمة هذه في أي وقت. استمرار استخدام المنصة بعد التغييرات يعني قبولك للشروط الجديدة.",
     },
+	toast: {
+		profileUpdated: "تم تحديث الملف الشخصي",
+		profileUpdateFailed: "فشل تحديث الملف الشخصي",
+		friendAdded: "تمت إضافة الصديق",
+		friendRemoved: "تمت إزالة الصديق",
+		friendAddFailed: "فشل إضافة الصديق",
+		friendRemoveFailed: "فشل إزالة الصديق",
+		registered: "تم إنشاء الحساب بنجاح",
+		opponentJoined: "انضم الخصم!",
+		drawOffered: "اقترح الخصم التعادل",
+		drawDeclined: "تم رفض عرض التعادل",
+	},
 		achievements: {
         1: { name: "راصتنا لوأ", description: "كل ةبعل لوأب زوفا" },
         2: { name: "ةجوملا ىلع", description: "ةيلاتتم باعلأ 3 ـب زوفا" },

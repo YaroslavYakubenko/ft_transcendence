@@ -179,6 +179,18 @@ export default {
 		section6Title: "Änderungen der Bedingungen",
 		section6Text: "Wir behalten uns das Recht vor, diese Nutzungsbedingungen jederzeit zu aktualisieren. Die weitere Nutzung der Plattform nach Änderungen gilt als Zustimmung zu den neuen Bedingungen.",
 	},
+	toast: {
+		profileUpdated: "Profil erfolgreich aktualisiert",
+		profileUpdateFailed: "Profil konnte nicht aktualisiert werden",
+		friendAdded: "Freund hinzugefügt",
+		friendRemoved: "Freund entfernt",
+		friendAddFailed: "Freund konnte nicht hinzugefügt werden",
+		friendRemoveFailed: "Freund konnte nicht entfernt werden",
+		registered: "Konto erfolgreich erstellt",
+		opponentJoined: "Gegner ist beigetreten!",
+		drawOffered: "Gegner hat Remis angeboten",
+		drawDeclined: "Dein Remisangebot wurde abgelehnt",
+	},
 	achievements: {
         1: { name: "Erster Sieg", description: "Gewinne dein erstes Spiel" },
         2: { name: "Auf der Rolle", description: "Gewinne 3 Spiele in Folge" },

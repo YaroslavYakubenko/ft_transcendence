@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import LoginPage from "./pages/LoginPage"
 import HomePage from "./pages/HomePage"
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { ToastProvider } from './context/ToastContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import RegisterPage from './pages/RegisterPage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
@@ -29,11 +30,24 @@ function AuthenticatedWidgets() {
 function App() {
     return (
         <AuthProvider>
+          <ToastProvider>
             <BrowserRouter>
                 <Routes>
-                    <Route path="/" element={<PublicOnlyRoute><LoginPage/></PublicOnlyRoute>} />
-                    <Route path="/login" element={<PublicOnlyRoute><LoginPage/></PublicOnlyRoute>} />
-                    <Route path="/register" element={<PublicOnlyRoute><RegisterPage/></PublicOnlyRoute>} />
+                    <Route path="/" element={
+                        <PublicOnlyRoute>
+                            <LoginPage/>
+                        </PublicOnlyRoute>
+                    } />
+                    <Route path="/login" element={
+                        <PublicOnlyRoute>
+                            <LoginPage/>
+                        </PublicOnlyRoute>
+                    } />
+                    <Route path="/register" element={
+                        <PublicOnlyRoute>
+                            <RegisterPage/>
+                        </PublicOnlyRoute>
+                    } />
                     <Route path="/oauth/callback" element={<OAuthCallbackPage/>} />
                     <Route path="/privacy-policy" element={<PrivacyPolicyPage/>} />
                     <Route path="/terms-of-service" element={<TermsOfServicePage/>} />
@@ -88,6 +102,7 @@ function App() {
                 </Routes>
                 <AuthenticatedWidgets />
             </BrowserRouter>
+          </ToastProvider>
         </AuthProvider>
     )
 }

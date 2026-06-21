@@ -130,6 +130,18 @@ class OnlineStatusConsumer(AsyncWebsocketConsumer):
         'created_at': event['created_at'],
         }))
 
+    async def friend_removed_msg(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'friend_removed',
+            'removed_by_id': event['removed_by_id'],
+        }))
+
+    async def friend_added_msg(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'friend_added',
+            'added_by_id': event['added_by_id'],
+        }))
+
 
 # Handles WebSocket connections for live Chess games
 # Both players connect here; moves are broadcast between them in real time

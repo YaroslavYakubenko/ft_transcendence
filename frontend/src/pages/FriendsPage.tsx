@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
 import { getFriends, removeFriend, type Friend } from "../api/social"
 import { useTranslation } from "react-i18next"
+import { useToast } from "../context/ToastContext"
 
 function FriendsPage() {
 	const [friends, setFriends] = useState<Friend[]>([])
@@ -12,6 +13,7 @@ function FriendsPage() {
 	const navigate = useNavigate()
 	const { t } = useTranslation()
 	const { token } = useAuth()
+	const { showToast } = useToast()
 
 	useEffect(() => {
 		const controller = new AbortController()
@@ -25,8 +27,9 @@ function FriendsPage() {
 		try {
 			await removeFriend(userId, token!)
 			setFriends(friends.filter(f => f.id !== userId))
+			showToast(t('toast.friendRemoved'))
 		} catch {
-			setError(t('friends.removeFailed'))
+			showToast(t('toast.friendRemoveFailed'), 'error')
 		}
 	}
 
