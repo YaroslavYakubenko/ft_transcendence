@@ -139,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 
 		let isClosed = false
 		let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
-		const WS_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:8443`
+		const WS_URL = `wss://${window.location.hostname}:8443`
 		const socketUrl = `${WS_URL}/ws/status/?token=${token}`
 
 		function connect() {
@@ -148,15 +148,24 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 			const ws = new WebSocket(socketUrl)
 			wsRef.current = ws
 
+			ws.onopen = () => {
+				console.log("STATUS WS OPEN")
+			}
+
 			ws.onmessage = (e) => {
 				const data = JSON.parse(e.data)
+
+				console.log("STATUS WS MESSAGE:", data)
 
 				if (data.type === 'chat')
 				{
 					setLastMessage({
+						id: data.id,
 						from_user_id: data.from_user_id,
+						to_user_id: data.to_user_id,
 						username: data.username,
 						message: data.message,
+						created_at: data.created_at,
 					})
 				}
 				else if (data.type === 'presence')
@@ -176,10 +185,15 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 				}
 			}
 
-			ws.onerror = () => {}
+			ws.onerror = (error) => {
+				console.error("STATUS WS ERROR:", error)
+			}
 
-			ws.onclose = () => {
+			ws.onclose = (event) => {
+				console.log("STATUS WS CLOSED:", event.code, event.reason)
+
 				if (isClosed) return
+
 				reconnectTimeout = setTimeout(connect, 3000)
 			}
 		}

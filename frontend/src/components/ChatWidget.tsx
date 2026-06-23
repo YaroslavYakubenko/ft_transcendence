@@ -16,9 +16,9 @@ function ChatWidget()
 
 	const [input, setInput] = useState("")
 	const bottomRef = useRef<HTMLDivElement>(null)
-	const lastProcessedMessage = useRef<typeof lastMessage>(null)
 	const { t } = useTranslation()
 	const { token, user, sendChat, lastMessage, friendsUpdate } = useAuth()
+	const lastProcessedMessage = useRef<typeof lastMessage>(null)
 
 	useEffect(() => {
 		const controller = new AbortController()
@@ -54,17 +54,20 @@ function ChatWidget()
 		const controller = new AbortController()
 		getMessages(selectedFriend.id, token, controller.signal)
 			.then(function(data) {
+				console.log("getMessages returned:", data)
 				setMessages(data)
 			})
 			.catch(function(error) {
-				if (error.name !== 'AbortError')
+				if (error.name !== 'AbortError') {
 					console.error("Could not load messages:", error)
-				setMessages([])
+					setMessages([])
+				}
 			})
 
 		return () => controller.abort()
 	}, [selectedFriend, token])				// runs when selectedFriend or token changes
 
+	
 	useEffect(() => {
 		if (!lastMessage || !user || lastMessage === lastProcessedMessage.current)
 			return
@@ -80,10 +83,14 @@ function ChatWidget()
 		setMessages(prev => [...prev, {
 			id: Date.now(),
 			fromId: lastMessage.from_user_id,
-			toId: lastMessage.from_user_id === user.id ? selectedFriend!.id : user.id,
+			toId: lastMessage.to_user_id,
 			text: lastMessage.message,
-			timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+			timestamp: new Date().toLocaleTimeString([], {
+				hour: '2-digit', 
+				minute: '2-digit'
+			})
 		}])
+		
 	}, [lastMessage, selectedFriend, user])
 
 
@@ -97,6 +104,8 @@ function handleSend()
 	sendChat(selectedFriend.id, text)
 	setInput("")
 }
+
+	console.log("CHATWIDGET MESSAGES STATE:", messages)
 
 	return (
 		<div className="fixed bottom-6 right-6 rtl:right-auto rtl:left-6 z-50 flex flex-col items-end rtl:items-start gap-3">
