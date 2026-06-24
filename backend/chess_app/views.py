@@ -108,6 +108,7 @@ def make_move(request):
 	_t = request.data.get('to')
 	game_id = request.data.get('game_id')  # Optional: save to database if provided
 
+
 	if not fen or not _s or not _t:
 		return Response({"error": "missing data"}, status=400)
 	
@@ -296,7 +297,7 @@ def create_game(request):
 		white_player = opponent
 		black_player = request.user
 
-	# print(" white_player", white_player, "\n")
+	print("\n\n\n\n white_player", white_player, "\n\n\n\n\n")
 	# print(" black_player", black_player, "\n\n\n")
 
 	# this sets request user as white always !!!!!
@@ -399,3 +400,28 @@ def resign_game(request):
 		"result": game.result,
 		"message": f"{resigner.username or resigner.email} resigned. {winner.username or winner.email} wins!"
 	})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def check_color(request):
+	game_id = request.data.get('gameId')
+	
+	if not game_id:
+		return Response({"error": "game_id is required"}, status=400)
+
+	try:
+		game = Game.objects.get(id=game_id)
+	except Game.DoesNotExist:
+		return Response({"error": "Game not found"}, status=404)
+
+	print("\n\n\n\nrequest.user", request.user, "\n\n\n\n")
+
+	color = "Black"
+	if game.white_player == request.user:
+		color = "White"
+
+	return Response({
+		"color": color,
+	})
+

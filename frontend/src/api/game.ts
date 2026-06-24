@@ -1,4 +1,5 @@
 
+import { getAchStorageKeys } from "../chess/constants"
 
 export interface UserStats {
 	wins: number
@@ -89,14 +90,82 @@ export async function getMatchHistory(userId: number, page: number = 1, signal?:
 	}
 }
 
-export async function getAchievements(_userId: number): Promise<Achievement[]> {
+export async function getAchievements(_userId: number, _stats: UserStats | null): Promise<Achievement[]> {
 	// TODO: Implement achievements in backend
+
+	const storage_k = getAchStorageKeys(_userId)
+
+
+	const num_games = (_stats?.wins ?? 0) + (_stats?.losses ?? 0)
+		console.debug("matches", (_stats?.wins ?? 0) + (_stats?.losses ?? 0))
+		// console.debug("matches", _matches)
+
+
+		if (!localStorage.getItem(storage_k.played_games))
+			localStorage.setItem(storage_k.played_games, `${num_games}`)
+
+		if (!localStorage.getItem(storage_k.ach_1))
+		{
+			if (_stats?.wins ?? 0 > 0)
+				localStorage.setItem(storage_k.ach_1, 'true')
+			else
+				localStorage.setItem(storage_k.ach_1, 'false')
+		}
+		if (!localStorage.getItem(storage_k.ach_2))
+			localStorage.setItem(storage_k.ach_2, 'false')
+		if (!localStorage.getItem(storage_k.ach_3))
+			localStorage.setItem(storage_k.ach_3, 'false')
+		if (!localStorage.getItem(storage_k.ach_4))
+			localStorage.setItem(storage_k.ach_4, 'false')
+		if (!localStorage.getItem(storage_k.ach_5))
+			localStorage.setItem(storage_k.ach_5, 'false')
+
+		if (!localStorage.getItem(storage_k.win_counter))
+			localStorage.setItem(storage_k.win_counter, String(0))
+
+		// update played games
+		localStorage.setItem(storage_k.played_games, String(num_games))
+
+		// if achievement false and games 10>= update
+		if (localStorage.getItem(storage_k.ach_3) == 'false' && num_games >= 10)
+				localStorage.setItem(storage_k.ach_3, 'true')
+		
+		// -> check elo for grandmaster
+		if (localStorage.getItem(storage_k.ach_4) == 'false')
+		{
+			if ( _stats?.elo ?? 0 >= 2000)
+				localStorage.setItem(storage_k.ach_4, 'true')
+		}
+
+		if (localStorage.getItem(storage_k.ach_1) == 'false' && (_stats?.wins ?? 0) > 0)
+			localStorage.setItem(storage_k.ach_1, 'true')
+
+		// -> check win achievements 
+
+		console.debug("ACH streak", localStorage.getItem(storage_k.highest_win_streak) )
+		
+			
+		if (localStorage.getItem(storage_k.ach_2) == 'false' && Number(localStorage.getItem(storage_k.highest_win_streak)) >= 3)
+			localStorage.setItem(storage_k.ach_2, 'true')
+		
+	
+		if (localStorage.getItem(storage_k.ach_5) == 'false' && Number(localStorage.getItem(storage_k.highest_win_streak)) >= 5)
+			localStorage.setItem(storage_k.ach_5, 'true')
+
+
+	function getbool(str: string | null)
+	{
+		if (str && str == 'true')
+			return true
+		return false
+	}
+
 	return [
-		{ id: 1, name: "First Win",     description: "Win your first game",       unlocked: true },
-		{ id: 2, name: "On a Roll",     description: "Win 3 games in a row",       unlocked: true },
-		{ id: 3, name: "Veteran",       description: "Play 10 games",             unlocked: true },
-		{ id: 4, name: "Grandmaster",   description: "Reach 2000 elo",            unlocked: false },
-		{ id: 5, name: "Untouchable",   description: "Win 5 games without a loss", unlocked: false },
+		{ id: 1, name: "First Win",     description: "Win your first game",       unlocked: getbool(localStorage.getItem(storage_k.ach_1)) },
+		{ id: 2, name: "On a Roll",     description: "Win 3 games in a row",       unlocked: getbool(localStorage.getItem(storage_k.ach_2)) },
+		{ id: 3, name: "Veteran",       description: "Play 10 games",             unlocked: getbool(localStorage.getItem(storage_k.ach_3)) },
+		{ id: 4, name: "Grandmaster",   description: "Reach 2000 elo",            unlocked: getbool(localStorage.getItem(storage_k.ach_4)) },
+		{ id: 5, name: "Untouchable",   description: "Win 5 games without a loss", unlocked: getbool(localStorage.getItem(storage_k.ach_5)) },
 	]
 }
 
@@ -272,6 +341,35 @@ export async function resign_game(
 	if (data.error) {
 		console.error(data.error);
 		return null;
+	}
+
+	return data;
+}
+
+export async function check_color(gameId: Number | null, token: string | null)
+{
+	if (!gameId || !token) {
+		console.error("Game ID or token missing");
+		return null;
+	}
+
+	const response = await fetch(`${GAME_BASE_URL}/check-color/`, {
+		method: "POST",
+		headers: {
+			"Authorization": `Token ${token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			gameId,
+		}),
+	})
+
+
+	const data = await response.json();
+
+	if (data.error) {
+		console.error(data.error);
+		return null; // fallback: no update
 	}
 
 	return data;

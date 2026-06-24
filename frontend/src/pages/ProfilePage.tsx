@@ -20,9 +20,13 @@ function ProfilePage() {
       const controller = new AbortController()
       getUserStats(user.id, controller.signal).then(setStats).catch(() => {})
       getMatchHistory(user.id, 1, controller.signal).then(setMatches).catch(() => {})
-      getAchievements(user.id).then(setAchievements).catch(() => {})
       return () => controller.abort()
     }, [user])
+	
+    useEffect(() => {
+      if (!user) return
+		getAchievements(user.id, stats).then(setAchievements).catch(() => {})
+	}, [user, stats])
 
     return (
       <div className="bg-[#0f0f13] min-h-screen flex flex-col">

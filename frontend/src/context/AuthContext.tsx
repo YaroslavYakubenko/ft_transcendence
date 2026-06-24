@@ -8,7 +8,7 @@
 import { createContext, useContext, useState, useEffect, useRef } from "react"
 import { getMe, logout as apiLogout, deleteAccount as apiDeleteAccount } from "../api/auth"
 
-interface User 
+export interface User 
 {
 	id: number
 	email: string

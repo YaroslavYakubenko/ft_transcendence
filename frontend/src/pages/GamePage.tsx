@@ -19,6 +19,7 @@ import { usePersistState, useRematchReset, usePlayerColor, useRestartGame, useRe
 import { appendMove, getBoardCoordinates, createOnPieceDrag, createOnPieceDrop, getGameId, requiresPromotion } from "../chess/utils"
 
 
+
 function GamePage() {
 	const { user, token } = useAuth()
 	const userRef = useRef(user)
@@ -388,6 +389,9 @@ function GamePage() {
 					< Gameover
 						result={result}
 						settings={effectiveSettings}
+						user={userRef.current}
+						token={token}
+						gameId={gameId}
 						restartGame={restartGame}
 					/>
 

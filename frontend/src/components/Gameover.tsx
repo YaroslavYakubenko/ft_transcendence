@@ -1,5 +1,10 @@
 
 import { useNavigate } from "react-router-dom"
+import { getAchStorageKeys } from "../chess/constants"
+import type  { User } from "../context/AuthContext"
+import { check_color } from "../api/game"
+
+import { useEffect } from "react"
 
 type RestartGameResult = {
 	gameId?: number
@@ -12,16 +17,75 @@ type Props = {
 		winner: string
 	}
 	settings: any
+	user:  User | null
+	token: string | null
+	gameId: Number | null
 	restartGame: () => Promise<RestartGameResult>
 }
 
 export default function Gameover({
 	result,
 	settings,
+	user,
+	token,
+	gameId,
 	restartGame,
 }: Props){
 	const navigate = useNavigate()
-	if (result.state === "ongoing") return null
+
+	useEffect(() => {
+		if (result.state === "ongoing")
+				return ;
+		if (user)
+		{
+			console.debug("user id", user.id)
+			console.debug("game id", gameId)
+
+			check_color(gameId, token).then((data: any) => {
+				if (!data)
+				{
+					console.debug("null")
+					return
+				}
+				console.debug("user color", data.color)
+				console.debug("res winner", result.winner)
+
+				const storage_k = getAchStorageKeys(user.id)
+		
+				if (data.color == result.winner)
+				{
+					if (!localStorage.getItem(storage_k.win_counter))
+						localStorage.setItem(storage_k.win_counter, "1")
+					else
+						localStorage.setItem(storage_k.win_counter, String(Number(localStorage.getItem(storage_k.win_counter)) + 1) )
+					
+					// win streak update
+					console.debug("Gameover streak ", localStorage.getItem(storage_k.highest_win_streak))
+					console.debug("Gameover win counter ", localStorage.getItem(storage_k.win_counter))
+
+					if (!localStorage.getItem(storage_k.highest_win_streak))
+					{
+						console.debug("aaaaa")
+						localStorage.setItem(storage_k.highest_win_streak, localStorage.getItem(storage_k.win_counter) ?? "0")
+					}
+					else if (Number(localStorage.getItem(storage_k.highest_win_streak)) < Number(localStorage.getItem(storage_k.win_counter)))
+					{
+						console.debug("ree")
+						localStorage.setItem(storage_k.highest_win_streak, localStorage.getItem(storage_k.win_counter) ?? "0")
+					}
+				}
+				else
+					localStorage.setItem(storage_k.win_counter, "0")
+
+
+			})
+
+		}
+	}, [user, gameId, token, result.winner]);
+
+	if (result.state === "ongoing")
+		return null;
+	
 
 	const handleRematch = async () => {
 		const res = await restartGame()

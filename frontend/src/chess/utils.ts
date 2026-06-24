@@ -1,4 +1,4 @@
-import { PROMOTION_PIECES, SQUARE_SIZE } from "../chess/constants"
+import { PROMOTION_PIECES, SQUARE_SIZE, getAchStorageKeys } from "../chess/constants"
 import type { PieceHandlerArgs, PieceDropHandlerArgs } from "react-chessboard"
 
 
@@ -174,6 +174,7 @@ export function createOnPieceDrop({
 			setPro({ move: data.promotion, x: -1, y: -1, pre: "" });
 			setCheckSquare(data.kingpos || null);
 		});
+
 
 		// after movement reset highlights
 		setHighlightSquares([]);
