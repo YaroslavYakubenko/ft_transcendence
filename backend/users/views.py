@@ -4,14 +4,15 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate # check email + password and return object or none
-from .models import User, Friendship, ChatMessage
+from .models import User, Friendship, ChatMessage, EmailVerificationToken
 from .serializers import RegisterSerializer, UserSerializer, FriendSerializer
 from chess_app.models import Game
 import requests #for http request to GitHub API
 import secrets
 import logging
 from django.conf import settings #to read our settings.py
-from django.http import JsonResponse # for docker health check
+from django.http import JsonResponse, HttpResponseRedirect, HttpResponseBadRequest # for docker health check
+from django.core.mail import send_mail
 from django.db import connection
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
@@ -45,9 +46,36 @@ def register(request):
 	serializer = RegisterSerializer(data=request.data)
 	if serializer.is_valid(): #check email and password are correct
 		user = serializer.save() # create user in DB
-		token, _ = Token.objects.get_or_create(user=user) # create token for new user or get old one
-		return Response({'token': token.key}, status=status.HTTP_201_CREATED)
+		user.email_verified = False
+		user.save()
+		verification = EmailVerificationToken.objects.create(user=user)
+		verify_url = f"{settings.FRONTEND_URL}/api/auth/verify-email/?token={verification.token}"
+		send_mail(
+			subject='Verify your email - Transcendence',
+			message=f'Click the link to verify your email:\n\n{verify_url}',
+			from_email=settings.DEFAULT_FROM_EMAIL,
+			recipient_list=[user.email],
+			fail_silently=True,
+		)
+		return Response({'message': 'Registration successful. Check your email to verify your account.'}, status=status.HTTP_201_CREATED)
 	return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+def verify_email(request):
+	token_str = request.GET.get('token')
+	if not token_str:
+		return HttpResponseBadRequest('Missing token')
+	try:
+		import uuid
+		token_uuid = uuid.UUID(token_str)
+		verification = EmailVerificationToken.objects.get(token=token_uuid)
+	except (ValueError, EmailVerificationToken.DoesNotExist):
+		return HttpResponseBadRequest('Invalid or expired token')
+	user = verification.user
+	user.email_verified = True
+	user.save()
+	verification.delete()
+	return HttpResponseRedirect(f"{settings.FRONTEND_URL}/login?verified=true")
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -57,6 +85,8 @@ def login(request):
 	user = authenticate(request, username=email, password=password) #check email and password, return user or none
 	if user is None:
 		return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+	if not user.email_verified:
+		return Response({'error': 'Please verify your email before logging in.'}, status=status.HTTP_403_FORBIDDEN)
 	user.is_online = True
 	user.save()
 	token, _ = Token.objects.get_or_create(user=user)
@@ -281,11 +311,12 @@ def oauth_login(request):
 		user, created = User.objects.get_or_create(email=email)
 		if created or not user.oauth_avatar:
 			user.oauth_avatar = avatar_url
+		user.email_verified = True  # email verified by GitHub
 		user.is_online = True
 		user.save()
 		token, _ = Token.objects.get_or_create(user=user)
 		return Response({'token': token.key})
-		
+
 	if provider == '42':
 		if not settings.FORTY_TWO_CLIENT_ID or not settings.FORTY_TWO_CLIENT_SECRET:
 			logger.warning('42 OAuth credentials are not configured in backend/.env')
@@ -342,6 +373,7 @@ def oauth_login(request):
 		user, created = User.objects.get_or_create(email=email)
 		if created or not user.oauth_avatar:
 			user.oauth_avatar = avatar_url
+		user.email_verified = True  # email verified by 42
 		user.is_online = True
 		user.save()
 		token, _ = Token.objects.get_or_create(user=user)

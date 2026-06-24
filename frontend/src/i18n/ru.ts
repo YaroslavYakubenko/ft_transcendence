@@ -24,6 +24,8 @@ export default {
 		loginWithGithub: "Войти через GitHub",
 		loginWith42: "Войти через 42",
 		invalidCredentials: "Неверный email или пароль",
+		emailNotVerified: "Пожалуйста, подтвердите email перед входом.",
+		emailVerified: "Email подтверждён! Теперь вы можете войти.",
     },
     register: {
     	title: "Создать аккаунт",
@@ -42,6 +44,13 @@ export default {
 			uppercase: "Одна заглавная буква (A-Z)",
 			digit: "Одна цифра (0-9)",
 			special: "Один спецсимвол (!@#$...)",
+		},
+		checkEmail: {
+			title: "Проверьте почту",
+			sentTo: "Мы отправили ссылку для подтверждения на",
+			clickLink: "Нажмите на ссылку в письме, чтобы активировать аккаунт.",
+			alreadyVerified: "Уже подтвердили?",
+			logIn: "Войти",
 		},
     },
 	home: {

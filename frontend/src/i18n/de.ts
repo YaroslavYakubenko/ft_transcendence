@@ -24,6 +24,8 @@ export default {
 		loginWithGithub: "Mit GitHub anmelden",
 		loginWith42: "Mit 42 anmelden",
 		invalidCredentials: "Ungültige E-Mail oder Passwort",
+		emailNotVerified: "Bitte bestätige deine E-Mail vor dem Anmelden.",
+		emailVerified: "E-Mail bestätigt! Du kannst dich jetzt anmelden.",
     },
     register: {
     	title: "Konto erstellen",
@@ -42,6 +44,13 @@ export default {
 			uppercase: "Ein Großbuchstabe (A-Z)",
 			digit: "Eine Ziffer (0-9)",
 			special: "Ein Sonderzeichen (!@#$...)",
+		},
+		checkEmail: {
+			title: "E-Mail überprüfen",
+			sentTo: "Wir haben einen Bestätigungslink gesendet an",
+			clickLink: "Klicke auf den Link in der E-Mail, um dein Konto zu aktivieren.",
+			alreadyVerified: "Bereits bestätigt?",
+			logIn: "Anmelden",
 		},
     },
 	home: {

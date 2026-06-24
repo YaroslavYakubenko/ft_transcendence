@@ -24,6 +24,8 @@ export default {
 		loginWithGithub: "ربع لوخدلا ليجست GitHub",
 		loginWith42: "42 ربع لوخدلا ليجست",
 		invalidCredentials: "ةحيحص ريغ رورملا ةملك وأ ينورتكلإلا ديربلا",
+		emailNotVerified: "يرجى التحقق من بريدك الإلكتروني قبل تسجيل الدخول.",
+		emailVerified: "تم التحقق من البريد الإلكتروني! يمكنك الآن تسجيل الدخول.",
     },
     register: {
     	title: "باسح ءاشنإ",
@@ -42,6 +44,13 @@ export default {
 			uppercase: "حرف كبير واحد (A-Z)",
 			digit: "رقم واحد (0-9)",
 			special: "رمز خاص واحد (!@#$...)",
+		},
+		checkEmail: {
+			title: "تحقق من بريدك الإلكتروني",
+			sentTo: "لقد أرسلنا رابط التحقق إلى",
+			clickLink: "انقر على الرابط في البريد الإلكتروني لتفعيل حسابك.",
+			alreadyVerified: "تم التحقق بالفعل؟",
+			logIn: "تسجيل الدخول",
 		},
     },
     home: {

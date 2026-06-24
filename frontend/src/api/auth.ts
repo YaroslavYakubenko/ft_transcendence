@@ -40,22 +40,22 @@ export async function login(email: string, _password: string): Promise<LoginResp
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ email, password: _password })
 	})
+	if (res.status === 403) throw new Error('EMAIL_NOT_VERIFIED')
 	if (!res.ok) throw new Error(await getErrorMessage(res, 'Invalid email or password'))
 	const data = await res.json()
 	const user = await getMe(data.token)
 	return { token: data.token, user }
 }
 
-export async function register(email: string, _password: string): Promise<LoginResponse> {
+export async function register(email: string, _password: string): Promise<{ message: string }> {
 	const res = await fetch(`${API}/auth/register/`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ email, password: _password })
 	})
 	if (!res.ok) throw new Error(await getErrorMessage(res, 'Registration failed'))
-		const data = await res.json()
-		const user = await getMe(data.token)
-		return { token: data.token, user }
+	const data = await res.json()
+	return { message: data.message }
 }
 
 export async function getMe(_token: string, signal?: AbortSignal): Promise<User> {

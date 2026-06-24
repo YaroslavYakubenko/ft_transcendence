@@ -2,6 +2,7 @@
 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+import uuid
 
 class UserManager(BaseUserManager):
 	def create_user(self, email, password=None, **extra_fields): # ** means to add extra arguments in vocabluary
@@ -25,6 +26,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 	oauth_avatar = models.URLField(blank=True, default='')
 	is_online = models.BooleanField(default=False)
 	is_active = models.BooleanField(default=True)
+	email_verified = models.BooleanField(default=False)
 	is_staff = models.BooleanField(default=False)
 	created_at = models.DateTimeField(auto_now_add=True) # time of registration
 	
@@ -73,3 +75,8 @@ class ChatMessage(models.Model):
 	#when ChatMessage object is shown as text, show the message text
 	def __str__(self):
 		return self.message
+
+class EmailVerificationToken(models.Model):
+	user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='email_token')
+	token = models.UUIDField(default=uuid.uuid4, unique=True)
+	created_at = models.DateTimeField(auto_now_add=True)
