@@ -104,7 +104,7 @@ export function createOnPieceDrag({
 	effectiveColor,
 }: any) {
 	return ({ isSparePiece, piece, square }: PieceHandlerArgs) => {
-		console.log("DEBUG: DRAG BEGIN:", isSparePiece, piece, square);
+		// console.log("DEBUG: DRAG BEGIN:", isSparePiece, piece, square);
 
 		if (!square || !piece) {
 			setHighlightSquares([]);

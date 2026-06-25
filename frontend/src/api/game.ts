@@ -374,3 +374,32 @@ export async function check_color(gameId: Number | null, token: string | null)
 
 	return data;
 }
+
+export async function check_game_status(gameId: Number | null, token: string | null)
+{
+	if (!gameId || !token) {
+		console.error("Game ID or token missing");
+		return null;
+	}
+
+	const response = await fetch(`${GAME_BASE_URL}/check-game-status/`, {
+		method: "POST",
+		headers: {
+			"Authorization": `Token ${token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			gameId,
+		}),
+	})
+
+
+	const data = await response.json();
+
+	if (data.error) {
+		console.error(data.error);
+		return data; 
+	}
+
+	return data;
+}

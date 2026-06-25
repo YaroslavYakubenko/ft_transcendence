@@ -68,8 +68,21 @@ export default {
     	black: "دوسأ",
     	random: "يئاوشع",
     	boardTheme: "ةعقرلا ةمس",
+
+		// check if correct
+		pieceTheme: "نمط القطع",
+		joinOptionMsg: "add",
+		enterIdMsg: "Spiel-ID eingeben",
+		join: "Beitreten",
+
     	startGame: "ةبعللا أدبا",
     },
+	waitingroom: {
+		// check
+		gameId: "Game ID",
+		waitingMsg: "Waiting for opponent...",
+		cancel: "cancel",
+	},
     game: {
     	resign: "مالستسالا",
     	draw: "لداعت",
@@ -79,6 +92,15 @@ export default {
     	check: "شك!",
     	checkmate: "تام شك!",
 		noMoves: "دعب تاكرح دجوت ال",
+		// add
+		stalemate: "Stalemate",
+		friend: "Freund",
+		White: "White",
+		Black: "Black",
+		Won: "Won!",
+    	resigned: "Aufgegeben",
+		rematch: "Rückspiel",
+		home: "Startseite",
     },
     profile: {
     	editProfile: "يصخشلا فلملا ليدعت",

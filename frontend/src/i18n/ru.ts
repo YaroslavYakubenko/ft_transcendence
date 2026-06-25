@@ -68,8 +68,21 @@ export default {
     	black: "Чёрные",
     	random: "Случайно",
     	boardTheme: "Тема доски",
+
+		// check if correct
+		pieceTheme: "Стиль фигур",
+		joinOptionMsg: "add",
+		enterIdMsg: "Spiel-ID eingeben",
+		join: "Beitreten",
+
     	startGame: "Начать игру",
     },
+	waitingroom: {
+		// check
+		gameId: "Game ID",
+		waitingMsg: "Waiting for opponent...",
+		cancel: "cancel",
+	},
     game: {
     	resign: "Сдаться",
     	draw: "Ничья",
@@ -79,6 +92,15 @@ export default {
     	check: "Шах!",
     	checkmate: "Мат!",
 		noMoves: "Ходов пока нет",
+		// add
+		stalemate: "Stalemate",
+		friend: "Freund",
+		White: "White",
+		Black: "Black",
+		Won: "Won!",
+    	resigned: "Aufgegeben",
+		rematch: "Rückspiel",
+		home: "Startseite",
     },
     profile: {
     	editProfile: "Редактировать профиль",

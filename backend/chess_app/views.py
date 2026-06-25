@@ -425,3 +425,26 @@ def check_color(request):
 		"color": color,
 	})
 
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def check_game_status(request):
+	game_id = request.data.get('gameId')
+	
+	if not game_id:
+		return Response({"error": "game_id is required"}, status=400)
+
+	try:
+		game = Game.objects.get(id=game_id)
+	except Game.DoesNotExist:
+		return Response({"error": "Game not found"}, status=404)
+
+	if game.status == 'completed':
+		return Response({"error": "Game is already completed"}, status=400)
+
+	if game.white_player.email != "pending@transcendence.de" and game.black_player.email != "pending@transcendence.de" and game.white_player != request.user and game.black_player != request.user:
+		return Response({"error": "You are not a player in this game"}, status=403)
+
+	return Response({
+		"status": "valid",
+	})

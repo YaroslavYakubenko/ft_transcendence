@@ -80,10 +80,6 @@ export function useResignGame(storage_keys: any, token: string | null, gameId: n
 		localStorage.removeItem(storage_keys.fen)
 		localStorage.removeItem(storage_keys.move_history)
 
-		setFen(START_FEN)
-		setMoves([])
-		setResignError("")
-
 		if (!token) {
 			setResignError("You must be logged in to resign.")
 			return
@@ -104,6 +100,9 @@ export function useResignGame(storage_keys: any, token: string | null, gameId: n
 		}
 
 		const winner = data.result === 'black_win' ? 'Black' : 'White'
+		setFen(START_FEN)
+		setMoves([])
+		setResignError("")
 		setRes({ state: "resign", winner })
 	}
 
