@@ -24,6 +24,7 @@ function EditProfilePage() {
 			if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
 		}
 	}, [])
+	const [isSubmitting, setIsSubmitting] = useState(false)
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 	const [showPassword, setShowPassword] = useState(false)
 	const [showConfirm, setShowConfirm] = useState(false)
@@ -36,6 +37,7 @@ function EditProfilePage() {
 	const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password)
 
 	async function handleSubmit() {
+		if (isSubmitting) return
 		if (!email.trim()) {
 			setError(t('login.fillAllFields'))
 			return
@@ -49,6 +51,7 @@ function EditProfilePage() {
 			return
 		}
 		setError('')
+		setIsSubmitting(true)
 		try {
 			const updatedUser = await updateMe(token!, { username, email, avatar, ...(password && { password }) })
 			updateUser(updatedUser)
@@ -56,6 +59,8 @@ function EditProfilePage() {
 			navigate('/profile')
 		} catch {
 			showToast(t('toast.profileUpdateFailed'), 'error')
+		} finally {
+			setIsSubmitting(false)
 		}
 	}
 
@@ -194,7 +199,8 @@ function EditProfilePage() {
 						</button>
 						<button
 							onClick={handleSubmit}
-							className="flex-1 bg-[#e2b96f] border-none rounded-lg py-2 text-[#0f0f13] text-sm font-semibold cursor-pointer"
+							disabled={isSubmitting}
+							className="flex-1 bg-[#e2b96f] border-none rounded-lg py-2 text-[#0f0f13] text-sm font-semibold cursor-pointer disabled:opacity-50"
 						>
 							{t('profile.saveChanges')}
 						</button>

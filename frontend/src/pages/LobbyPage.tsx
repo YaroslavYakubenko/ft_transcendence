@@ -56,7 +56,7 @@ function LobbyPage() {
             if (game?.game_id) {
                 gameId = game.game_id
             } else {
-                setStartError("Could not create tracked game. Starting local game without stats/resign tracking.")
+                setStartError(t('lobby.couldNotCreateTracked'))
             }
 
             if (game?.user && game.user !== pieceColor) {
@@ -75,7 +75,7 @@ function LobbyPage() {
                 localStorage.removeItem(`move_history_${game.game_id}`)
                 localStorage.removeItem(`piece_color_${game.game_id}`)
             } else {
-                setStartError("Could not create tracked game.")
+                setStartError(t('lobby.couldNotCreate'))
             }
 
             if (game?.user && game.user !== pieceColor) {

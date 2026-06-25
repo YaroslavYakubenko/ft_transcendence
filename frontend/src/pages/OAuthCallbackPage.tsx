@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { oauthLogin, type OAuthProvider } from "../api/auth"
 import { useAuth } from "../context/AuthContext"
+import { useTranslation } from "react-i18next"
 
 function OAuthCallbackPage() {
 	const [error, setError] = useState('')
@@ -9,6 +10,7 @@ function OAuthCallbackPage() {
 	const navigate = useNavigate()
 	const { login } = useAuth()
 	const hasRun = useRef(false)
+	const { t } = useTranslation()
 
 	useEffect(() => {
 		const code = searchParams.get('code')
@@ -60,11 +62,11 @@ function OAuthCallbackPage() {
 						onClick={() => navigate('/login')}
 						className="text-[#e2b96f] underline cursor-pointer"
 					>
-						Back to login
+						{t('login.backToLogin')}
 					</button>
 				</div>
 			) : (
-				<p className="text-[#8892a4]">Logging in...</p>
+				<p className="text-[#8892a4]">{t('common.loggingIn')}</p>
 			)}
 		</div>
 	)

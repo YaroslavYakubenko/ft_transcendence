@@ -41,15 +41,16 @@ interface FriendAdded
 
 // AuthContextType = blue print / declaration
 // there will be a "user", "token" and "last message" field
-interface AuthContextType 
+interface AuthContextType
 {
 	user: User | null
 	token: string | null
 	login: (token: string, user: User) => void						// function to login
-	logout: () => void												// function to logout
+	logout: () => Promise<void>										// function to logout
 	updateUser: (updates: Partial<User>) => void					// function to update user data
 	deleteAccount: () => Promise<void>								// function to delete account
 	isLoggedIn: boolean
+	authLoading: boolean
 	sendChat: (to_user_id: number, message: string) => void			// function to send a message
 	lastMessage: IncomingMessage | null
 	friendsUpdate: FriendsUpdate | null
@@ -69,6 +70,8 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 		localStorage.getItem('token')								// reads token from localStorage on startup
 	)
 
+	const [authLoading, setAuthLoading] = useState<boolean>(!!localStorage.getItem('token'))
+
 	const [lastMessage, setLastMessage] = useState<IncomingMessage | null>(null)
 	const [friendsUpdate, setFriendsUpdate] = useState<FriendsUpdate | null>(null)
 	const [friendRemoved, setFriendRemoved] = useState<FriendRemoved | null>(null)
@@ -82,13 +85,16 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 		setUser(user)
 	}
 
-	const logout = () => {
-		if (token) {
-			apiLogout(token)
+	const logout = async () => {
+		try {
+			if (token) await apiLogout(token)
+		} catch {
+			// backend unreachable — proceed with local cleanup anyway
+		} finally {
+			localStorage.removeItem('token')
+			setToken(null)
+			setUser(null)
 		}
-		localStorage.removeItem('token')
-		setToken(null)
-		setUser(null)
 	}
 
 
@@ -98,7 +104,11 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 	}
 
 	const deleteAccount = async () => {
-		if (token) await apiDeleteAccount(token)
+		try {
+			if (token) await apiDeleteAccount(token)
+		} catch {
+			return
+		}
 		setUser(null)
 		setToken(null)
 		localStorage.removeItem('token')
@@ -122,6 +132,9 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 				localStorage.removeItem('token')
 				setToken(null)
 				setUser(null)
+			})
+			.finally(function(){
+				if (!controller.signal.aborted) setAuthLoading(false)
 			})
 
 		return () => controller.abort()
@@ -225,6 +238,7 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 			deleteAccount,
 			updateUser,
 			isLoggedIn: !!token,
+			authLoading,
 			sendChat,
 			lastMessage,
 			friendsUpdate,

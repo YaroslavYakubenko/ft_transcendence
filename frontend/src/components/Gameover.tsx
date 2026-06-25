@@ -1,5 +1,6 @@
 
 import { useNavigate } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 
 type RestartGameResult = {
 	gameId?: number
@@ -21,6 +22,7 @@ export default function Gameover({
 	restartGame,
 }: Props){
 	const navigate = useNavigate()
+	const { t } = useTranslation()
 	if (result.state === "ongoing") return null
 
 	const handleRematch = async () => {
@@ -58,11 +60,11 @@ export default function Gameover({
 				{/* Result header */}
 				<div className="text-center">
 					<div className="text-[18px] font-bold">
-						{result?.winner ? `${result.winner} Won!` : "Draw"}
+						{result?.winner ? t('game.won', { winner: result.winner }) : t('game.draw')}
 					</div>
 
 					<div className="mt-1 text-xs text-[#8892a4]">
-						Game over
+						{t('game.gameOver')}
 					</div>
 				</div>
 
@@ -76,7 +78,7 @@ export default function Gameover({
 						className="flex-1 rounded-lg bg-[#81b64c] px-4 py-2.5 font-semibold text-white cursor-pointer"
 						onClick={handleRematch}
 					>
-						Rematch
+						{t('game.rematch')}
 					</button>
 
 					<button
@@ -84,7 +86,7 @@ export default function Gameover({
 						className="flex-1 rounded-lg bg-[#3a3937] px-4 py-2.5 font-semibold text-[#f0eeff] cursor-pointer"
 						onClick={() => navigate("/")}
 					>
-						Home
+						{t('nav.home')}
 					</button>
 				</div>
 			</div>

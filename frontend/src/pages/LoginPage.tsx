@@ -59,7 +59,7 @@ function LoginPage() {
 			if (err instanceof Error && err.message) {
 				setError(err.message)
 			} else {
-				setError('Failed to start OAuth flow. Please try again.')
+				setError(t('login.oauthFailed'))
 			}
 		}
 	}

@@ -26,6 +26,8 @@ export default {
 		invalidCredentials: "Ungültige E-Mail oder Passwort",
 		emailNotVerified: "Bitte bestätige deine E-Mail vor dem Anmelden.",
 		emailVerified: "E-Mail bestätigt! Du kannst dich jetzt anmelden.",
+		oauthFailed: "OAuth-Anmeldung fehlgeschlagen. Bitte erneut versuchen.",
+		backToLogin: "Zurück zur Anmeldung",
     },
     register: {
     	title: "Konto erstellen",
@@ -77,7 +79,12 @@ export default {
     	black: "Schwarz",
     	random: "Zufällig",
     	boardTheme: "Brettdesign",
+    	pieceTheme: "Figurendesign",
+    	default: "Standard",
+    	simple: "Einfach",
     	startGame: "Spiel starten",
+		couldNotCreateTracked: "Spiel konnte nicht verfolgt werden. Lokales Spiel wird ohne Statistiken gestartet.",
+		couldNotCreate: "Spiel konnte nicht verfolgt werden.",
     },
     game: {
     	resign: "Aufgeben",
@@ -88,6 +95,9 @@ export default {
     	check: "Schach!",
     	checkmate: "Schachmatt!",
 		noMoves: "Noch keine Züge",
+		won: "{{winner}} hat gewonnen!",
+		gameOver: "Spiel beendet",
+		rematch: "Revanche",
     },
     profile: {
     	editProfile: "Profil bearbeiten",
@@ -145,6 +155,7 @@ export default {
     	notFound: "Seite nicht gefunden",
     	backHome: "Zur Startseite",
     	userNotFound: "Benutzer nicht gefunden",
+		loggingIn: "Anmelden...",
     },
 	footer: {
 		privacyPolicy: "Datenschutzrichtlinie",
@@ -199,6 +210,7 @@ export default {
 		opponentJoined: "Gegner ist beigetreten!",
 		drawOffered: "Gegner hat Remis angeboten",
 		drawDeclined: "Dein Remisangebot wurde abgelehnt",
+		loadFailed: "Daten konnten nicht geladen werden",
 	},
 	achievements: {
         1: { name: "Erster Sieg", description: "Gewinne dein erstes Spiel" },

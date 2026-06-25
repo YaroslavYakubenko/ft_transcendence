@@ -26,6 +26,8 @@ export default {
 		invalidCredentials: "Неверный email или пароль",
 		emailNotVerified: "Пожалуйста, подтвердите email перед входом.",
 		emailVerified: "Email подтверждён! Теперь вы можете войти.",
+		oauthFailed: "Ошибка OAuth. Попробуйте ещё раз.",
+		backToLogin: "Вернуться к входу",
     },
     register: {
     	title: "Создать аккаунт",
@@ -77,7 +79,12 @@ export default {
     	black: "Чёрные",
     	random: "Случайно",
     	boardTheme: "Тема доски",
+    	pieceTheme: "Тема фигур",
+    	default: "Стандарт",
+    	simple: "Простой",
     	startGame: "Начать игру",
+		couldNotCreateTracked: "Не удалось создать отслеживаемую игру. Запускаем локально без статистики.",
+		couldNotCreate: "Не удалось создать отслеживаемую игру.",
     },
     game: {
     	resign: "Сдаться",
@@ -88,6 +95,9 @@ export default {
     	check: "Шах!",
     	checkmate: "Мат!",
 		noMoves: "Ходов пока нет",
+		won: "{{winner}} победил!",
+		gameOver: "Игра окончена",
+		rematch: "Реванш",
     },
     profile: {
     	editProfile: "Редактировать профиль",
@@ -145,6 +155,7 @@ export default {
     	notFound: "Страница не найдена",
     	backHome: "На главную",
     	userNotFound: "Пользователь не найден",
+		loggingIn: "Вход...",
     },
 	footer: {
 		privacyPolicy: "Политика конфиденциальности",
@@ -199,6 +210,7 @@ export default {
 		opponentJoined: "Противник подключился!",
 		drawOffered: "Противник предложил ничью",
 		drawDeclined: "Ваше предложение ничьей отклонено",
+		loadFailed: "Не удалось загрузить данные",
 	},
 	achievements: {
         1: { name: "Первая победа", description: "Выиграй свою первую партию" },

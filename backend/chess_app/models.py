@@ -34,7 +34,7 @@ class Game(models.Model):
 
 	timer = models.CharField(max_length=10, choices=TIMER_CHOICES, default='none')
 	current_fen = models.TextField(default='rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
-	
+
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)
 	started_at = models.DateTimeField(null=True, blank=True)

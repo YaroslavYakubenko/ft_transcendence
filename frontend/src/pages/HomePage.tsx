@@ -6,19 +6,21 @@ import { useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { getUserStats, getMatchHistory } from "../api/game"
 import type { UserStats, MatchRecord } from "../api/game"
+import { useToast } from "../context/ToastContext"
 
 function HomePage() {
 	const { user } = useAuth()
 	const navigate = useNavigate()
 	const { t } = useTranslation()
+	const { showToast } = useToast()
 	const [stats, setStats] = useState<UserStats | null>(null)
 	const [matches, setMatches] = useState<MatchRecord[]>([])
 
 	useEffect(() => {
 		if (!user) return
 		const controller = new AbortController()
-		getUserStats(user.id, controller.signal).then(setStats).catch(() => {})
-		getMatchHistory(user.id, 1, controller.signal).then((data) => setMatches(data.slice(0, 5))).catch(() => {})
+		getUserStats(user.id, controller.signal).then(setStats).catch((err) => { if (err.name !== 'AbortError') showToast(t('toast.loadFailed'), 'error') })
+		getMatchHistory(user.id, 1, controller.signal).then((data) => setMatches(data.slice(0, 5))).catch((err) => { if (err.name !== 'AbortError') showToast(t('toast.loadFailed'), 'error') })
 		return () => controller.abort()
 	}, [user])
 

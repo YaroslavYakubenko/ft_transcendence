@@ -6,11 +6,13 @@ import Footer from "../components/Footer"
 import { getUserStats, getMatchHistory, getAchievements } from "../api/game"
 import { type UserStats, type MatchRecord, type Achievement } from "../api/game"
 import { useTranslation } from "react-i18next"
+import { useToast } from "../context/ToastContext"
 
 function ProfilePage() {
     const { user } = useAuth()
     const navigate = useNavigate()
     const { t } = useTranslation()
+    const { showToast } = useToast()
     const [stats, setStats] = useState<UserStats | null>(null)
     const [matches, setMatches] = useState<MatchRecord[]>([])
     const [achievements, setAchievements] = useState<Achievement[]>([])
@@ -18,9 +20,9 @@ function ProfilePage() {
     useEffect(() => {
       if (!user) return
       const controller = new AbortController()
-      getUserStats(user.id, controller.signal).then(setStats).catch(() => {})
-      getMatchHistory(user.id, 1, controller.signal).then(setMatches).catch(() => {})
-      getAchievements(user.id).then(setAchievements).catch(() => {})
+      getUserStats(user.id, controller.signal).then(setStats).catch((err) => { if (err.name !== 'AbortError') showToast(t('toast.loadFailed'), 'error') })
+      getMatchHistory(user.id, 1, controller.signal).then(setMatches).catch((err) => { if (err.name !== 'AbortError') showToast(t('toast.loadFailed'), 'error') })
+      getAchievements(user.id).then(setAchievements).catch((err) => { if (err.name !== 'AbortError') showToast(t('toast.loadFailed'), 'error') })
       return () => controller.abort()
     }, [user])
 

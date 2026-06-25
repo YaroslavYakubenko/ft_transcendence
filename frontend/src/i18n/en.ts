@@ -26,6 +26,8 @@ export default {
 		invalidCredentials: "Invalid email or password",
 		emailNotVerified: "Please verify your email before logging in.",
 		emailVerified: "Email verified! You can now log in.",
+		oauthFailed: "Failed to start OAuth flow. Please try again.",
+		backToLogin: "Back to login",
 	},
 	register: {
 		title: "Create Account",
@@ -84,6 +86,8 @@ export default {
 		simple: "Simple",
 
 		startGame: "Start Game",
+		couldNotCreateTracked: "Could not create tracked game. Starting local game without stats/resign tracking.",
+		couldNotCreate: "Could not create tracked game.",
 	},
 	game: {
 		resign: "Resign",
@@ -94,6 +98,9 @@ export default {
 		check: "Check!",
 		checkmate: "Checkmate!",
 		noMoves: "No moves yet",
+		won: "{{winner}} Won!",
+		gameOver: "Game over",
+		rematch: "Rematch",
 	},
 	profile: {
 		editProfile: "Edit Profile",
@@ -151,6 +158,7 @@ export default {
 		notFound: "Page not found",
 		backHome: "Back to Home",
 		userNotFound: "User not found",
+		loggingIn: "Logging in...",
 	},
 	footer: {
 		privacyPolicy: "Privacy Policy",
@@ -205,6 +213,7 @@ export default {
 		opponentJoined: "Opponent has joined!",
 		drawOffered: "Opponent offered a draw",
 		drawDeclined: "Your draw offer was declined",
+		loadFailed: "Failed to load data",
 	},
 	achievements: {
         1: { name: "First Win", description: "Win your first game" },

@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate # check email + password and return object or none
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from .models import User, Friendship, ChatMessage, EmailVerificationToken
 from .serializers import RegisterSerializer, UserSerializer, FriendSerializer
 from chess_app.models import Game
@@ -87,8 +89,6 @@ def login(request):
 		return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 	if not user.email_verified:
 		return Response({'error': 'Please verify your email before logging in.'}, status=status.HTTP_403_FORBIDDEN)
-	user.is_online = True
-	user.save()
 	token, _ = Token.objects.get_or_create(user=user)
 	return Response({'token': token.key})
 
@@ -123,6 +123,10 @@ def update_me(request):
 		# Handle password update
 		password = request.data.get('password')
 		if password:
+			try:
+				validate_password(password, request.user)
+			except ValidationError as e:
+				return Response({'error': list(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
 			request.user.set_password(password)
 		# Save all changes
 		request.user.save()
@@ -253,9 +257,13 @@ def oauth_login(request):
 	if not code or not state:
 		return Response({'error': 'Missing OAuth data'}, status=status.HTTP_400_BAD_REQUEST)
 
-	if not state.startswith(f'{provider}:'):
-		logger.warning('OAuth state format invalid for provider=%s', provider)
+	session_key = f'oauth_state_{provider}'
+	expected_state = request.session.get(session_key)
+	if not expected_state or expected_state != state:
+		logger.warning('OAuth state mismatch for provider=%s', provider)
 		return Response({'error': 'Invalid OAuth state'}, status=status.HTTP_400_BAD_REQUEST)
+	del request.session[session_key]
+	request.session.modified = True
 
 	if provider == 'github':
 		try:

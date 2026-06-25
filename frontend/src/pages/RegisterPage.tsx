@@ -34,7 +34,7 @@ function RegisterPage() {
 			setError(t('register.passwordWeak'))
 			return
 		}
-		if (password.trim() !== confirmPassword.trim()) {
+		if (password !== confirmPassword) {
 			setError(t('register.passwordsDoNotMatch'))
 			return
 		}
