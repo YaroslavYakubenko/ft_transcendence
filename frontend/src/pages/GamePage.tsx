@@ -55,13 +55,18 @@ function GamePage() {
 	const [fen, setFen] = useState(() => {
 		return loadFen(storage_keys.fen, location.state?.rematchId)
 	});
+
+	// stores moves history
 	const [moves, setMoves] = useState<{ white: string; black?: string }[]>(() => {
 		return loadMoves(storage_keys.move_history)
 	});
+
 	const [result, setRes] = useState(() => {
 		return loadResult(storage_keys.result)
 	})
 	const [promotion, setPro] = useState({ move: "", x: -1, y: -1, pre: "" })
+
+	// Live multiplayer state  ----------------------------------------
 	const [opponentConnected, setOpponentConnected] = useState(false);
 	const [liveColor, setLiveColor] = useState<'white' | 'black' | null>(null)
 	const [activeTimer, setActiveTimer] = useState(settings.timer)
@@ -72,7 +77,6 @@ function GamePage() {
 
 // react hooks?? what do you call it ----------------------------------------
 
-	// const playerColor = usePlayerColor( settings.pieceColor, storage_keys.piece_color )
 	const restartGame  = useRestartGame(settings, settings.pieceColor, token, activeTimer)
 	const playerColor = usePlayerColor( settings.userColor, storage_keys.piece_color )
 
@@ -225,7 +229,8 @@ function GamePage() {
 					setRes({ state: 'draw', winner: '' })
 				}
 
-				else if (data.msg_type === 'draw_declined') {
+				else if (data.msg_type === 'draw_declined') 
+				{
 					setDrawState('idle')
 					showToast(t('toast.drawDeclined'), 'error')
 				}
@@ -256,7 +261,8 @@ function GamePage() {
 		if (multiplayer && socketIsOpen)
 		{
 			// show promotion dialog locally before sending via WS
-			if (requiresPromotion(currentFen, from, to)) {
+			if (requiresPromotion(currentFen, from, to)) 
+			{
 				const { x, y } = getBoardCoordinates(to, effectiveColor, currentFen)
 				setPro({ move: from + to, x, y, pre: currentFen.split(' ')[1] })
 				return null

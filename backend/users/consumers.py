@@ -270,7 +270,9 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
             print("GAME DOES NOT EXIST")
             return None
 
+	# data from frontend
     async def _handle_move(self, data):
+		# read move data 
         frm = data.get('from')
         to = data.get('to')
         promotion = data.get('promotion', '')   # e.g. 'q', 'r', 'b', 'n'
@@ -278,14 +280,17 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
         if not frm or not to:
             await self.send_json({'type': 'error', 'message': 'missing from/to'})
             return
-
+		
+		# fetches game row from the database
         game = await self.get_game()
         if game is None or game.status == 'completed':
             await self.send_json({'type': 'error', 'message': 'game not found or already over'})
             return
 
-        # enforce turn order — white_player moves on white's turn, black_player on black's
+		# create a temporary chess board object in Python  from the FEN string saved in the database 
         board = chess.Board(game.current_fen)
+
+		# enforce turn order — white_player moves on white's turn, black_player on black's
         is_white_turn = board.turn == chess.WHITE
         if is_white_turn and self.user != game.white_player:
             await self.send_json({'type': 'error', 'message': 'not your turn'})
@@ -294,37 +299,54 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
             await self.send_json({'type': 'error', 'message': 'not your turn'})
             return
 
+		# UCI format is how chess moves are written for python chess
         uci = frm + to + (promotion.lower() if promotion else '')
+
+		# convert string into a chess move object 
         try:
             move = chess.Move.from_uci(uci)
         except ValueError:
             await self.send_json({'type': 'error', 'message': 'invalid move format'})
             return
 
+		# check if move is legal (format can be valid but move still illegal -> pawn cannot move three squares)
         if move not in board.legal_moves:
             await self.send_json({'type': 'error', 'message': 'illegal move'})
             return
 
+		# save current board before move 
         fen_before = game.current_fen
+
+		# change the python object "board" in memory
         board.push(move)
         new_fen = board.fen()
 
-        # determine game result
+        # prepare result values
         result = 'ongoing'
         winner = ''
         king_in_check = ''
+
+		# after board.push(move), board.turn has already changed to the next player
         if board.is_checkmate():
             result = 'checkmate'
             winner = 'Black' if board.turn == chess.WHITE else 'White'
+		
+		# player has no legal moves, but is not in check
         elif board.is_stalemate():
             result = 'stalemate'
+
+		# check automatic draw conditions (king vs king; 75-move rule; fivefold repetition)
         elif board.is_insufficient_material() or board.is_seventyfive_moves() or board.is_fivefold_repetition():
             result = 'draw'
+
+		# if move gives check, find the checked king's square
         elif board.is_check():
             king_in_check = chess.square_name(board.king(board.turn))
 
+		# save move to database
         await self._save_move(game, frm, to, promotion, fen_before, new_fen, result)
 
+		# broadcast move to both players
         await self.channel_layer.group_send(self.game_group_name, {
             'type': 'game_message',
             'msg_type': 'move',
@@ -398,6 +420,7 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
         else:
             game.white_player.losses += 1
             game.black_player.wins += 1
+
         game.white_player.save()
         game.black_player.save()
 
