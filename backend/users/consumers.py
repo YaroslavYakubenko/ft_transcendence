@@ -7,6 +7,9 @@ from chess_app.models import Game, Move
 from chess_app.views import update_player_stats
 from django.utils import timezone
 from users.models import ChatMessage
+import redis.asyncio as aioredis
+
+_redis = aioredis.from_url("redis://redis:6379", decode_responses=True)
 
 # self is the consumer instance
 # Django Channels creates an object (self) for each WebSocket connection
@@ -42,6 +45,7 @@ class OnlineStatusConsumer(AsyncWebsocketConsumer):
         self.inbox = 'inbox_' + str(self.user.id)
         await self.channel_layer.group_add(self.inbox, self.channel_name)
         await self.channel_layer.group_add('presence', self.channel_name)
+        await _redis.incr(f"ws_conn_{self.user.id}")
         await database_sync_to_async(self.setOnline)(True)
         await self.accept()
 
@@ -65,14 +69,16 @@ class OnlineStatusConsumer(AsyncWebsocketConsumer):
         if self.user is not None:
             await self.channel_layer.group_discard(self.inbox, self.channel_name)
             await self.channel_layer.group_discard('presence', self.channel_name)
-            await database_sync_to_async(self.setOnline)(False)
-
-            print("PRESENCE OFFLINE:", self.user.id, self.user.email)
-            await self.channel_layer.group_send('presence', {
-                'type': 'presence_msg',
-                'user_id': self.user.id,
-                'is_online': False,
-        })
+            count = await _redis.decr(f"ws_conn_{self.user.id}")
+            if count <= 0:
+                await _redis.delete(f"ws_conn_{self.user.id}")
+                await database_sync_to_async(self.setOnline)(False)
+                print("PRESENCE OFFLINE:", self.user.id, self.user.email)
+                await self.channel_layer.group_send('presence', {
+                    'type': 'presence_msg',
+                    'user_id': self.user.id,
+                    'is_online': False,
+                })
 
     def setOnline(self, status):
         if self.user is not None:
@@ -190,6 +196,8 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
         # send to GamePage.tsx / frontend
         is_white = self.user == game.white_player
         opponent = game.black_player if is_white else game.white_player
+        pending_email = 'pending@transcendence.de'
+        waiting_for_opponent = opponent.email == pending_email
         await self.send_json({
             'msg_type': 'sync',
             'fen': game.current_fen,
@@ -200,6 +208,7 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
             'your_color': 'white' if is_white else 'black',
             'opponent_id': opponent.id,
             'opponent_name': opponent.username or opponent.email,
+            'waiting_for_opponent': waiting_for_opponent,
             'timer': game.timer,
         })
 
@@ -213,13 +222,14 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 
     async def disconnect(self, close_code):
         if hasattr(self, 'game_group_name'):
-            await self.channel_layer.group_discard(self.game_group_name, self.channel_name)				# client just left game_group_name
-            await self.channel_layer.group_send(self.game_group_name, 									# notifies everybody remaining in game_group_name about the disconnect
-            {
-                'type': 'game_message',
-                'msg_type': 'player_disconnected',
-                'username': self.user.username or self.user.email,
-            })
+            await self.channel_layer.group_discard(self.game_group_name, self.channel_name)
+            game = await self.get_game()
+            if game and game.status != 'pending':
+                await self.channel_layer.group_send(self.game_group_name, {
+                    'type': 'game_message',
+                    'msg_type': 'player_disconnected',
+                    'username': self.user.username or self.user.email,
+                })
 
     async def receive_json(self, content):
         msg_type = content.get('type')
@@ -235,7 +245,7 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 
     # called on each connection in the group when group_send fires
     async def game_message(self, event):
-        event.pop('type')
+        event.pop('type', None)
         await self.send_json(event)
 
     @database_sync_to_async

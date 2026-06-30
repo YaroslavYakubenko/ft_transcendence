@@ -34,21 +34,25 @@ function WaitingRoomPage() {
 			const socket = new WebSocket(socketUrl)
 			socketRef.current = socket
 
+			const navigateToGame = () => navigate('/game', {
+				state: {
+					opponent: "live",
+					difficulty: settings.difficulty,
+					timer: settings.timer,
+					pieceColor: settings.pieceColor,
+					userColor: settings.userColor,
+					boardTheme: settings.boardTheme,
+					pieceTheme: settings.pieceTheme,
+					game_id: settings.game_id,
+				},
+			})
+
 			socket.onmessage = (event) => {
 				const data = JSON.parse(event.data)
 				if (data.msg_type === 'player_connected' && data.username !== myIdentifier) {
-					navigate('/game', {
-						state: {
-							opponent: "live",
-							difficulty: settings.difficulty,
-							timer: settings.timer,
-							pieceColor: settings.pieceColor,
-							userColor: settings.userColor,
-							boardTheme: settings.boardTheme,
-							pieceTheme: settings.pieceTheme,
-							game_id: settings.game_id,
-						},
-					})
+					navigateToGame()
+				} else if (data.msg_type === 'sync' && data.waiting_for_opponent === false) {
+					navigateToGame()
 				}
 			}
 

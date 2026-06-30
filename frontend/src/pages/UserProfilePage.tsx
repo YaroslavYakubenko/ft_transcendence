@@ -69,11 +69,11 @@ function UserProfilePage() {
 					<img src={profile.avatarUrl} alt="avatar" className="w-20 h-20 rounded-full object-cover mb-4" />
 				) : (
 					<div className="w-20 h-20 rounded-full bg-[#e2b96f] flex items-center justify-center text-[#0f0f13] text-3xl font-bold mb-4">
-						{(profile.username || profile.email)[0].toUpperCase()}
+						{(profile.username || profile.email.split('@')[0])[0].toUpperCase()}
 					</div>
 				)}
-				<p className="text-xl font-semibold mb-1">{profile.username || profile.email}</p>
-				{profile.username && <p className="text-sm text-[#8892a4] mb-8">{profile.email}</p>}
+				<p className="text-xl font-semibold mb-1">{profile.username || profile.email.split('@')[0]}</p>
+				{profile.username && <p className="text-sm text-[#8892a4] mb-8">{profile.email.split('@')[0]}</p>}
 				<div className="flex gap-4 mb-8">
 					<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl px-8 py-6 text-center">
 						<div className="text-2xl font-semibold text-green-400">{profile.wins}</div>

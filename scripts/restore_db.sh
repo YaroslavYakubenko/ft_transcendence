@@ -15,6 +15,9 @@ source .env
 
 echo "Restoring database from $1"
 
+docker compose exec -T db psql -U "$DB_USER" -d postgres -c "DROP DATABASE IF EXISTS \"$DB_NAME\";"
+docker compose exec -T db psql -U "$DB_USER" -d postgres -c "CREATE DATABASE \"$DB_NAME\";"
+
 cat "$1" | docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME"
 
 echo "Restore completed"

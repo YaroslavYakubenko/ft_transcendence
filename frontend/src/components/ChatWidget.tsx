@@ -115,7 +115,7 @@ function handleSend()
 						{selectedFriend ? (
 							<div className="flex items-center gap-2">
 								<button onClick={() => setSelectedFriend(null)} className="text-[#8892a4] hover:text-[#f0eeff] cursor-pointer text-xs rtl:rotate-180 inline-block">←</button>
-								<span className="text-[#f0eeff] font-semibold text-sm">{selectedFriend.username || selectedFriend.email}</span>
+								<span className="text-[#f0eeff] font-semibold text-sm">{selectedFriend.username || selectedFriend.email.split('@')[0]}</span>
 							</div>
 						) : (
 							<span className="text-[#f0eeff] font-semibold text-sm">{t('chat.title')}</span>
@@ -129,10 +129,10 @@ function handleSend()
 							{friends.map(friend => (
 								<div key={friend.id} onClick={() => setSelectedFriend(friend)} className="px-4 py-3 flex items-center gap-3 hover:bg-[#2e2e40] cursor-pointer">
 									<div className="w-8 h-8 rounded-full bg-[#e2b96f] flex items-center justify-center text-[#0f0f13] text-sm font-bold">
-										{(friend.username || friend.email)[0].toUpperCase()}
+										{(friend.username || friend.email.split('@')[0])[0].toUpperCase()}
 									</div>
 									<div>
-										<p className="text-[#f0eeff] text-sm">{friend.username || friend.email}</p>
+										<p className="text-[#f0eeff] text-sm">{friend.username || friend.email.split('@')[0]}</p>
 										<p className="text-xs text-[#8892a4]">{friend.isOnline ? `🟢 ${t('friends.online')}` : `⚫ ${t('friends.offline')}`}</p>
 									</div>
 								</div>

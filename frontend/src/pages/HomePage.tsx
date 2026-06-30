@@ -32,12 +32,12 @@ function HomePage() {
 					<img src={user.avatarUrl} alt="avatar" className="w-20 h-20 rounded-full object-cover mb-4" />
 				) : (
 					<div className="w-20 h-20 rounded-full bg-[#e2b96f] flex items-center justify-center text-[#0f0f13] text-3xl font-bold mb-4">
-						{(user?.username || user?.email || '?')[0].toUpperCase()}
+						{(user?.username || user?.email?.split('@')[0] || '?')[0].toUpperCase()}
 					</div>
 				)}
 				{user && (
 					<p className="text-[#8892a4] text-sm mb-8 m-0">
-						{t('home.welcome')}, {user.username || user.email}
+						{t('home.welcome')}, {user.username || user.email.split('@')[0]}
 					</p>
 				)}
 				<div className="flex gap-4 mb-8">

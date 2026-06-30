@@ -90,7 +90,10 @@ ASGI_APPLICATION = 'backend.asgi.application'
 
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [{'host': 'redis', 'port': 6379, 'socket_keepalive': True, 'socket_timeout': 300}],
+        },
     },
 }
 
@@ -167,6 +170,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "https://10.11.11.2:8443",
+    "https://10.11.11.2:8025",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
@@ -213,4 +217,4 @@ EMAIL_HOST_USER = ''
 EMAIL_HOST_PASSWORD = ''
 EMAIL_USE_TLS = False
 DEFAULT_FROM_EMAIL = 'noreply@transcendence.local'
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://localhost:8443')
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://10.11.11.2:8443')

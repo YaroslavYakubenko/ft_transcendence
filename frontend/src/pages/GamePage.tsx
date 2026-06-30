@@ -33,11 +33,28 @@ function GamePage() {
 // variables ----------------------------------------
 
 	// setting vars ----------------------------------------
-	const settings: GameSettings = location.state ?? DEFAULT_SETTINGS
+	const [settings] = useState<GameSettings>(() => {
+		if (location.state) {
+			const stateSettings = location.state as GameSettings
+			// location.state survives F5 in browser history but may have a stale timer
+			// (P2's lobby default). Check for a sync-corrected timer saved separately.
+			const syncedTimer = stateSettings.game_id
+				? localStorage.getItem(`timer_sync_${stateSettings.game_id}`)
+				: null
+			const result = syncedTimer
+				? { ...stateSettings, timer: syncedTimer as GameSettings['timer'] }
+				: stateSettings
+			localStorage.setItem('game_session', JSON.stringify(result))
+			return result
+		}
+		try {
+			const saved = localStorage.getItem('game_session')
+			return saved ? JSON.parse(saved) : DEFAULT_SETTINGS
+		} catch { return DEFAULT_SETTINGS }
+	})
 	const theme = BOARD_THEMES[settings.boardTheme]
 	const pieces = PIECE_THEMES[settings.pieceTheme]
-	// const gameId = 428
-	const gameId = getGameId(location.state)
+	const gameId = getGameId(settings)
 	const storage_keys = getStorageKeys(gameId) // for local storage persistance
 	const multiplayer = settings.opponent === 'live'
 
@@ -69,6 +86,7 @@ function GamePage() {
 	const [opponent, setOpponent] = useState<{ id: number; name: string } | null>(null)
 	const opponentRef = useRef<{ id: number; name: string } | null>(null)
 	const [drawState, setDrawState] = useState<'idle' | 'offer_sent' | 'offer_received'>('idle')
+	const disconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
 // react hooks?? what do you call it ----------------------------------------
 
@@ -98,6 +116,14 @@ function GamePage() {
 	usePersistState(storage_keys.move_history, JSON.stringify(moves), location.state?.rematchId)
 	usePersistState(storage_keys.result, JSON.stringify(result), location.state?.rematchId )
 
+	// Clear the saved game session when the game ends so it can't be accidentally resumed
+	useEffect(() => {
+		if (result.state !== 'ongoing') {
+			localStorage.removeItem('game_session')
+			if (gameId) localStorage.removeItem(`timer_sync_${gameId}`)
+		}
+	}, [result.state])
+
 	const {handleResign, resignError,isResigning} = useResignGame(
 		storage_keys, token, gameId,
 		setFen, setMoves, setRes
@@ -105,8 +131,7 @@ function GamePage() {
 
 	const effectiveSettings = { ...settings, timer: activeTimer }
 	const effectiveColor = (multiplayer && liveColor) ? liveColor : playerColor
-	// For multiplayer, don't assign panel times until liveColor is confirmed from sync
-	const colorForTimer: 'white' | 'black' | null = (!multiplayer || liveColor !== null) ? effectiveColor : null
+	const colorForTimer = effectiveColor
 	const { playerTime, opponentTime } = useChessTimer(
 		activeTimer,
 		fen,
@@ -118,7 +143,8 @@ function GamePage() {
 			if (loser === colorForTimer && gameId && token) {
 				await resign_game(gameId, token)
 			}
-		}
+		},
+		gameId
 	)
 
 
@@ -176,8 +202,16 @@ function GamePage() {
 						opponentRef.current = opp
 					}
 
-					if (data.timer)
+					if (data.timer) {
 						setActiveTimer(data.timer)
+						// Save synced timer under a dedicated key so it survives F5
+						// (location.state also survives F5 and would otherwise overwrite it)
+						if (gameId) localStorage.setItem(`timer_sync_${gameId}`, data.timer)
+						try {
+							const saved = localStorage.getItem('game_session')
+							if (saved) localStorage.setItem('game_session', JSON.stringify({ ...JSON.parse(saved), timer: data.timer }))
+						} catch {}
+					}
 
 					// Override any stale localStorage result — DB is the source of truth
 					if (data.status !== 'completed')
@@ -186,8 +220,23 @@ function GamePage() {
 
 				else if (data.msg_type === 'player_connected') {
 					setOpponentConnected(true)
+					// Cancel any pending disconnect timeout (opponent reconnected in time)
+					if (disconnectTimerRef.current) {
+						clearTimeout(disconnectTimerRef.current)
+						disconnectTimerRef.current = null
+					}
 					if (!opponentRef.current)
 						showToast(t('toast.opponentJoined'))
+				}
+
+				else if (data.msg_type === 'player_disconnected') {
+					// Give 10 seconds for reconnect before ending the game.
+					// WS briefly drops during page refresh / network hiccup — don't end immediately.
+					if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current)
+					disconnectTimerRef.current = setTimeout(() => {
+						disconnectTimerRef.current = null
+						setRes({ state: 'resign', winner: liveColorRef.current === 'white' ? 'White' : 'Black' })
+					}, 10000)
 				}
 
 				else if (data.msg_type === 'move')
@@ -242,6 +291,7 @@ function GamePage() {
 		return () => {
 			isClosed = true
 			if (reconnectTimeout) clearTimeout(reconnectTimeout)
+			if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current)
 			wsRef.current?.close()
 		}
 	}, [multiplayer, gameId, token])

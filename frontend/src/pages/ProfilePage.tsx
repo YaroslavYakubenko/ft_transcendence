@@ -36,10 +36,10 @@ function ProfilePage() {
             <img src={user.avatarUrl} alt="avatar" className="w-20 h-20 rounded-full object-cover mb-4" />
           ) : (
             <div className="w-20 h-20 rounded-full bg-[#e2b96f] flex items-center justify-center text-[#0f0f13] text-3xl font-bold mb-4">
-              {user ? (user.username || user.email)[0].toUpperCase() : '?'}
+              {user ? (user.username || user.email.split('@')[0])[0].toUpperCase() : '?'}
             </div>
           )}
-          <p className="text-xl font-semibold mb-1">{user?.username || user?.email}</p>
+          <p className="text-xl font-semibold mb-1">{user?.username || user?.email.split('@')[0]}</p>
           <p className="text-sm text-[#8892a4] mb-2">{t('profile.member')}</p>
 
           {/* Level + XP bar */}
