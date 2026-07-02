@@ -166,9 +166,14 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 			}
 
 			ws.onmessage = (e) => {
-				const data = JSON.parse(e.data)
+				let data
+				try {
+					data = JSON.parse(e.data)
+				}
+				catch (error) {
+					console.error("Invalid Websocket message:", e.data)
+				} 
 
-				console.log("STATUS WS MESSAGE:", data)
 
 				if (data.type === 'chat')
 				{
