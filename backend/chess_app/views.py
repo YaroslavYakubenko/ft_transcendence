@@ -300,7 +300,6 @@ def create_game(request):
 	print("\n\n\n\n white_player", white_player, "\n\n\n\n\n")
 	# print(" black_player", black_player, "\n\n\n")
 
-	# this sets request user as white always !!!!!
 	game = Game.objects.create(
 		white_player=white_player,
 		black_player=black_player,
@@ -402,10 +401,21 @@ def resign_game(request):
 	})
 
 
+def update_achievements_db(user, winner, color):
+
+	if color == winner:
+		user.win_counter += 1
+		if (user.highest_win_streak < user.win_counter):
+			user.highest_win_streak = user.win_counter
+	else:
+		user.win_counter = 0
+	user.save()
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def check_color(request):
 	game_id = request.data.get('gameId')
+	result = request.data.get('result')
 	
 	if not game_id:
 		return Response({"error": "game_id is required"}, status=400)
@@ -421,8 +431,10 @@ def check_color(request):
 	if game.white_player == request.user:
 		color = "White"
 
+	update_achievements_db(request.user, result, color)
+
 	return Response({
-		"color": color,
+		"status": "valid",
 	})
 
 

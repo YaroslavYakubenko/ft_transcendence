@@ -34,6 +34,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 	draws = models.IntegerField(default=0)
 	elo = models.IntegerField(default=1200)  # Standard starting ELO rating
 
+	# for achievements 
+	win_counter = models.IntegerField(default=0)
+	highest_win_streak = models.IntegerField(default=0)
+
 	USERNAME_FIELD = 'email' # login via email
 	REQUIRED_FIELDS = []
 

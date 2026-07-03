@@ -1,5 +1,4 @@
 
-import { getAchStorageKeys } from "../chess/constants"
 
 export interface UserStats {
 	wins: number
@@ -90,83 +89,55 @@ export async function getMatchHistory(userId: number, page: number = 1, signal?:
 	}
 }
 
-export async function getAchievements(_userId: number, _stats: UserStats | null): Promise<Achievement[]> {
+export async function getAchievements(_userId: number): Promise<Achievement[]> {
 	// TODO: Implement achievements in backend
 
-	const storage_k = getAchStorageKeys(_userId)
+	try {
+		const response = await fetch(`${API_BASE_URL}/users/${_userId}/stats/`, {
+			method: 'GET',
+			headers: {
+				'Authorization': `Token ${localStorage.getItem('token')}`,
+				'Content-Type': 'application/json',
+			},
 
+		})
 
-	const num_games = (_stats?.wins ?? 0) + (_stats?.losses ?? 0)
-		console.debug("matches", (_stats?.wins ?? 0) + (_stats?.losses ?? 0))
-		// console.debug("matches", _matches)
-
-
-		if (!localStorage.getItem(storage_k.played_games))
-			localStorage.setItem(storage_k.played_games, `${num_games}`)
-
-		if (!localStorage.getItem(storage_k.ach_1))
-		{
-			if (_stats?.wins ?? 0 > 0)
-				localStorage.setItem(storage_k.ach_1, 'true')
-			else
-				localStorage.setItem(storage_k.ach_1, 'false')
-		}
-		if (!localStorage.getItem(storage_k.ach_2))
-			localStorage.setItem(storage_k.ach_2, 'false')
-		if (!localStorage.getItem(storage_k.ach_3))
-			localStorage.setItem(storage_k.ach_3, 'false')
-		if (!localStorage.getItem(storage_k.ach_4))
-			localStorage.setItem(storage_k.ach_4, 'false')
-		if (!localStorage.getItem(storage_k.ach_5))
-			localStorage.setItem(storage_k.ach_5, 'false')
-
-		if (!localStorage.getItem(storage_k.win_counter))
-			localStorage.setItem(storage_k.win_counter, String(0))
-
-		// update played games
-		localStorage.setItem(storage_k.played_games, String(num_games))
-
-		// if achievement false and games 10>= update
-		if (localStorage.getItem(storage_k.ach_3) == 'false' && num_games >= 10)
-				localStorage.setItem(storage_k.ach_3, 'true')
-		
-		// -> check elo for grandmaster
-		if (localStorage.getItem(storage_k.ach_4) == 'false')
-		{
-			if ( _stats?.elo ?? 0 >= 2000)
-				localStorage.setItem(storage_k.ach_4, 'true')
+		if (!response.ok) {
+			throw new Error(`Failed to fetch user stats: ${response.statusText}`)
 		}
 
-		if (localStorage.getItem(storage_k.ach_1) == 'false' && (_stats?.wins ?? 0) > 0)
-			localStorage.setItem(storage_k.ach_1, 'true')
+		const data = await response.json()
+		let bools: boolean[] = new Array(5).fill(false);
 
-		// -> check win achievements 
+		if (data.wins >= 1)
+			bools[0] = true;
+		if (data.highest_win_streak >= 3)
+			bools[1] = true;
+		if (data.wins + data.losses >= 10)
+			bools[2] = true;
+		if (data.elo >= 2000)
+			bools[3] = true;
+		if (data.highest_win_streak >= 5)
+			bools[4] = true;
 
-		console.debug("ACH streak", localStorage.getItem(storage_k.highest_win_streak) )
-		
-			
-		if (localStorage.getItem(storage_k.ach_2) == 'false' && Number(localStorage.getItem(storage_k.highest_win_streak)) >= 3)
-			localStorage.setItem(storage_k.ach_2, 'true')
-		
-	
-		if (localStorage.getItem(storage_k.ach_5) == 'false' && Number(localStorage.getItem(storage_k.highest_win_streak)) >= 5)
-			localStorage.setItem(storage_k.ach_5, 'true')
-
-
-	function getbool(str: string | null)
-	{
-		if (str && str == 'true')
-			return true
-		return false
-	}
-
-	return [
-		{ id: 1, name: "First Win",     description: "Win your first game",       unlocked: getbool(localStorage.getItem(storage_k.ach_1)) },
-		{ id: 2, name: "On a Roll",     description: "Win 3 games in a row",       unlocked: getbool(localStorage.getItem(storage_k.ach_2)) },
-		{ id: 3, name: "Veteran",       description: "Play 10 games",             unlocked: getbool(localStorage.getItem(storage_k.ach_3)) },
-		{ id: 4, name: "Grandmaster",   description: "Reach 2000 elo",            unlocked: getbool(localStorage.getItem(storage_k.ach_4)) },
-		{ id: 5, name: "Untouchable",   description: "Win 5 games without a loss", unlocked: getbool(localStorage.getItem(storage_k.ach_5)) },
+		return [
+		{ id: 1, name: "First Win",     description: "Win your first game",			unlocked: bools[0]},
+		{ id: 2, name: "On a Roll",     description: "Win 3 games in a row",		unlocked: bools[1] },
+		{ id: 3, name: "Veteran",       description: "Play 10 games",				unlocked: bools[2]},
+		{ id: 4, name: "Grandmaster",   description: "Reach 2000 elo",				unlocked: bools[3]},
+		{ id: 5, name: "Untouchable",   description: "Win 5 games without a loss",	unlocked: bools[4] },
 	]
+	} catch (error) {
+		if (error instanceof Error && error.name === 'AbortError') throw error
+		console.error('Error fetching user stats:', error)
+		return [
+		{ id: 1, name: "First Win",     description: "Win your first game",			unlocked: false},
+		{ id: 2, name: "On a Roll",     description: "Win 3 games in a row",		unlocked: false},
+		{ id: 3, name: "Veteran",       description: "Play 10 games",				unlocked: false},
+		{ id: 4, name: "Grandmaster",   description: "Reach 2000 elo",				unlocked: false},
+		{ id: 5, name: "Untouchable",   description: "Win 5 games without a loss",	unlocked: false},
+	]
+	}
 }
 
 export async function getLeaderboard(limit: number = 50, signal?: AbortSignal): Promise<{ id: number; username: string; email: string; wins: number; losses: number; elo: number; rank: number }[]> {
@@ -346,7 +317,7 @@ export async function resign_game(
 	return data;
 }
 
-export async function check_color(gameId: Number | null, token: string | null)
+export async function check_color(gameId: Number | null, token: string | null, result: string)
 {
 	if (!gameId || !token) {
 		console.error("Game ID or token missing");
@@ -361,6 +332,7 @@ export async function check_color(gameId: Number | null, token: string | null)
 		},
 		body: JSON.stringify({
 			gameId,
+			result,
 		}),
 	})
 
