@@ -97,11 +97,11 @@ class OnlineStatusConsumer(AsyncWebsocketConsumer):
 			content = json.loads(text_data)
 
 		except json.JSONDecodeError:
-        	await self.send(text_data=json.dumps({
-            	'type': 'error',
-            	'message': 'Invalid message format',
-        	}))
-        	return
+			await self.send(text_data=json.dumps({
+				'type': 'error',
+				'message': 'Invalid message format',
+			}))
+			return
 		
 		to_user_id = content.get('to_user_id')
 		message = content.get('message', '')
@@ -113,10 +113,10 @@ class OnlineStatusConsumer(AsyncWebsocketConsumer):
 
 		if len(message) > 1000:
 			await self.send(text_data=json.dumps({
-            	'type': 'error',
-            	'message': 'Message is too long',
-        	}))
-        	return
+				'type': 'error',
+				'message': 'Message is too long',
+			}))
+			return
 
 		saved_message = await self.save_chat_message(to_user_id, message)
 

@@ -50,6 +50,8 @@ export async function addFriend(userId: number, token: string): Promise<void> {
 		headers: { 'Authorization': `Token ${token}` }
 	})
 	if (!res.ok) throw new Error('Failed to add friend')
+	
+	window.dispatchEvent(new Event("friendsChanged"))
 }
 
 export async function removeFriend(userId: number, token: string): Promise<void> {
@@ -57,7 +59,10 @@ export async function removeFriend(userId: number, token: string): Promise<void>
 		method: 'DELETE',
 		headers: { 'Authorization': `Token ${token}` }
 	})
-	if (!res.ok) throw new Error('Failed to remove friend')
+	if (!res.ok) 
+		throw new Error('Failed to remove friend')
+
+	window.dispatchEvent(new Event("friendsChanged"))
 }
 
 // Users API
