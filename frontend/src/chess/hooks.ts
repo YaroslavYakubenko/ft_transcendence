@@ -56,18 +56,11 @@ export function usePlayerColor(
 ) {
 	return useMemo(() => {
 		const saved = localStorage.getItem(storageKey)
-		// console.log("usePlayerColor | saved: ", saved)
-		// console.log("usePlayerColor | pieceColor: ", pieceColor)
-
 		if (saved === "white" || saved === "black") {
 			return saved
 		}
-
 		const resolved = sideChoice(pieceColor)
-
 		localStorage.setItem(storageKey, resolved)
-
-		// console.log("usePlayerColor | resolved: ", resolved)
 		return resolved
 	}, [pieceColor, storageKey])
 }

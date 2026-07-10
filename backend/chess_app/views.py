@@ -139,8 +139,6 @@ def make_move(request):
 	elif res != "ongoing" :
 		win = "Black" if board.turn else "White"
 
-	# print("\n\n\king: ", king, "\n\n\n")
-	
 	# Save move to database if game_id is provided
 	if game_id:
 		try:
@@ -260,7 +258,6 @@ def create_game(request):
 	opponent_type = request.data.get('opponent', 'bot')
 	piece_color = request.data.get('pieceColor', 'random')
 	timer = request.data.get('timer', 'none')
-	# print("\n\n\n given color", piece_color, "\n")
 
 	if opponent_type == 'bot':
 		bot_user, _ = User.objects.get_or_create(
@@ -296,9 +293,6 @@ def create_game(request):
 	else:
 		white_player = opponent
 		black_player = request.user
-
-	print("\n\n\n\n white_player", white_player, "\n\n\n\n\n")
-	# print(" black_player", black_player, "\n\n\n")
 
 	game = Game.objects.create(
 		white_player=white_player,
@@ -424,8 +418,6 @@ def check_color(request):
 		game = Game.objects.get(id=game_id)
 	except Game.DoesNotExist:
 		return Response({"error": "Game not found"}, status=404)
-
-	print("\n\n\n\nrequest.user", request.user, "\n\n\n\n")
 
 	color = "Black"
 	if game.white_player == request.user:

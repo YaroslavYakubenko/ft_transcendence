@@ -77,8 +77,6 @@ function GamePage() {
 		rematchId: location.state?.rematchId,
 		storage_keys,
 		resetGameState: () => {
-			// console.log("id:", gameId)
-			// console.log("player color:", playerColor)
 			setFen(START_FEN)
 			setMoves([])
 			setRes({ state: "ongoing", winner: "" })
