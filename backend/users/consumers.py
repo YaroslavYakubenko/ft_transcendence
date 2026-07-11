@@ -205,19 +205,36 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 		await self.accept()
 
 		# game taken from database through get_game function
-		# send to GamePage.tsx / frontend
+
 		is_white = self.user == game.white_player
 		opponent = game.black_player if is_white else game.white_player
+
+		white_name = None
+		if game.white_player:
+			white_name = game.white_player.username or game.white_player.email
+
+		black_name = None
+		if game.black_player:
+			black_name = game.black_player.username or game.black_player.email
+		
+		opponent_id = None
+		opponent_name = None
+
+		if opponent:
+			opponent_id = opponent.id
+			opponent_name = opponent.username or opponent.email
+
+		# send to GamePage.tsx / frontend
 		await self.send_json({
 			'msg_type': 'sync',
 			'fen': game.current_fen,
 			'status': game.status,
 			'result': game.result,
-			'white_player': game.white_player.username or game.white_player.email,
-			'black_player': game.black_player.username or game.black_player.email,
+			'white_player': white_name,
+			'black_player': black_name,
 			'your_color': 'white' if is_white else 'black',
-			'opponent_id': opponent.id,
-			'opponent_name': opponent.username or opponent.email,
+			'opponent_id': opponent_id,
+			'opponent_name': opponent_name,
 			'timer': game.timer,
 		})
 
@@ -258,27 +275,21 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 
 	@database_sync_to_async
 	def get_game(self):
-		pending_email = 'pending@transcendence.de'
-
 		try:
 			game = Game.objects.select_related('white_player', 'black_player').get(id=self.game_id)
 
-			print(f"game {self.game_id}: white={game.white_player.email} black={game.black_player.email} user={self.user.email}")
-
 			# If this user is already white or black, allow connection.
-			if self.user in (game.white_player, game.black_player):
+			if self.user == game.white_player or self.user == game.black_player:
 				return game
 
-			# If black is still pending, assign this user as black.
-			if game.black_player.email == pending_email:
-				game.black_player = self.user
-				game.save(update_fields=['black_player'])
-				return game
-
-			# If white is still pending, assign this user as white.
-			if game.white_player.email == pending_email:
+			if game.white_player is None:
 				game.white_player = self.user
 				game.save(update_fields=['white_player'])
+				return game
+		
+			elif game.black_player is None:
+				game.black_player = self.user
+				game.save(update_fields=['black_player'])
 				return game
 
 			print("USER NOT IN GAME")
@@ -303,6 +314,10 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 		game = await self.get_game()
 		if game is None or game.status == 'completed':
 			await self.send_json({'type': 'error', 'message': 'game not found or already over'})
+			return
+
+		if game.white_player is None or game.black_player is None:
+			await self.send_json({'type': 'error', 'message': 'waiting for opponent'})
 			return
 
 		# create a temporary chess board object in Python  from the FEN string saved in the database 

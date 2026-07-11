@@ -277,12 +277,9 @@ def create_game(request):
 			except User.DoesNotExist:
 				return Response({'error': 'Opponent not found'}, status=404)
 		
-		#no opponent yet, use placeholder
+		#no opponent yet
 		else:
-			opponent, _ = User.objects.get_or_create(
-				username='Pending',
-				email='pending@transcendence.de',
-			)
+			opponent = None
 	else:
 		return Response({'error': 'Invalid opponent type'}, status=400)
 
