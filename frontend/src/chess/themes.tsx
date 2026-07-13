@@ -14,19 +14,19 @@ export const PIECE_THEMES = {
 	},
 
 	simple: {
-		wP: () => <img src="/imgs/wp.png" style={pieceStyle} />,
-		wN: () => <img src="/imgs/wn.png"  style={pieceStyle} />,
-		wB: () => <img src="/imgs/wb.png"  style={pieceStyle} />,
-		wR: () => <img src="/imgs/wr.png"  style={pieceStyle} />,
-		wQ: () => <img src="/imgs/wq.png"  style={pieceStyle} />,
-		wK: () => <img src="/imgs/wk.png"  style={pieceStyle} />,
+		wP: () => <img src="/imgs/wp.png" style={pieceStyle} alt="White Pawn" />,
+		wN: () => <img src="/imgs/wn.png" style={pieceStyle} alt="White Knight" />,
+		wB: () => <img src="/imgs/wb.png" style={pieceStyle} alt="White Bishop" />,
+		wR: () => <img src="/imgs/wr.png" style={pieceStyle} alt="White Rook" />,
+		wQ: () => <img src="/imgs/wq.png" style={pieceStyle} alt="White Queen" />,
+		wK: () => <img src="/imgs/wk.png" style={pieceStyle} alt="White King" />,
 
-		bP: () => <img src="/imgs/bp.png"  style={pieceStyle} />,
-		bN: () => <img src="/imgs/bn.png"  style={pieceStyle} />,
-		bB: () => <img src="/imgs/bb.png"  style={pieceStyle} />,
-		bR: () => <img src="/imgs/br.png"  style={pieceStyle} />,
-		bQ: () => <img src="/imgs/bq.png"  style={pieceStyle} />,
-		bK: () => <img src="/imgs/bk.png"  style={pieceStyle} />,
+		bP: () => <img src="/imgs/bp.png" style={pieceStyle} alt="Black Pawn" />,
+		bN: () => <img src="/imgs/bn.png" style={pieceStyle} alt="Black Knight" />,
+		bB: () => <img src="/imgs/bb.png" style={pieceStyle} alt="Black Bishop" />,
+		bR: () => <img src="/imgs/br.png" style={pieceStyle} alt="Black Rook" />,
+		bQ: () => <img src="/imgs/bq.png" style={pieceStyle} alt="Black Queen" />,
+		bK: () => <img src="/imgs/bk.png" style={pieceStyle} alt="Black King" />,
 	},
 }
 

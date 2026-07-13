@@ -56,18 +56,11 @@ export function usePlayerColor(
 ) {
 	return useMemo(() => {
 		const saved = localStorage.getItem(storageKey)
-		// console.log("usePlayerColor | saved: ", saved)
-		// console.log("usePlayerColor | pieceColor: ", pieceColor)
-
 		if (saved === "white" || saved === "black") {
 			return saved
 		}
-
 		const resolved = sideChoice(pieceColor)
-
 		localStorage.setItem(storageKey, resolved)
-
-		// console.log("usePlayerColor | resolved: ", resolved)
 		return resolved
 	}, [pieceColor, storageKey])
 }
@@ -79,10 +72,6 @@ export function useResignGame(storage_keys: any, token: string | null, gameId: n
 	const handleResign = async () => {
 		localStorage.removeItem(storage_keys.fen)
 		localStorage.removeItem(storage_keys.move_history)
-
-		setFen(START_FEN)
-		setMoves([])
-		setResignError("")
 
 		if (!token) {
 			setResignError("You must be logged in to resign.")
@@ -104,6 +93,9 @@ export function useResignGame(storage_keys: any, token: string | null, gameId: n
 		}
 
 		const winner = data.result === 'black_win' ? 'Black' : 'White'
+		setFen(START_FEN)
+		setMoves([])
+		setResignError("")
 		setRes({ state: "resign", winner })
 	}
 

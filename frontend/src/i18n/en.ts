@@ -82,12 +82,18 @@ export default {
 
 		// add to other languages
 		pieceTheme: "Piece Theme",
-		default: "Default",
-		simple: "Simple",
+		joinOptionMsg: "or join existing game",
+		enterIdMsg: "Enter game ID",
+		join: "join",
 
 		startGame: "Start Game",
 		couldNotCreateTracked: "Could not create tracked game. Starting local game without stats/resign tracking.",
 		couldNotCreate: "Could not create tracked game.",
+	},
+	waitingroom: {
+		gameId: "Game ID",
+		waitingMsg: "Waiting for opponent...",
+		cancel: "Cancel",
 	},
 	game: {
 		resign: "Resign",
@@ -97,10 +103,15 @@ export default {
 		opponentTurn: "Opponent's turn",
 		check: "Check!",
 		checkmate: "Checkmate!",
+		stalemate: "Stalemate!",
 		noMoves: "No moves yet",
-		won: "{{winner}} Won!",
-		gameOver: "Game over",
+		friend: "Friend",
+		White: "White",
+		Black: "Black",
+		Won: "Won!",
+    	resigned: "Resigned",
 		rematch: "Rematch",
+		home: "Home",
 	},
 	profile: {
 		editProfile: "Edit Profile",

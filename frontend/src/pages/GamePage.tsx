@@ -21,6 +21,7 @@ import { usePersistState, useRematchReset, usePlayerColor, useRestartGame, useRe
 import { appendMove, getBoardCoordinates, createOnPieceDrag, createOnPieceDrop, getGameId, requiresPromotion } from "../chess/utils"
 
 
+
 function GamePage() {
 	const { user, token } = useAuth()
 	const { showToast } = useToast()
@@ -85,8 +86,6 @@ function GamePage() {
 		rematchId: location.state?.rematchId,
 		storage_keys,
 		resetGameState: () => {
-			// console.log("id:", gameId)
-			// console.log("player color:", playerColor)
 			setFen(START_FEN)
 			setMoves([])
 			setRes({ state: "ongoing", winner: "" })
@@ -408,6 +407,9 @@ function GamePage() {
 					< Gameover
 						result={result}
 						settings={effectiveSettings}
+						user={userRef.current}
+						token={token}
+						gameId={gameId}
 						restartGame={restartGame}
 					/>
 

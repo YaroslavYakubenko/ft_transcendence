@@ -91,7 +91,7 @@ export default function OpponentPanel({ settings, opponent, time }: Props) {
 							onClick={() => navigate(`/users/${opponent.id}`)}
 							className="text-[#8892a4] text-xs hover:text-[#e2b96f] transition-colors cursor-pointer"
 						>
-							Profile
+							{t("nav.profile")}
 						</button>
 						<span className="text-[#2e2e40] text-xs">|</span>
 						<button
@@ -103,7 +103,7 @@ export default function OpponentPanel({ settings, opponent, time }: Props) {
 									: 'text-[#8892a4] hover:text-[#81b64c]'
 							}`}
 						>
-							{added ? '✓ Friend' : adding ? '...' : '+ Friend'}
+							{added ? `✓ ${t("game.friend")}` : adding ? '...' : `+ ${t("game.friend")}`}
 						</button>
 					</div>
 				)}

@@ -108,6 +108,7 @@ def make_move(request):
 	_t = request.data.get('to')
 	game_id = request.data.get('game_id')  # Optional: save to database if provided
 
+
 	if not fen or not _s or not _t:
 		return Response({"error": "missing data"}, status=400)
 	
@@ -138,8 +139,6 @@ def make_move(request):
 	elif res != "ongoing" :
 		win = "Black" if board.turn else "White"
 
-	# print("\n\n\king: ", king, "\n\n\n")
-	
 	# Save move to database if game_id is provided
 	if game_id:
 		try:
@@ -259,7 +258,6 @@ def create_game(request):
 	opponent_type = request.data.get('opponent', 'bot')
 	piece_color = request.data.get('pieceColor', 'random')
 	timer = request.data.get('timer', 'none')
-	# print("\n\n\n given color", piece_color, "\n")
 
 	if opponent_type == 'bot':
 		bot_user, _ = User.objects.get_or_create(
@@ -293,10 +291,6 @@ def create_game(request):
 		white_player = opponent
 		black_player = request.user
 
-	# print(" white_player", white_player, "\n")
-	# print(" black_player", black_player, "\n\n\n")
-
-	# this sets request user as white always !!!!!
 	game = Game.objects.create(
 		white_player=white_player,
 		black_player=black_player,
@@ -395,4 +389,63 @@ def resign_game(request):
 		"status": "success",
 		"result": game.result,
 		"message": f"{resigner.username or resigner.email} resigned. {winner.username or winner.email} wins!"
+	})
+
+
+def update_achievements_db(user, winner, color):
+
+	if color == winner:
+		user.win_counter += 1
+		if (user.highest_win_streak < user.win_counter):
+			user.highest_win_streak = user.win_counter
+	else:
+		user.win_counter = 0
+	user.save()
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def check_color(request):
+	game_id = request.data.get('gameId')
+	result = request.data.get('result')
+	
+	if not game_id:
+		return Response({"error": "game_id is required"}, status=400)
+
+	try:
+		game = Game.objects.get(id=game_id)
+	except Game.DoesNotExist:
+		return Response({"error": "Game not found"}, status=404)
+
+	color = "Black"
+	if game.white_player == request.user:
+		color = "White"
+
+	update_achievements_db(request.user, result, color)
+
+	return Response({
+		"status": "valid",
+	})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def check_game_status(request):
+	game_id = request.data.get('gameId')
+	
+	if not game_id:
+		return Response({"error": "game_id is required"}, status=400)
+
+	try:
+		game = Game.objects.get(id=game_id)
+	except Game.DoesNotExist:
+		return Response({"error": "Game not found"}, status=404)
+
+	if game.status == 'completed':
+		return Response({"error": "Game is already completed"}, status=400)
+
+	if game.white_player.email != "pending@transcendence.de" and game.black_player.email != "pending@transcendence.de" and game.white_player != request.user and game.black_player != request.user:
+		return Response({"error": "You are not a player in this game"}, status=403)
+
+	return Response({
+		"status": "valid",
 	})
