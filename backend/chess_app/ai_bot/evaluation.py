@@ -33,6 +33,28 @@ PAWN_TABLE = [
      0,   0,   0,   0,   0,   0,   0,   0,
 ]
 
+BISHOP_TABLE = [
+    -20,-10,-10,-10,-10,-10,-10,-20,
+    -10,  5,  0,  0,  0,  0,  5,-10,
+    -10, 10, 10, 10, 10, 10, 10,-10,
+    -10,  0, 10, 10, 10, 10,  0,-10,
+    -10,  5,  5, 10, 10,  5,  5,-10,
+    -10,  0,  5, 10, 10,  5,  0,-10,
+    -10,  0,  0,  0,  0,  0,  0,-10,
+    -20,-10,-10,-10,-10,-10,-10,-20,
+]
+
+ROOK_TABLE = [
+     0,  0,  5, 10, 10,  5,  0,  0,
+     0,  0,  5, 10, 10,  5,  0,  0,
+     0,  0,  5, 10, 10,  5,  0,  0,
+     0,  0,  5, 10, 10,  5,  0,  0,
+     0,  0,  5, 10, 10,  5,  0,  0,
+     0,  0,  5, 10, 10,  5,  0,  0,
+     10,10,10, 20, 20, 10, 10, 10,
+     0,  0,  5, 10, 10,  5,  0,  0,
+]
+
 def evaluate_fen(fen: str) -> int:
 	board = chess.Board(fen)
 
@@ -52,7 +74,6 @@ def evaluate_fen(fen: str) -> int:
 # Evaluate knight position
 	for square in board.pieces(chess.KNIGHT, chess.WHITE):
 		score += KNIGHT_TABLE[square]
-
 	for square in board.pieces(chess.KNIGHT, chess.BLACK):
 		score -= KNIGHT_TABLE[chess.square_mirror(square)]
 	
@@ -61,5 +82,17 @@ def evaluate_fen(fen: str) -> int:
 		score += PAWN_TABLE[square]
 	for square in board.pieces(chess.PAWN, chess.BLACK):
 		score -= PAWN_TABLE[chess.square_mirror(square)]
+
+# Evaluate bishop position
+	for square in board.pieces(chess.BISHOP, chess.WHITE):
+		score += BISHOP_TABLE[square]
+	for square in board.pieces(chess.BISHOP, chess.BLACK):
+		score -= BISHOP_TABLE[chess.square_mirror(square)]
+
+# Evaluate rook position
+	for square in board.pieces(chess.ROOK, chess.WHITE):
+		score += ROOK_TABLE[square]
+	for square in board.pieces(chess.ROOK, chess.BLACK):
+		score -= ROOK_TABLE[chess.square_mirror(square)]
 
 	return score
