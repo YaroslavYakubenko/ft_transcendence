@@ -230,13 +230,13 @@ function GamePage() {
 				}
 
 				else if (data.msg_type === 'player_disconnected') {
-					// Give 10 seconds for reconnect before ending the game.
+					// Give 30 seconds for reconnect before ending the game.
 					// WS briefly drops during page refresh / network hiccup — don't end immediately.
 					if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current)
 					disconnectTimerRef.current = setTimeout(() => {
 						disconnectTimerRef.current = null
 						setRes({ state: 'resign', winner: liveColorRef.current === 'white' ? 'White' : 'Black' })
-					}, 10000)
+					}, 30000)
 				}
 
 				else if (data.msg_type === 'move')
