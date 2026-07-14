@@ -24,11 +24,15 @@ function FriendsPage() {
 	}, [])
 
 	async function handleRemove(userId: number) {
-		try {
+		try 
+		{
 			await removeFriend(userId, token!)
 			setFriends(friends.filter(f => f.id !== userId))
+			// window.dispatchEvent(new Event("friendsChanged"))
 			showToast(t('toast.friendRemoved'))
-		} catch {
+		} 
+		catch 
+		{
 			showToast(t('toast.friendRemoveFailed'), 'error')
 		}
 	}

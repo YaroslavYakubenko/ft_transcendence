@@ -22,21 +22,40 @@ function ChatWidget()
 
 	useEffect(() => {
 		const controller = new AbortController()
-		getFriends(token!, controller.signal).then(setFriends).catch(() => {})
-		return () => controller.abort()
+
+
+		function reloadFriends() {
+			getFriends(token!, controller.signal)
+				.then(function(data) {
+					setFriends(data)
+				})
+				.catch(function(error) {
+					if (error.name !== 'AbortError')
+						console.error("Could not reload friends:", error)
+				})
+		}
+		reloadFriends()
+		window.addEventListener("friendsChanged", reloadFriends)
+		
+		return () => {
+			controller.abort()
+			window.removeEventListener("friendsChanged", reloadFriends)
+		}
 	}, [])
+
 
 	useEffect(() => {
 		if (!friendsUpdate)
-			return
+			return;
 
 		setFriends(prev =>
 			prev.map(friend =>
-			friend.id === friendsUpdate.user_id
-				? { ...friend, isOnline: friendsUpdate.is_online }
-				: friend
+				friend.id === friendsUpdate.user_id
+					? { ...friend, isOnline: friendsUpdate.is_online }
+					: friend
+			)
 		)
-	)
+	
 	}, [friendsUpdate])
 
 	useEffect(() => {
@@ -105,7 +124,6 @@ function handleSend()
 	setInput("")
 }
 
-	console.log("CHATWIDGET MESSAGES STATE:", messages)
 
 	return (
 		<div className="fixed bottom-6 right-6 rtl:right-auto rtl:left-6 z-50 flex flex-col items-end rtl:items-start gap-3">

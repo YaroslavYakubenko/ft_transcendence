@@ -21,6 +21,7 @@ import { usePersistState, useRematchReset, usePlayerColor, useRestartGame, useRe
 import { appendMove, getBoardCoordinates, createOnPieceDrag, createOnPieceDrop, getGameId, requiresPromotion } from "../chess/utils"
 
 
+
 function GamePage() {
 	const { user, token } = useAuth()
 	const { showToast } = useToast()
@@ -72,9 +73,12 @@ function GamePage() {
 	const [fen, setFen] = useState(() => {
 		return loadFen(storage_keys.fen, location.state?.rematchId)
 	});
+
+	// stores moves history
 	const [moves, setMoves] = useState<{ white: string; black?: string }[]>(() => {
 		return loadMoves(storage_keys.move_history)
 	});
+
 	const [result, setRes] = useState(() => {
 		return loadResult(storage_keys.result)
 	})
@@ -89,7 +93,6 @@ function GamePage() {
 
 // react hooks?? what do you call it ----------------------------------------
 
-	// const playerColor = usePlayerColor( settings.pieceColor, storage_keys.piece_color )
 	const restartGame  = useRestartGame(settings, settings.pieceColor, token, activeTimer)
 	const playerColor = usePlayerColor( settings.userColor, storage_keys.piece_color )
 
@@ -98,8 +101,6 @@ function GamePage() {
 		rematchId: location.state?.rematchId,
 		storage_keys,
 		resetGameState: () => {
-			// console.log("id:", gameId)
-			// console.log("player color:", playerColor)
 			setFen(START_FEN)
 			setMoves([])
 			setRes({ state: "ongoing", winner: "" })
@@ -272,7 +273,8 @@ function GamePage() {
 					setRes({ state: 'draw', winner: '' })
 				}
 
-				else if (data.msg_type === 'draw_declined') {
+				else if (data.msg_type === 'draw_declined') 
+				{
 					setDrawState('idle')
 					showToast(t('toast.drawDeclined'), 'error')
 				}
@@ -304,7 +306,8 @@ function GamePage() {
 		if (multiplayer && socketIsOpen)
 		{
 			// show promotion dialog locally before sending via WS
-			if (requiresPromotion(currentFen, from, to)) {
+			if (requiresPromotion(currentFen, from, to)) 
+			{
 				const { x, y } = getBoardCoordinates(to, effectiveColor, currentFen)
 				setPro({ move: from + to, x, y, pre: currentFen.split(' ')[1] })
 				return null
@@ -450,6 +453,9 @@ function GamePage() {
 					< Gameover
 						result={result}
 						settings={effectiveSettings}
+						user={userRef.current}
+						token={token}
+						gameId={gameId}
 						restartGame={restartGame}
 					/>
 

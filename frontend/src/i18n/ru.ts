@@ -82,10 +82,21 @@ export default {
     	pieceTheme: "Тема фигур",
     	default: "Стандарт",
     	simple: "Простой",
+
+		joinOptionMsg: "add",
+		enterIdMsg: "Spiel-ID eingeben",
+		join: "Beitreten",
+
     	startGame: "Начать игру",
 		couldNotCreateTracked: "Не удалось создать отслеживаемую игру. Запускаем локально без статистики.",
 		couldNotCreate: "Не удалось создать отслеживаемую игру.",
     },
+	waitingroom: {
+		// check
+		gameId: "Game ID",
+		waitingMsg: "Waiting for opponent...",
+		cancel: "cancel",
+	},
     game: {
     	resign: "Сдаться",
     	draw: "Ничья",
@@ -95,9 +106,16 @@ export default {
     	check: "Шах!",
     	checkmate: "Мат!",
 		noMoves: "Ходов пока нет",
-		won: "{{winner}} победил!",
 		gameOver: "Игра окончена",
 		rematch: "Реванш",
+		// add
+		stalemate: "Stalemate",
+		friend: "Freund",
+		White: "White",
+		Black: "Black",
+		Won: "победил!",
+    	resigned: "Aufgegeben",
+		home: "Startseite",
     },
     profile: {
     	editProfile: "Редактировать профиль",

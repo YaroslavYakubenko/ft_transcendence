@@ -82,10 +82,20 @@ export default {
     	pieceTheme: "سمة القطع",
     	default: "افتراضي",
     	simple: "بسيط",
+		joinOptionMsg: "add",
+		enterIdMsg: "Spiel-ID eingeben",
+		join: "Beitreten",
+
     	startGame: "ابدأ اللعبة",
 		couldNotCreateTracked: "تعذّر إنشاء لعبة متتبعة. يتم تشغيل لعبة محلية بدون إحصائيات.",
 		couldNotCreate: "تعذّر إنشاء لعبة متتبعة.",
     },
+	waitingroom: {
+		// check
+		gameId: "Game ID",
+		waitingMsg: "Waiting for opponent...",
+		cancel: "cancel",
+	},
     game: {
     	resign: "الاستسلام",
     	draw: "تعادل",
@@ -98,6 +108,14 @@ export default {
 		won: "{{winner}} فاز!",
 		gameOver: "انتهت اللعبة",
 		rematch: "مباراة انتقامية",
+		// add
+		stalemate: "Stalemate",
+		friend: "Freund",
+		White: "White",
+		Black: "Black",
+		Won: "Won!",
+    	resigned: "Aufgegeben",
+		home: "Startseite",
     },
     profile: {
     	editProfile: "تعديل الملف الشخصي",

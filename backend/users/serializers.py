@@ -66,7 +66,7 @@ class UserStatsSerializer(serializers.ModelSerializer):
 	
 	class Meta:
 		model = User
-		fields = ('id', 'username', 'wins', 'losses', 'draws', 'elo', 'rank')
+		fields = ('id', 'username', 'wins', 'losses', 'draws', 'elo', 'rank', 'highest_win_streak')
 	
 	def get_rank(self, obj):
 		# Calculate rank based on elo (higher elo = lower rank number)
