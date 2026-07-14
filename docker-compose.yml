@@ -111,10 +111,11 @@ services:
 
   nginx_exporter:
     image: nginx/nginx-prometheus-exporter:latest
+    command:
+    - --nginx.scrape-uri=http://nginx/nginx_status
+    - --log.level=error
     container_name: transcendence_nginx_exporter
     restart: unless-stopped
-    command:
-      - --nginx.scrape-uri=http://nginx/nginx_status
     ports:
       - "9113:9113"
     depends_on:
@@ -172,6 +173,10 @@ services:
     image: grafana/grafana:latest
     container_name: transcendence_grafana
     restart: unless-stopped
+
+    environment:
+      GF_LOG_LEVEL: "warn"
+    
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
@@ -182,7 +187,7 @@ services:
       prometheus:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000 || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -218,6 +223,8 @@ services:
     - /var/lib/docker:/var/lib/docker:ro
     - /var/run/docker.sock:/var/run/docker.sock:ro
     - /dev/disk:/dev/disk:ro
+    - /etc/machine-id:/etc/machine-id:ro
+
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080 || exit 1"]
       interval: 15s
@@ -229,9 +236,11 @@ services:
     image: mailhog/mailhog
     container_name: transcendence_mailhog
     restart: unless-stopped
+    logging:
+       driver: "none" #remove if you want to have mailhog logs
     ports:
-      - "1025:1025"
-      - "8025:8025"
+    - "1025:1025"
+    - "8025:8025"
 
 # Named volumes for persistence
 volumes:
