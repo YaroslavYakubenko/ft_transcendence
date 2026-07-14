@@ -4,7 +4,7 @@ import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
 import { useTranslation } from "react-i18next"
 import { useAuth } from "../context/AuthContext"
-import { createGame } from "../api/game"
+import { createGame, check_game_status } from "../api/game"
 
 function LobbyPage() {
 	const navigate = useNavigate()
@@ -18,6 +18,7 @@ function LobbyPage() {
 	const [isStarting, setIsStarting] = useState(false)
 	const [startError, setStartError] = useState("")
 	const [joinGameId, setJoinGameId] = useState("")
+	const [joinError, setJoinError] = useState("")
 	const { t } = useTranslation()
 
     // Player 2 — join an existing game by ID
@@ -29,17 +30,28 @@ function LobbyPage() {
         localStorage.removeItem(`chess_fen_${id}`)
         localStorage.removeItem(`move_history_${id}`)
         localStorage.removeItem(`piece_color_${id}`)
-        navigate('/game', {
-            state: {
-                opponent: 'live',
-                difficulty,
-                timer,
-                pieceColor,
-                boardTheme,
-                pieceTheme,
-                game_id: id,
-            },
-        })
+
+		// check if: game exists, game complete, game full. can rejoin own unfinished games
+		check_game_status(id, token).then((data: any) => {
+			if (!data || data.error || data.status != "valid")
+			{
+				if (data.error)
+					setJoinError(data.error)
+				return 
+			}
+
+	        navigate('/game', {
+	            state: {
+	                opponent: 'live',
+	                difficulty,
+	                timer,
+	                pieceColor,
+	                boardTheme,
+	                pieceTheme,
+	                game_id: id,
+	            },
+	        })
+		})
     }
 
     // Player 1 — create a new game
@@ -63,6 +75,20 @@ function LobbyPage() {
                 userColor = game.user
                 setPieceColor(game.user)
             }
+
+			setIsStarting(false)
+			navigate('/game', {
+				state: {
+					opponent,
+					difficulty,
+					timer,
+					pieceColor,
+					userColor,
+					boardTheme,
+					pieceTheme,
+					game_id: gameId,
+				},
+	        })
         }
 
         if (opponent === 'live' && token) {
@@ -99,19 +125,7 @@ function LobbyPage() {
             return
         }
 
-        setIsStarting(false)
-        navigate('/game', {
-            state: {
-                opponent,
-                difficulty,
-                timer,
-                pieceColor,
-                userColor,
-                boardTheme,
-                pieceTheme,
-                game_id: gameId,
-            },
-        })
+
     }
 
     return (
@@ -257,7 +271,7 @@ function LobbyPage() {
                         <div className="mt-4">
                             <div className="flex items-center gap-3 mb-3">
                                 <div className="flex-1 h-px bg-[#2e2e40]" />
-                                <span className="text-[#8892a4] text-xs">or join existing game</span>
+                                <span className="text-[#8892a4] text-xs"> {t('lobby.joinOptionMsg')} </span>
                                 <div className="flex-1 h-px bg-[#2e2e40]" />
                             </div>
                             <div className="flex gap-2">
@@ -265,16 +279,23 @@ function LobbyPage() {
                                     value={joinGameId}
                                     onChange={e => setJoinGameId(e.target.value)}
                                     onKeyDown={e => e.key === "Enter" && handleJoinGame()}
-                                    placeholder="Enter game ID"
+                                    placeholder={t("lobby.enterIdMsg")}
                                     className="flex-1 bg-[#0f0f13] border border-[#2e2e40] rounded-lg px-3 py-2 text-sm text-[#f0eeff] outline-none"
                                 />
                                 <button
                                     onClick={handleJoinGame}
                                     className="bg-[#0f0f13] text-[#f0eeff] border border-[#2e2e40] rounded-lg px-4 py-2 text-sm cursor-pointer hover:border-[#e2b96f] hover:text-[#e2b96f]"
                                 >
-                                    Join
+                                    {t("lobby.join")}
                                 </button>
                             </div>
+
+							{joinError && (
+								<p className="text-[#e25f5f] text-xs mt-2 mb-0">
+									{joinError}
+								</p>
+							)}
+
                         </div>
                     )}
 

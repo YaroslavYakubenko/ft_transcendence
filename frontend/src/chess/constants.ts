@@ -43,3 +43,16 @@ export const getStorageKeys = (gameId: number | null) => {
 		result: `result_${id}`,
 	}
 }
+
+export const getAchStorageKeys = (_userId: number | null) => {
+	return {
+		played_games: `played_games_${_userId}`,
+		ach_1 : `first_win_${_userId}`,
+		ach_2 : `on_a_roll_${_userId}`,
+		ach_3 : `veteran_${_userId}`,
+		ach_4 : `grandmaster_${_userId}`,
+		ach_5 : `untouchable_${_userId}`,
+		win_counter: `win_counter${_userId}`,
+		highest_win_streak: `highest_win_streak_${_userId}`,
+	}
+}
