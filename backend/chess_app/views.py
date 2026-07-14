@@ -396,6 +396,50 @@ def create_game(request):
 		timer=timer,
 	)
 
+	# If opponent is a bot, start the game immediately and possibly let the bot play the first move
+	if (game.white_player and getattr(game.white_player, 'is_bot', False)) or (game.black_player and getattr(game.black_player, 'is_bot', False)):
+		game.status = 'ongoing'
+		game.started_at = timezone.now()
+		game.save()
+
+		# If the bot is white, make an opening move on its behalf
+		bot_user = game.white_player if getattr(game.white_player, 'is_bot', False) else (game.black_player if getattr(game.black_player, 'is_bot', False) else None)
+		if bot_user and getattr(game.white_player, 'is_bot', False):
+			try:
+				from chess_app.ai_bot.minimax import find_best_move, get_depth
+				import chess as _chess
+
+				board = _chess.Board(game.current_fen)
+				difficulty = getattr(game, 'difficulty', 'medium')
+				depth = get_depth(difficulty)
+				best = find_best_move(board, depth, difficulty)
+				if best:
+					board.push(best)
+					promo = None
+					if best.promotion:
+						try:
+							promo = _chess.piece_symbol(best.promotion).upper()
+						except Exception:
+							promo = None
+					Move.objects.create(
+						game=game,
+						from_square=_chess.square_name(best.from_square),
+						to_square=_chess.square_name(best.to_square),
+						promotion_piece=promo,
+						fen_before=game.current_fen,
+						fen_after=board.fen(),
+						move_number=1,
+					)
+					game.current_fen = board.fen()
+					# If game ended by bot move, update stats
+					g_res = check_gameover(board)
+					if g_res != 'ongoing':
+						update_player_stats(game, g_res)
+					game.save()
+			except Exception:
+				# If AI unavailable, leave game as started without a bot move
+				pass
+
 	if piece_color == 'white':
 		return Response({
 			'game_id': game.id,
