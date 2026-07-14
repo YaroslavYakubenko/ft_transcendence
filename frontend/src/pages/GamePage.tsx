@@ -1,216 +1,372 @@
-import { useMemo, useState } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { Chessboard } from "react-chessboard"
 import { useAuth } from "../context/AuthContext"
+import { useLocation } from "react-router-dom"
+import { make_move, legal_moves, do_promotion, resign_game } from "../api/game"
+import { useToast } from "../context/ToastContext"
 import { useTranslation } from "react-i18next"
+
 import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
-import type { PieceHandlerArgs, PieceDropHandlerArgs } from "react-chessboard"
-import { make_move, legal_moves, resign_game, do_promotion, createGame } from "../api/game"
-import { START_FEN } from "../chess/constants"
-import { PIECE_THEMES, BOARD_THEMES, createSquareStyles } from "../chess/themes"
-import { usePersistState, useRematchReset, usePlayerColor } from "../chess/hooks"
-import { appendMove, getBoardCoordinates } from "../chess/utils"
+import Gameover from "../components/Gameover"
+import PlayerPanel from "../components/PlayerPanel"
+import OpponentPanel from "../components/OpponentPanel"
+import MoveHistoryPanel from "../components/MoveHistoryPanel"
 import PromotionSelector from "../components/PromotionSelector"
 
-interface GameResult {
-	state: string
-	winner: string
-}
+import { loadFen, loadMoves, loadResult } from "../chess/storage"
+import { PIECE_THEMES, BOARD_THEMES, createSquareStyles } from "../chess/themes"
+import { START_FEN, DEFAULT_SETTINGS, getStorageKeys, type GameSettings } from "../chess/constants"
+import { usePersistState, useRematchReset, usePlayerColor, useRestartGame, useResignGame, useChessTimer } from "../chess/hooks"
+import { appendMove, getBoardCoordinates, createOnPieceDrag, createOnPieceDrop, getGameId, requiresPromotion } from "../chess/utils"
 
-interface GameSettings {
-	opponent: 'bot' | 'live'
-	difficulty: 'easy' | 'medium' | 'hard'
-	timer: 'none' | '3' | '5' | '10'
-	pieceColor: 'white' | 'black' | 'random'
-	boardTheme: 'default' | 'green' | 'blue' | 'brown'
-	pieceTheme: 'default' | 'simple'
-	game_id?: number
-	rematchId?: number
-}
+
 
 function GamePage() {
 	const { user, token } = useAuth()
-	const navigate = useNavigate()
-	const location = useLocation()
+	const { showToast } = useToast()
 	const { t } = useTranslation()
+	const userRef = useRef(user)
+	useEffect(() => { userRef.current = user }, [user])
+	const location = useLocation()
+	const wsRef = useRef<WebSocket | null>(null)							// creates a React ref that will store the WebSocket connection
 
-	const settings: GameSettings = location.state ?? {
-		opponent: 'bot',
-		difficulty: 'medium',
-		timer: 'none',
-		pieceColor: 'random',
-		boardTheme: 'default',
-		pieceTheme: 'default',
-	}
+// variables ----------------------------------------
 
+	// setting vars ----------------------------------------
+	const settings: GameSettings = location.state ?? DEFAULT_SETTINGS
 	const theme = BOARD_THEMES[settings.boardTheme]
 	const pieces = PIECE_THEMES[settings.pieceTheme]
-	const locationState = (location.state as Record<string, unknown>) ?? {}
-	const gameIdFromState =
-		locationState.game_id ??
-		locationState.gameId ??
-		((locationState.game as { id?: number } | undefined)?.id ?? null)
-	const gameId = typeof gameIdFromState === 'number' ? gameIdFromState : null
+	// const gameId = 428
+	const gameId = getGameId(location.state)
+	const storage_keys = getStorageKeys(gameId) // for local storage persistance
+	const multiplayer = settings.opponent === 'live'
 
-	const storageKeys = useMemo(() => ({
-		fen: `chess_fen_${gameId ?? 'local'}`,
-		moveHistory: `move_history_${gameId ?? 'local'}`,
-		pieceColor: `piece_color_${gameId ?? 'local'}`,
-	}), [gameId])
 
-	const [fen, setFen] = useState(() => {
-		if (location.state?.rematchId) return START_FEN
-		return localStorage.getItem(storageKeys.fen) || START_FEN
-	})
-	const [result, setRes] = useState<GameResult>({ state: 'ongoing', winner: '' })
-	const [promotion, setPro] = useState({ move: '', x: -1, y: -1, pre: '' })
-	const [moves, setMoves] = useState<{ white: string; black?: string }[]>(() => {
-		const saved = localStorage.getItem(storageKeys.moveHistory)
-		return saved ? JSON.parse(saved) : []
-	})
+	// highlight/ special squares ----------------------------------------
 	const [highlightSquares, setHighlightSquares] = useState<string[]>([])
 	const [highlightSquares2, setHighlightSquares2] = useState<string[]>([])
 	const [checkSquare, setCheckSquare] = useState<string | null>(null)
-	const [resignError, setResignError] = useState('')
-	const [isResigning, setIsResigning] = useState(false)
-
-	const playerColor = usePlayerColor(settings.pieceColor, storageKeys.pieceColor)
-	const customSquareStyles = useMemo(
-		() => createSquareStyles(highlightSquares, highlightSquares2, checkSquare),
+	const customSquareStyles = useMemo(() =>
+		createSquareStyles( highlightSquares, highlightSquares2, checkSquare ),
 		[highlightSquares, highlightSquares2, checkSquare]
-	)
+	);
 
-	const restartGame = async () => {
-		let newGameId: number | undefined
-		if (settings.opponent === 'bot' && token) {
-			const game = await createGame(settings.opponent, token)
-			if (game?.game_id) {
-				newGameId = game.game_id
-			}
-		}
-		return newGameId
-	}
+	// game vars ----------------------------------------
+	const [fen, setFen] = useState(() => {
+		return loadFen(storage_keys.fen, location.state?.rematchId)
+	});
 
+	// stores moves history
+	const [moves, setMoves] = useState<{ white: string; black?: string }[]>(() => {
+		return loadMoves(storage_keys.move_history)
+	});
+
+	const [result, setRes] = useState(() => {
+		return loadResult(storage_keys.result)
+	})
+	const [promotion, setPro] = useState({ move: "", x: -1, y: -1, pre: "" })
+
+	// Live multiplayer state  ----------------------------------------
+	const [opponentConnected, setOpponentConnected] = useState(false);
+	const [liveColor, setLiveColor] = useState<'white' | 'black' | null>(null)
+	const [activeTimer, setActiveTimer] = useState(settings.timer)
+	const liveColorRef = useRef<'white' | 'black' | null>(null)
+	const [opponent, setOpponent] = useState<{ id: number; name: string } | null>(null)
+	const opponentRef = useRef<{ id: number; name: string } | null>(null)
+	const [drawState, setDrawState] = useState<'idle' | 'offer_sent' | 'offer_received'>('idle')
+
+// react hooks?? what do you call it ----------------------------------------
+
+	const restartGame  = useRestartGame(settings, settings.pieceColor, token, activeTimer)
+	const playerColor = usePlayerColor( settings.userColor, storage_keys.piece_color )
+
+	// when given rematch id reset board to starting positions
 	useRematchReset({
 		rematchId: location.state?.rematchId,
-		storage_keys: storageKeys,
+		storage_keys,
 		resetGameState: () => {
 			setFen(START_FEN)
 			setMoves([])
-			setRes({ state: 'ongoing', winner: '' })
-			setPro({ move: '', x: -1, y: -1, pre: '' })
+			setRes({ state: "ongoing", winner: "" })
+			setPro({ move: "", x: -1, y: -1, pre: "" })
 			setHighlightSquares([])
 			setHighlightSquares2([])
 			setCheckSquare(null)
 		},
 	})
 
-	usePersistState(storageKeys.fen, fen, location.state?.rematchId)
-	usePersistState(storageKeys.moveHistory, JSON.stringify(moves), location.state?.rematchId)
+	// update local fen & move history & state on change
+	usePersistState(storage_keys.fen, fen, location.state?.rematchId)
+	usePersistState(storage_keys.move_history, JSON.stringify(moves), location.state?.rematchId)
+	usePersistState(storage_keys.result, JSON.stringify(result), location.state?.rematchId )
 
-	const handleResign = async () => {
-		localStorage.removeItem(storageKeys.fen)
-		localStorage.removeItem(storageKeys.moveHistory)
-		setFen(START_FEN)
-		setMoves([])
-		setResignError('')
+	const {handleResign, resignError,isResigning} = useResignGame(
+		storage_keys, token, gameId,
+		setFen, setMoves, setRes
+	)
 
-		if (!token) {
-			setResignError('You must be logged in to resign.')
-			return
-		}
-		if (!gameId) {
-			setResignError('No game ID found. Resign is unavailable for this game.')
-			return
-		}
-
-		setIsResigning(true)
-		const data = await resign_game(gameId, token)
-		setIsResigning(false)
-
-		if (!data) {
-			setResignError('Resign request failed.')
-			return
-		}
-
-		setRes({ state: 'resign', winner: data.result?.winner || '' })
-	}
-
-	const chessboardOptions = {
-		position: fen,
-		boardOrientation: playerColor,
-		darkSquareStyle: { backgroundColor: theme.dark },
-		lightSquareStyle: { backgroundColor: theme.light },
-		pieces,
-		onPieceDrag: ({ square }: PieceHandlerArgs) => {
-			if (!square) {
-				setHighlightSquares([])
-				setHighlightSquares2([])
-				return
+	const effectiveSettings = { ...settings, timer: activeTimer }
+	const effectiveColor = (multiplayer && liveColor) ? liveColor : playerColor
+	// For multiplayer, don't assign panel times until liveColor is confirmed from sync
+	const colorForTimer: 'white' | 'black' | null = (!multiplayer || liveColor !== null) ? effectiveColor : null
+	const { playerTime, opponentTime } = useChessTimer(
+		activeTimer,
+		fen,
+		result.state !== 'ongoing',
+		colorForTimer,
+		async (loser) => {
+			setRes({ state: 'timeout', winner: loser === 'white' ? 'Black' : 'White' })
+			// Only the losing player notifies the backend so stats update once
+			if (loser === colorForTimer && gameId && token) {
+				await resign_game(gameId, token)
 			}
-			legal_moves(fen).then((data) => {
-				if (!data) return
-				setHighlightSquares(data.moves[square] || [])
-				setHighlightSquares2(data.moves2[square] || [])
-			})
-		},
-		onPieceDrop: ({ sourceSquare, targetSquare }: PieceDropHandlerArgs) => {
-			if (!sourceSquare || !targetSquare) return false
-			if (result.state !== 'ongoing') return false
+		}
+	)
 
-			make_move(fen, sourceSquare, targetSquare, gameId).then((data) => {
-				if (!data) return
-				if (data.promotion !== '') {
-					const { x, y } = getBoardCoordinates(targetSquare, playerColor, fen)
-					setPro({ move: data.promotion, x, y, pre: fen.split(' ')[1] })
-					return
+
+	// WebSocket for live games ----------------------------------------
+	// 	{
+	// 		data: '{"msg_type":"move","fen":"some-fen"}',
+	// 		type: "message",
+	// 		target: WebSocket,
+	// 		origin: "ws://localhost:8000",
+	// 		lastEventId: "",
+	// 		source: null,
+	// 		ports: []
+	// }
+
+	// event.data might contain '{"msg_type":"move","fen":"new-board-position"}'
+	// JSON.parse turns it into a Javascript object 
+	// 	{
+	// 		msg_type: "move",
+	// 		fen: "new-board-position"
+	//	}
+	useEffect(() =>
+	{
+		if (!multiplayer || !gameId || !token)
+			return
+
+		let isClosed = false
+		let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
+
+		const WS_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:8443`
+		const socketUrl = `${WS_URL}/ws/game/${gameId}/?token=${token}`
+
+		function connect() {
+			if (isClosed) return
+
+			const socket = new WebSocket(socketUrl)
+			wsRef.current = socket
+
+			socket.onmessage = function(event)
+			{
+				if (isClosed) return
+
+				const data = JSON.parse(event.data)
+
+				if (data.msg_type === 'sync')
+				{
+					setFen(data.fen)
+
+					const color = (data.your_color === 'white' ? 'white' : 'black') as 'white' | 'black'
+					setLiveColor(color)
+					liveColorRef.current = color
+
+					if (data.opponent_id && data.opponent_name) {
+						const opp = { id: data.opponent_id, name: data.opponent_name }
+						setOpponent(opp)
+						opponentRef.current = opp
+					}
+
+					if (data.timer)
+						setActiveTimer(data.timer)
+
+					// Override any stale localStorage result — DB is the source of truth
+					if (data.status !== 'completed')
+						setRes({ state: 'ongoing', winner: '' })
 				}
 
-				const moveNotation = `${sourceSquare}${targetSquare}`
-				const isWhiteMove = fen.split(' ')[1] === 'w'
-				setMoves((prevMoves) => {
-					let nextMoves = appendMove(prevMoves, moveNotation, isWhiteMove)
-					if (data.bot_move) {
-						nextMoves = appendMove(nextMoves, data.bot_move, !isWhiteMove)
-					}
-					return nextMoves
-				})
+				else if (data.msg_type === 'player_connected') {
+					setOpponentConnected(true)
+					if (!opponentRef.current)
+						showToast(t('toast.opponentJoined'))
+				}
 
-				setFen(data.fen)
-				setRes({ state: data.result || 'ongoing', winner: data.winner || '' })
-				setPro({ move: '', x: -1, y: -1, pre: '' })
-				setCheckSquare(data.kingpos || null)
-			})
+				else if (data.msg_type === 'move')
+				{
+					setFen(data.fen)
+					setCheckSquare(data.king_in_check || null)
 
-			setHighlightSquares([])
-			setHighlightSquares2([])
-			return false
-		},
+					const isWhiteMove = data.fen.split(' ')[1] === 'b'
+					const notation = data.from + data.to + (data.promotion || '')
+					setMoves((prev: any) => appendMove(prev, notation, isWhiteMove))
+
+					if (data.result !== 'ongoing')
+						setRes({ state: data.result, winner: data.winner })
+				}
+
+				else if (data.msg_type === 'resign')
+					setRes({ state: 'resign', winner: data.winner })
+
+				else if (data.msg_type === 'draw_offer')
+					setDrawState(prev => {
+						if (prev === 'offer_sent') {
+							// Both players offered simultaneously — auto-accept
+							const socket = wsRef.current
+							if (socket?.readyState === WebSocket.OPEN)
+								socket.send(JSON.stringify({ type: 'draw_response', accepted: true }))
+							return 'idle'
+						}
+						showToast(t('toast.drawOffered'))
+						return 'offer_received'
+					})
+
+				else if (data.msg_type === 'draw_accepted')
+				{
+					setDrawState('idle')
+					setRes({ state: 'draw', winner: '' })
+				}
+
+				else if (data.msg_type === 'draw_declined') 
+				{
+					setDrawState('idle')
+					showToast(t('toast.drawDeclined'), 'error')
+				}
+			}
+
+			socket.onclose = () => {
+				if (isClosed) return
+				reconnectTimeout = setTimeout(connect, 3000)
+			}
+		}
+
+		connect()
+
+		return () => {
+			isClosed = true
+			if (reconnectTimeout) clearTimeout(reconnectTimeout)
+			wsRef.current?.close()
+		}
+	}, [multiplayer, gameId, token])
+
+
+	// send a move over WS for live games, fall back to HTTP for bot games
+	const sendMove = async (currentFen: string, from: string, to: string) => {
+
+		const socket = wsRef.current
+		const socketIsOpen = socket?.readyState === WebSocket.OPEN
+
+		if (multiplayer && socketIsOpen)
+		{
+			// show promotion dialog locally before sending via WS
+			if (requiresPromotion(currentFen, from, to)) 
+			{
+				const { x, y } = getBoardCoordinates(to, effectiveColor, currentFen)
+				setPro({ move: from + to, x, y, pre: currentFen.split(' ')[1] })
+				return null
+			}
+
+			const messageText = JSON.stringify({ type: "move", from, to })
+			socket.send(messageText)
+
+			return null
+		}
+
+		// non-multiplayer games
+		return make_move(currentFen, from, to, gameId)
 	}
 
+	const handleWsPromotion = (promo: string) => {
+		const from = promotion.move.substring(0, 2)
+		const to = promotion.move.substring(2, 4)
+		const socket = wsRef.current
+		if (socket?.readyState === WebSocket.OPEN) {
+			socket.send(JSON.stringify({ type: 'move', from, to, promotion: promo }))
+		}
+	}
+
+
+// Draw actions ----------------------------------------
+
+	const handleDrawOffer = () => {
+		const socket = wsRef.current
+		if (socket?.readyState === WebSocket.OPEN) {
+			socket.send(JSON.stringify({ type: 'draw_offer' }))
+			setDrawState('offer_sent')
+		}
+	}
+
+	const handleDrawAccept = () => {
+		const socket = wsRef.current
+		if (socket?.readyState === WebSocket.OPEN) {
+			socket.send(JSON.stringify({ type: 'draw_response', accepted: true }))
+			setDrawState('idle')
+		}
+	}
+
+	const handleDrawDecline = () => {
+		const socket = wsRef.current
+		if (socket?.readyState === WebSocket.OPEN) {
+			socket.send(JSON.stringify({ type: 'draw_response', accepted: false }))
+			setDrawState('idle')
+		}
+	}
+
+// Piece movement actions ----------------------------------------
+
+	const onPieceDrag = createOnPieceDrag({
+		fen,
+		setHighlightSquares, setHighlightSquares2,
+		legal_moves,
+		effectiveColor,
+	});
+	const onPieceDrop = createOnPieceDrop({
+		fen, gameId, playerColor: effectiveColor,
+		make_move: sendMove,
+		getBoardCoordinates,
+		appendMove,
+		setMoves, setFen, setRes, setPro,
+		setCheckSquare, setHighlightSquares, setHighlightSquares2,
+	});
+
+	const chessboardOptions =
+	{
+		position: fen,
+		boardOrientation: (multiplayer && liveColor) ? liveColor : playerColor,
+		darkSquareStyle: { backgroundColor: theme.dark },
+		lightSquareStyle: { backgroundColor: theme.light },
+		pieces: pieces,
+
+		onPieceDrag,
+		onPieceDrop,
+	};
+	
 	return (
 		<div className="bg-[#0f0f13] min-h-screen flex flex-col">
 			<Navbar />
 			<div className="flex-1 flex items-center justify-center py-8">
 				<div className="flex gap-4 items-start">
-					<div className="flex flex-col">
-						<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl px-4 py-3 flex mt-2 items-center justify-between w-[500px]">
-							<div className="flex items-center gap-3">
-								<div className="w-8 h-8 rounded-full bg-[#3d3d55] border border-[#5a5a7a] flex items-center justify-center text-[#f0eeff] text-xs font-bold">
-									{settings.opponent === 'bot' ? 'AI' : '?'}
-								</div>
-								<span className="text-[#f0eeff] text-sm font-medium">
-									{settings.opponent === 'bot' ? `${t('lobby.bot')} (${t(`lobby.${settings.difficulty}`)})` : t('lobby.opponent')}
-								</span>
-							</div>
-							<span className="text-[#e2b96f] text-sm font-mono">
-								{settings.timer === 'none' ? '∞' : `${settings.timer}:00`}
-							</span>
-						</div>
 
+					{/* Left - board + player pannels */}
+					<div className="flex flex-col">
+
+						{/* Opponent panel */}
+						<OpponentPanel
+							settings={effectiveSettings}
+							opponent={opponent}
+							time={opponentTime}
+						/>
+
+						{/* Board */}
 						<div className="relative w-[500px]">
-							<Chessboard options={{ ...chessboardOptions, squareStyles: customSquareStyles }} />
+							<Chessboard 
+								options={{
+									...chessboardOptions,
+									squareStyles: customSquareStyles,
+								}} />
+
+							{/* promotion */}
 							<PromotionSelector
 								promotion={promotion}
 								pieces={pieces}
@@ -220,85 +376,43 @@ function GamePage() {
 								setRes={setRes}
 								setPro={setPro}
 								do_promotion={do_promotion}
+								onWsPromotion={multiplayer ? handleWsPromotion : undefined}
 							/>
+
 						</div>
 
-						<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl px-4 py-3 mt-2 flex items-center justify-between w-[500px]">
-							<div className="flex items-center gap-3">
-								<div className="w-8 h-8 rounded-full bg-[#e2b96f] flex items-center justify-center text-[#0f0f13] text-xs font-bold">
-									{user?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || '?'}
-								</div>
-								<span className="text-[#f0eeff] text-sm font-medium">
-									{user?.username || user?.email || 'You'}
-								</span>
-							</div>
-							<span className="text-[#e2b96f] text-sm font-mono">
-								{settings.timer === 'none' ? '∞' : `${settings.timer}:00`}
-							</span>
-						</div>
+						{/* Player panel */}
+						< PlayerPanel
+							settings={effectiveSettings}
+							user={user}
+							time={playerTime}
+						/>
+
 					</div>
 
-					<div className="flex flex-col gap-3 w-48 h-fit mt-2">
-						<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl p-3 overflow-y-auto h-[620px]">
-							<p className="text-[#8896a4] text-xs mb-2 m-0">{t('game.movesHistory')}</p>
-							{moves.length === 0 ? (
-								<p className="text-[#2e2e40] text-xs">{t('game.noMoves')}</p>
-							) : (
-								<div className="text-[#f0eeff] text-xs space-y-1">
-									{moves.map((movePair, i) => (
-										<div key={i} className="flex gap-2">
-											<span className="text-[#8896a4] min-w-[1.5rem]">{i + 1}.</span>
-											<span className="text-[#e2b96f]">{movePair.white}</span>
-											{movePair.black && <span className="text-[#8896a4]">{movePair.black}</span>}
-										</div>
-									))}
-								</div>
-							)}
-						</div>
-						<button
-							onClick={handleResign}
-							disabled={isResigning}
-							className="w-full bg-[#0f0f13] border border-[#e25f5f] text-[#e25f5f] rounded-lg text-sm cursor-pointer hover:bg-[#e25f5f] hover:text-[#f0eeff]"
-						>
-							{isResigning ? 'Resigning...' : t('game.resign')}
-						</button>
-						<button className="w-full bg-[#0f0f13] border border-[#2e2e40] text-[#8892a4] rounded-lg text-sm cursor-pointer hover:border-[#e2b96f] hover:text-[#e2b96f]">
-							{t('game.draw')}
-						</button>
-						{resignError && <p className="text-[#e25f5f] text-xs m-0">{resignError}</p>}
-					</div>
+					{/* Right - move history + buttons */}
+					<MoveHistoryPanel
+						moves={moves}
+						onResign={handleResign}
+						isResigning={isResigning}
+						resignError={resignError}
+						isGameOver={result.state !== 'ongoing'}
+						drawState={multiplayer && result.state === 'ongoing' ? drawState : undefined}
+						onDrawOffer={multiplayer && result.state === 'ongoing' ? handleDrawOffer : undefined}
+						onDrawAccept={multiplayer && result.state === 'ongoing' ? handleDrawAccept : undefined}
+						onDrawDecline={multiplayer && result.state === 'ongoing' ? handleDrawDecline : undefined}
+					/>
 
-					{result.state !== 'ongoing' && (
-						<div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/75 px-4">
-							<div className="w-full max-w-2xl rounded-2xl border border-[#2e2e40] bg-[#1a1a24] p-6 shadow-2xl flex flex-col max-h-[80vh]">
-								<div className="text-center mb-4">
-									<p className="text-[#8892a4] text-xs uppercase tracking-[0.3em] mb-2">Game Over</p>
-									<h2 className="text-[#f0eeff] text-2xl font-semibold mb-2">{result.winner ? `${result.winner} Won!` : 'Draw'}</h2>
-									<p className="text-[#e2b96f] text-lg font-mono">State: {result.state}</p>
-								</div>
-								<div className="flex gap-2">
-									<button
-										type="button"
-										className="flex-1 rounded-lg bg-[#81b64c] px-4 py-2.5 font-semibold text-white cursor-pointer"
-										onClick={async () => {
-											const newGameId = await restartGame()
-											if (!newGameId) return
-											navigate('/game', { state: { ...settings, game_id: newGameId, rematchId: newGameId } })
-										}}
-									>
-										Rematch
-									</button>
-									<button
-										type="button"
-										className="flex-1 rounded-lg bg-[#3a3937] px-4 py-2.5 font-semibold text-[#f0eeff] cursor-pointer"
-										onClick={() => navigate('/')}
-									>
-										Home
-									</button>
-								</div>
-							</div>
-						</div>
-					)}
+					{/* gameover make better with rematch option and stuff*/}
+					< Gameover
+						result={result}
+						settings={effectiveSettings}
+						user={userRef.current}
+						token={token}
+						gameId={gameId}
+						restartGame={restartGame}
+					/>
+
 				</div>
 			</div>
 			<Footer />
@@ -307,3 +421,9 @@ function GamePage() {
 }
 
 export default GamePage
+
+// tabading@example.com Hello1295!
+
+// implement draw button once websockets are in -> question opponent if they agree
+// if live player not bot/ pending widget -> display game id, waiting for opponent.
+// -> update opponent

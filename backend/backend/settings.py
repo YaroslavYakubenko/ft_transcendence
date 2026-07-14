@@ -163,22 +163,17 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173", #list of adrresses to allow (our frontend)
-    "http://127.0.0.1:5173"
+    "https://localhost:8443",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://10.11.11.2:8443",
 ]
 CORS_ALLOW_CREDENTIALS = True
-# In local dev (DEBUG=True) we typically run frontend + backend on plain HTTP localhost.
-# Keep cookies usable for OAuth state in that setup, and harden automatically outside DEBUG.
-# SESSION_COOKIE_SAMESITE = 'Lax' if DEBUG else 'None'
-# SESSION_COOKIE_SECURE = not DEBUG
-# CSRF_COOKIE_SAMESITE = 'Lax' if DEBUG else 'None'
-# CSRF_COOKIE_SECURE = not DEBUG
 
-SESSION_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SECURE = True
-
 
 # Reverse proxy / HTTPS handling (Nginx)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -197,11 +192,25 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField' # This is a setting that te
 # our oauth keys
 GITHUB_CLIENT_ID = os.environ.get('GITHUB_CLIENT_ID', '')
 GITHUB_CLIENT_SECRET = os.environ.get('GITHUB_CLIENT_SECRET', '')
+GITHUB_CLIENT_ID_IP = os.environ.get('GITHUB_CLIENT_ID_IP', '')
+GITHUB_CLIENT_SECRET_IP = os.environ.get('GITHUB_CLIENT_SECRET_IP', '')
 
 FORTY_TWO_CLIENT_ID = os.environ.get('FORTY_TWO_CLIENT_ID', '')
 FORTY_TWO_CLIENT_SECRET = os.environ.get('FORTY_TWO_CLIENT_SECRET', '')
-OAUTH_REDIRECT_URI = os.environ.get('OAUTH_REDIRECT_URI', 'http://localhost:5173/oauth/callback')
+FORTY_TWO_CLIENT_ID_IP = os.environ.get('FORTY_TWO_CLIENT_ID_IP', '')
+FORTY_TWO_CLIENT_SECRET_IP = os.environ.get('FORTY_TWO_CLIENT_SECRET_IP', '')
+OAUTH_REDIRECT_URI = os.environ.get('OAUTH_REDIRECT_URI', 'http://localhost:8443/oauth/callback')
 
 # User uploaded files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Email (MailHog for development)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'mailhog')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 1025))
+EMAIL_HOST_USER = ''
+EMAIL_HOST_PASSWORD = ''
+EMAIL_USE_TLS = False
+DEFAULT_FROM_EMAIL = 'noreply@transcendence.local'
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://localhost:8443')

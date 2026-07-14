@@ -6,20 +6,24 @@ import Footer from "../components/Footer"
 import { getUserStats, getMatchHistory, getAchievements } from "../api/game"
 import { type UserStats, type MatchRecord, type Achievement } from "../api/game"
 import { useTranslation } from "react-i18next"
+import { useToast } from "../context/ToastContext"
 
 function ProfilePage() {
     const { user } = useAuth()
     const navigate = useNavigate()
     const { t } = useTranslation()
+    const { showToast } = useToast()
     const [stats, setStats] = useState<UserStats | null>(null)
     const [matches, setMatches] = useState<MatchRecord[]>([])
     const [achievements, setAchievements] = useState<Achievement[]>([])
 
     useEffect(() => {
       if (!user) return
-      getUserStats(user.id).then(setStats).catch(() => {})
-      getMatchHistory(user.id).then((data) => setMatches(data)).catch(() => {})
-      getAchievements(user.id).then(setAchievements).catch(() => {})
+      const controller = new AbortController()
+      getUserStats(user.id, controller.signal).then(setStats).catch((err) => { if (err.name !== 'AbortError') showToast(t('toast.loadFailed'), 'error') })
+      getMatchHistory(user.id, 1, controller.signal).then(setMatches).catch((err) => { if (err.name !== 'AbortError') showToast(t('toast.loadFailed'), 'error') })
+      getAchievements(user.id).then(setAchievements).catch((err) => { if (err.name !== 'AbortError') showToast(t('toast.loadFailed'), 'error') })
+      return () => controller.abort()
     }, [user])
 
     return (
@@ -29,15 +33,7 @@ function ProfilePage() {
 
           {/* Avatar + name */}
           {user?.avatarUrl ? (
-            <img 
-              src={`${user.avatarUrl}?t=${Date.now()}`} 
-              alt="avatar" 
-              className="w-20 h-20 rounded-full object-cover mb-4"
-              onError={(e) => {
-                // If avatar fails to load, hide it and show initials
-                e.currentTarget.style.display = 'none'
-              }}
-            />
+            <img src={user.avatarUrl} alt="avatar" className="w-20 h-20 rounded-full object-cover mb-4" />
           ) : (
             <div className="w-20 h-20 rounded-full bg-[#e2b96f] flex items-center justify-center text-[#0f0f13] text-3xl font-bold mb-4">
               {user ? (user.username || user.email)[0].toUpperCase() : '?'}
@@ -62,6 +58,10 @@ function ProfilePage() {
               <div className="text-xs text-[#8892a4] mt-1">{t('home.losses')}</div>
             </div>
             <div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl px-8 py-6 text-center">
+              <div className="text-2xl font-semibold text-[#8892a4]">{stats?.draws ?? 0}</div>
+              <div className="text-xs text-[#8892a4] mt-1">{t('home.draws')}</div>
+            </div>
+            <div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl px-8 py-6 text-center">
               <div className="text-2xl font-semibold text-[#e2b96f]">#{stats?.rank ?? '-'}</div>
               <div className="text-xs text-[#8892a4] mt-1">{t('home.rank')}</div>
             </div>
@@ -77,11 +77,8 @@ function ProfilePage() {
 
           {/* Match history */}
           <div className="w-full max-w-2xl mb-10">
-            <h2 className="text-lg font-semibold mb-4">
-              {t('profile.matchHistory')}
-              <span className="text-sm text-[#8892a4] ml-3">{matches.length} matches</span>
-            </h2>
-            <div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl overflow-hidden max-h-[500px] overflow-y-auto">
+            <h2 className="text-lg font-semibold mb-4">{t('profile.matchHistory')}</h2>
+            <div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl overflow-hidden">
               {matches.length === 0 ? (
                 <p className="text-[#8892a4] text-sm px-6 py-4">{t('profile.noMatches')}</p>
               ) : (

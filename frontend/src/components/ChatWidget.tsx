@@ -1,83 +1,129 @@
 import { useState, useEffect, useRef } from "react"
-import { getFriends, type Friend, type ChatMessage } from "../api/social"
+import { getFriends, getMessages, sendMessage, type Friend, type ChatMessage } from "../api/social"
 import { useTranslation } from "react-i18next"
 import { useAuth } from "../context/AuthContext"
 
-function ChatWidget() {
+
+// in react every piece of UI is a function
+// you call it and it returns what should be drawn on the screen 
+// inside we have helper functions that only this component needs
+function ChatWidget() 
+{
 	const [isOpen, setIsOpen] = useState(false)
 	const [friends, setFriends] = useState<Friend[]>([])
 	const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null)
-	const [messages, setMessages] = useState<ChatMessage[]>([])
+	const [messages, setMessages] = useState<ChatMessage[]>([])							// setMessages = updates messages; React rerenders when setMessages changes messages
+
 	const [input, setInput] = useState("")
 	const bottomRef = useRef<HTMLDivElement>(null)
-	const wsRef = useRef<WebSocket | null>(null)
 	const { t } = useTranslation()
-	const { token, user } = useAuth()
+	const { token, user, sendChat, lastMessage, friendsUpdate } = useAuth()
+	const lastProcessedMessage = useRef<typeof lastMessage>(null)
 
 	useEffect(() => {
-		getFriends(token!).then(setFriends).catch(() => {})
+		const controller = new AbortController()
+
+
+		function reloadFriends() {
+			getFriends(token!, controller.signal)
+				.then(function(data) {
+					setFriends(data)
+				})
+				.catch(function(error) {
+					if (error.name !== 'AbortError')
+						console.error("Could not reload friends:", error)
+				})
+		}
+		reloadFriends()
+		window.addEventListener("friendsChanged", reloadFriends)
+		
+		return () => {
+			controller.abort()
+			window.removeEventListener("friendsChanged", reloadFriends)
+		}
 	}, [])
 
-	// useEffect(() => {
-	// 	if (selectedFriend) {
-	// 		getMessages(selectedFriend.id, token!).then(setMessages)
-	// 	}
-	// }, [selectedFriend])
+
+	useEffect(() => {
+		if (!friendsUpdate)
+			return;
+
+		setFriends(prev =>
+			prev.map(friend =>
+				friend.id === friendsUpdate.user_id
+					? { ...friend, isOnline: friendsUpdate.is_online }
+					: friend
+			)
+		)
+	
+	}, [friendsUpdate])
 
 	useEffect(() => {
 		bottomRef.current?.scrollIntoView()
 	}, [messages])
 
-	// open / close WebSocket when a friend is selected
+	// react to incoming messages from the persistent WebSocket in AuthContext
 	useEffect(() => {
-		// close any existing connection first
-		if (wsRef.current) {
-			wsRef.current.close()
-			wsRef.current = null
-		}
-
-		if (!selectedFriend || !token || !user) return
-
-		// room name is sorted by ID so both users always join the same room
-    	const roomName = `dm_${Math.min(user.id, selectedFriend.id)}_${Math.max(user.id, selectedFriend.id)}`
-		const ws = new WebSocket(`wss://localhost:8443/ws/chat/${roomName}/?token=${token}`)
-
-		ws.onopen = () => {
-			console.log(`Cchat connected to room ${roomName}`)
-		}
-
-		ws.onmessage = (e) => {
-			const data = JSON.parse(e.data)
-			setMessages(prev => [...prev, {
-				id: Date.now(),
-				fromId: data.username === (user.username || user.email) ? user.id : selectedFriend.id,
-				toId: data.username === (user.username || user.email) ? selectedFriend.id : user.id,
-				text: data.message,
-				timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit'})
-			}])
-		}
-
-		ws.onerror = (e) => console.error('Chat Websocket error:', e)
-		ws.onclose = () => console.log('Chat Websocket closed')
-
-		wsRef.current = ws
-
-		// clear messages when switching friends
-		setMessages([])
-
-		return () => {
-			ws.close()
-		}
-
-	}, [selectedFriend])
-
-
-	function handleSend() {
-		if (!input.trim() || !selectedFriend || !wsRef.current) 
+		if (!selectedFriend || !token)
+		{
+			setMessages([])
 			return
-		wsRef.current.send(JSON.stringify({ message: input }))
-		setInput("")
-	}
+		}
+		
+		const controller = new AbortController()
+		getMessages(selectedFriend.id, token, controller.signal)
+			.then(function(data) {
+				console.log("getMessages returned:", data)
+				setMessages(data)
+			})
+			.catch(function(error) {
+				if (error.name !== 'AbortError') {
+					console.error("Could not load messages:", error)
+					setMessages([])
+				}
+			})
+
+		return () => controller.abort()
+	}, [selectedFriend, token])				// runs when selectedFriend or token changes
+
+	
+	useEffect(() => {
+		if (!lastMessage || !user || lastMessage === lastProcessedMessage.current)
+			return
+
+		lastProcessedMessage.current = lastMessage
+
+		const isFromFriend = lastMessage.from_user_id === selectedFriend?.id
+		const isFromMe = lastMessage.from_user_id === user.id
+
+		if (!isFromFriend && !isFromMe)
+			return
+
+		setMessages(prev => [...prev, {
+			id: Date.now(),
+			fromId: lastMessage.from_user_id,
+			toId: lastMessage.to_user_id,
+			text: lastMessage.message,
+			timestamp: new Date().toLocaleTimeString([], {
+				hour: '2-digit', 
+				minute: '2-digit'
+			})
+		}])
+		
+	}, [lastMessage, selectedFriend, user])
+
+
+function handleSend() 
+{
+	if (!input.trim() || !selectedFriend || !token) 
+		return
+
+	const text = input.trim()
+
+	sendChat(selectedFriend.id, text)
+	setInput("")
+}
+
 
 	return (
 		<div className="fixed bottom-6 right-6 rtl:right-auto rtl:left-6 z-50 flex flex-col items-end rtl:items-start gap-3">

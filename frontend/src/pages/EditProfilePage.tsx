@@ -1,10 +1,11 @@
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { updateMe } from "../api/auth"
 import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
 import { useTranslation } from "react-i18next"
+import { useToast } from "../context/ToastContext"
 
 function EditProfilePage() {
 	const { user, token, updateUser, deleteAccount } = useAuth()
@@ -16,10 +17,19 @@ function EditProfilePage() {
 	const [confirmPassword, setConfirmPassword] = useState('')
 	const [error, setError] = useState('')
 	const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatarUrl || null)
+	const blobUrlRef = useRef<string | null>(null)
+
+	useEffect(() => {
+		return () => {
+			if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
+		}
+	}, [])
+	const [isSubmitting, setIsSubmitting] = useState(false)
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 	const [showPassword, setShowPassword] = useState(false)
 	const [showConfirm, setShowConfirm] = useState(false)
 	const { t } = useTranslation()
+	const { showToast } = useToast()
 
 	const hasMinLength = password.length >= 8
 	const hasUppercase = /[A-Z]/.test(password)
@@ -27,6 +37,7 @@ function EditProfilePage() {
 	const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password)
 
 	async function handleSubmit() {
+		if (isSubmitting) return
 		if (!email.trim()) {
 			setError(t('login.fillAllFields'))
 			return
@@ -40,12 +51,16 @@ function EditProfilePage() {
 			return
 		}
 		setError('')
+		setIsSubmitting(true)
 		try {
 			const updatedUser = await updateMe(token!, { username, email, avatar, ...(password && { password }) })
 			updateUser(updatedUser)
+			showToast(t('toast.profileUpdated'))
 			navigate('/profile')
 		} catch {
-			setError(t('profile.updateFailed'))
+			showToast(t('toast.profileUpdateFailed'), 'error')
+		} finally {
+			setIsSubmitting(false)
 		}
 	}
 
@@ -72,7 +87,11 @@ function EditProfilePage() {
 						onChange={(e) => {
 							const file = e.target.files?.[0] || null
 							setAvatar(file)
-							if (file) setAvatarPreview(URL.createObjectURL(file))
+							if (file) {
+								if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
+								blobUrlRef.current = URL.createObjectURL(file)
+								setAvatarPreview(blobUrlRef.current)
+							}
 						}}
 						className="hidden"
 					/>
@@ -180,7 +199,8 @@ function EditProfilePage() {
 						</button>
 						<button
 							onClick={handleSubmit}
-							className="flex-1 bg-[#e2b96f] border-none rounded-lg py-2 text-[#0f0f13] text-sm font-semibold cursor-pointer"
+							disabled={isSubmitting}
+							className="flex-1 bg-[#e2b96f] border-none rounded-lg py-2 text-[#0f0f13] text-sm font-semibold cursor-pointer disabled:opacity-50"
 						>
 							{t('profile.saveChanges')}
 						</button>

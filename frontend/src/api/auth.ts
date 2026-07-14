@@ -40,27 +40,28 @@ export async function login(email: string, _password: string): Promise<LoginResp
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ email, password: _password })
 	})
+	if (res.status === 403) throw new Error('EMAIL_NOT_VERIFIED')
 	if (!res.ok) throw new Error(await getErrorMessage(res, 'Invalid email or password'))
 	const data = await res.json()
 	const user = await getMe(data.token)
 	return { token: data.token, user }
 }
 
-export async function register(email: string, _password: string): Promise<LoginResponse> {
+export async function register(email: string, _password: string): Promise<{ message: string }> {
 	const res = await fetch(`${API}/auth/register/`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ email, password: _password })
 	})
 	if (!res.ok) throw new Error(await getErrorMessage(res, 'Registration failed'))
-		const data = await res.json()
-		const user = await getMe(data.token)
-		return { token: data.token, user }
+	const data = await res.json()
+	return { message: data.message }
 }
 
-export async function getMe(_token: string): Promise<User> {
+export async function getMe(_token: string, signal?: AbortSignal): Promise<User> {
 	const res = await fetch(`${API}/auth/me/`, {
-		headers: { 'Authorization': `Token ${_token}` }
+		headers: { 'Authorization': `Token ${_token}` },
+		signal,
 	})
 	if (!res.ok) throw new Error('Unauthorized')
 	const data = await res.json()
@@ -79,19 +80,26 @@ export async function logout(_token: string): Promise<void> {
 export function buildOAuthUrl(provider: OAuthProvider, state: string): string {
 	const redirectUri = getRedirectUri()
 	if (provider === 'github') {
-		return `https://github.com/login/oauth/authorize?client_id=${import.meta.env.VITE_GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email&state=${encodeURIComponent(state)}`
+		const githubClientId = window.location.hostname === '10.11.11.2'
+			? import.meta.env.VITE_GITHUB_CLIENT_ID_IP
+			: import.meta.env.VITE_GITHUB_CLIENT_ID
+		return `https://github.com/login/oauth/authorize?client_id=${githubClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email&state=${encodeURIComponent(state)}`
 	}
-	return `https://api.intra.42.fr/oauth/authorize?client_id=${import.meta.env.VITE_FORTY_TWO_CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=public&state=${encodeURIComponent(state)}`
+	const fortyTwoClientId = window.location.hostname === '10.11.11.2'
+		? import.meta.env.VITE_FORTY_TWO_CLIENT_ID_IP
+		: import.meta.env.VITE_FORTY_TWO_CLIENT_ID
+	return `https://api.intra.42.fr/oauth/authorize?client_id=${fortyTwoClientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=public&state=${encodeURIComponent(state)}`
 }
 
 export async function getOAuthState(provider: OAuthProvider): Promise<string> {
-	const res = await fetch(`${API}/auth/oauth/state/?provider=${encodeURIComponent(provider)}`, {
-		credentials: 'include'
+	const res = await fetch(`${API}/auth/oauth/state/?provider=${provider}`, {
+		credentials: 'include',
 	})
-	if (!res.ok) throw new Error(await getErrorMessage(res, 'Failed to initialize OAuth state'))
+	if (!res.ok) throw new Error('Failed to get OAuth state')
 	const data = await res.json()
-	if (!data.state) throw new Error('Missing OAuth state')
-	return data.state
+	const state: string = data.state
+	sessionStorage.setItem(`oauth_state_${provider}`, state)
+	return state
 }
 
 export async function oauthLogin(provider: OAuthProvider, code: string, state: string): Promise<LoginResponse> {

@@ -1,6 +1,6 @@
+// frontend API helper file
 
-
-const API = import.meta.env.VITE_API_URL
+const API = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '')
 
 export interface UserProfile {
 	id: number
@@ -9,15 +9,14 @@ export interface UserProfile {
 	wins: number
 	losses: number
 	avatarUrl: string | null
-	isBot?: boolean
-	isOnline?: boolean
 }
 
 export interface Friend extends UserProfile {
 	isOnline: boolean
 }
 
-export interface ChatMessage {
+export interface ChatMessage 
+{
 	id: number
 	fromId: number
 	toId: number
@@ -27,20 +26,20 @@ export interface ChatMessage {
 
 // Friends API
 
-export async function getFriends(token: string): Promise<Friend[]> {
+export async function getFriends(token: string, signal?: AbortSignal): Promise<Friend[]> {
 	const res = await fetch(`${API}/friends/`, {
-		headers: { 'Authorization': `Token ${token}` }
+		headers: { 'Authorization': `Token ${token}` },
+		signal,
 	})
 	if (!res.ok) throw new Error('Failed to fetch friends')
 	const data = await res.json()
-	return data.map((f: { id: number; email: string; username: string; avatar: string; is_online: boolean; is_bot?: boolean }) => ({
+	return data.map((f: { id: number; email: string; username: string; avatar: string; is_online: boolean }) => ({
 		id: f.id,
 		email: f.email,
 		username: f.username,
-		wins: f.wins ?? 0,
-		losses: f.losses ?? 0,
+		wins: 0,
+		losses: 0,
 		avatarUrl: f.avatar || null,
-		isBot: f.is_bot ?? false,
 		isOnline: f.is_online
 	}))
 }
@@ -51,27 +50,8 @@ export async function addFriend(userId: number, token: string): Promise<void> {
 		headers: { 'Authorization': `Token ${token}` }
 	})
 	if (!res.ok) throw new Error('Failed to add friend')
-}
-
-export async function searchUsers(query: string, token: string): Promise<UserProfile[]> {
-	const trimmedQuery = query.trim()
-	if (!trimmedQuery) return []
-
-	const res = await fetch(`${API}/friends/search/?q=${encodeURIComponent(trimmedQuery)}`, {
-		headers: { 'Authorization': `Token ${token}` }
-	})
-	if (!res.ok) throw new Error('Failed to search users')
-	const data = await res.json()
-	return data.map((user: any) => ({
-		id: user.id,
-		email: user.email,
-		username: user.username,
-		wins: user.wins ?? 0,
-		losses: user.losses ?? 0,
-		avatarUrl: user.avatar || null,
-		isBot: user.is_bot ?? false,
-		isOnline: user.is_online ?? false,
-	}))
+	
+	window.dispatchEvent(new Event("friendsChanged"))
 }
 
 export async function removeFriend(userId: number, token: string): Promise<void> {
@@ -79,7 +59,10 @@ export async function removeFriend(userId: number, token: string): Promise<void>
 		method: 'DELETE',
 		headers: { 'Authorization': `Token ${token}` }
 	})
-	if (!res.ok) throw new Error('Failed to remove friend')
+	if (!res.ok) 
+		throw new Error('Failed to remove friend')
+
+	window.dispatchEvent(new Event("friendsChanged"))
 }
 
 // Users API
@@ -90,24 +73,64 @@ export async function getUserProfile(userId: number, token: string): Promise<Use
 	})
 	if (!res.ok) throw new Error('User not found')
 	const data = await res.json()
+	return { ...data, wins: data.wins || 0, losses: data.losses || 0, avatarUrl: data.avatar || null }
+}
+
+// Chat API to communicate with Django backend endpoints 
+// POST /api/chat/send
+export async function sendMessage(toId: number, text: string, token: string): Promise<ChatMessage> {
+	const res = await fetch(`${API}/chat/send/`, 
+	{
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			'Authorization': `Token ${token}`,
+		},
+		body: JSON.stringify({
+			to_user_id: toId,
+			message: text,
+		}),
+	})
+
+	if (!res.ok)
+		throw new Error('Failed to send message')
+
+	const data = await res.json()
+
 	return {
 		id: data.id,
-		email: data.email,
-		username: data.username,
-		wins: data.wins ?? 0,
-		losses: data.losses ?? 0,
-		avatarUrl: data.avatar || null,
-		isBot: data.is_bot ?? false,
-		isOnline: data.is_online ?? false,
+		fromId: data.from_user_id,
+		toId: data.to_user_id,
+		text: data.message,
+		timestamp: new Date(data.created_at).toLocaleTimeString([], {
+			hour: '2-digit',
+			minute: '2-digit'
+		}),
 	}
 }
 
-// Chat API
+// GET /api/chat/<friendId>/
+export async function getMessages(withUserId: number, token: string, signal?: AbortSignal): Promise<ChatMessage[]> {
+	const res = await fetch(`${API}/chat/${withUserId}/`, {
+		method: 'GET',
+		headers: {
+			'Authorization': `Token ${token}`,
+		},
+		signal,
+	})
 
-export async function getMessages(_withUserId: number, _token: string): Promise<ChatMessage[]> {
-	return []
+	if (!res.ok)
+		throw new Error('Failed to load messages')
+
+	const data = await res.json()
+	console.log("FIRST RAW MESSAGE:", data[0])
+
+	return data.map((msg: any) => ({
+		id: msg.id,
+		fromId: msg.fromId,
+		toId: msg.toId,
+		text: msg.text,
+		timestamp: msg.timestamp,
+	}))
 }
 
-export async function sendMessage(_toId: number, _text: string, _token: string): Promise<void> {
-	// chat not implemented yet
-}

@@ -4,15 +4,20 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate # check email + password and return object or none
-from .models import User, Friendship
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+from .models import User, Friendship, ChatMessage, EmailVerificationToken
 from .serializers import RegisterSerializer, UserSerializer, FriendSerializer
 from chess_app.models import Game
 import requests #for http request to GitHub API
 import secrets
 import logging
 from django.conf import settings #to read our settings.py
-from django.http import JsonResponse # for docker health check
+from django.http import JsonResponse, HttpResponseRedirect, HttpResponseBadRequest # for docker health check
+from django.core.mail import send_mail
 from django.db import connection
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 from django.db import models
 
 
@@ -43,9 +48,36 @@ def register(request):
 	serializer = RegisterSerializer(data=request.data)
 	if serializer.is_valid(): #check email and password are correct
 		user = serializer.save() # create user in DB
-		token, _ = Token.objects.get_or_create(user=user) # create token for new user or get old one
-		return Response({'token': token.key}, status=status.HTTP_201_CREATED)
+		user.email_verified = False
+		user.save()
+		verification = EmailVerificationToken.objects.create(user=user)
+		verify_url = f"{settings.FRONTEND_URL}/api/auth/verify-email/?token={verification.token}"
+		send_mail(
+			subject='Verify your email - Transcendence',
+			message=f'Click the link to verify your email:\n\n{verify_url}',
+			from_email=settings.DEFAULT_FROM_EMAIL,
+			recipient_list=[user.email],
+			fail_silently=True,
+		)
+		return Response({'message': 'Registration successful. Check your email to verify your account.'}, status=status.HTTP_201_CREATED)
 	return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+def verify_email(request):
+	token_str = request.GET.get('token')
+	if not token_str:
+		return HttpResponseBadRequest('Missing token')
+	try:
+		import uuid
+		token_uuid = uuid.UUID(token_str)
+		verification = EmailVerificationToken.objects.get(token=token_uuid)
+	except (ValueError, EmailVerificationToken.DoesNotExist):
+		return HttpResponseBadRequest('Invalid or expired token')
+	user = verification.user
+	user.email_verified = True
+	user.save()
+	verification.delete()
+	return HttpResponseRedirect(f"{settings.FRONTEND_URL}/login?verified=true")
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -55,8 +87,8 @@ def login(request):
 	user = authenticate(request, username=email, password=password) #check email and password, return user or none
 	if user is None:
 		return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
-	user.is_online = True
-	user.save()
+	if not user.email_verified:
+		return Response({'error': 'Please verify your email before logging in.'}, status=status.HTTP_403_FORBIDDEN)
 	token, _ = Token.objects.get_or_create(user=user)
 	return Response({'token': token.key})
 
@@ -99,6 +131,10 @@ def update_me(request):
 		# Handle password update
 		password = request.data.get('password')
 		if password:
+			try:
+				validate_password(password, request.user)
+			except ValidationError as e:
+				return Response({'error': list(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
 			request.user.set_password(password)
 			request.user.save(update_fields=['password'])
 		
@@ -128,8 +164,8 @@ def get_user(request, user_id): # view someone else's profile
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_friends(request): # view who added whom
-	friendships = Friendship.objects.filter(from_user=request.user) # search all friends
-	serializer = FriendSerializer(friendships, many=True, context={'request': request}) # many=True is a list, converts 
+	friendships = Friendship.objects.filter(from_user=request.user)
+	serializer = FriendSerializer(friendships, many=True, context={'request': request})
 	return Response(serializer.data)
 
 @api_view(['GET'])
@@ -159,14 +195,82 @@ def add_friend(request, user_id):
 		return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 	if to_user == request.user:
 		return Response({'error': 'Cannot add yourself'}, status=status.HTTP_400_BAD_REQUEST)
-	Friendship.objects.get_or_create(from_user=request.user, to_user=to_user) # create friendship in DB
+	Friendship.objects.get_or_create(from_user=request.user, to_user=to_user)
+	Friendship.objects.get_or_create(from_user=to_user, to_user=request.user)
+	channel_layer = get_channel_layer()
+	async_to_sync(channel_layer.group_send)(f'inbox_{user_id}', {
+		'type': 'friend_added_msg',
+		'added_by_id': request.user.id,
+	})
 	return Response(status=status.HTTP_201_CREATED)
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def remove_friend(request, user_id):
-	Friendship.objects.filter(from_user=request.user, to_user__id=user_id).delete() # search friend and delete
+	Friendship.objects.filter(from_user=request.user, to_user__id=user_id).delete()
+	Friendship.objects.filter(from_user__id=user_id, to_user=request.user).delete()
+	channel_layer = get_channel_layer()
+	async_to_sync(channel_layer.group_send)(f'inbox_{user_id}', {
+		'type': 'friend_removed_msg',
+		'removed_by_id': request.user.id,
+	})
 	return Response(status=status.HTTP_204_NO_CONTENT)
+
+# Frontend sends recipient ID and message
+# Backend checks the data and finds recipient
+# Backend saves the message in ChatMessage
+# Backend returns the saved message to the frontend
+@api_view(['POST'])								# this endpoint only accepts POST requests
+@permission_classes([IsAuthenticated])			# only logged in users can use this endpoint
+def send_chat_message(request):					# when frontend calls the URL for sending chat messages, Django runs this function
+	to_user_id = request.data.get('to_user_id')
+	message = request.data.get('message', '').strip()
+
+	if not to_user_id or not message:
+		return Response({'error': 'Missing recipient or message'}, status=status.HTTP_400_BAD_REQUEST)
+	
+	try:
+		recipient = User.objects.get(id=to_user_id)
+	except User.DoesNotExist:
+		return Response({'error': 'Recipient not found'}, status=status.HTTP_404_NOT_FOUND)
+
+	chat_message = ChatMessage.objects.create(
+		sender=request.user,
+		recipient=recipient,
+		message=message,
+	)
+
+	return Response({
+		'id': chat_message.id,
+		'from_user_id': chat_message.sender.id,
+		'to_user_id': chat_message.recipient.id,
+		'message': chat_message.message,
+		'created_at': chat_message.created_at,
+	}, status=status.HTTP_201_CREATED)
+
+# loads the saved chat history between the logged-in user and one friend
+# request = HTTP request from the frontend
+# models.Q = Django helper for making more complex database filters (sender & friend or friend & recipient)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chat_messages(request, friend_id):
+	messages = ChatMessage.objects.filter(
+		models.Q(sender=request.user, recipient_id=friend_id) |
+		models.Q(sender_id=friend_id, recipient=request.user)
+	).order_by('created_at')
+
+	data = []
+
+	for msg in messages:
+		data.append({
+			'id': msg.id,
+			'from_user_id': msg.sender.id,
+			'to_user_id': msg.recipient.id,
+			'message': msg.message,
+			'created_at': msg.created_at.isoformat(),
+		})
+	return Response(data)
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -181,13 +285,13 @@ def oauth_login(request):
 	if not code or not state:
 		return Response({'error': 'Missing OAuth data'}, status=status.HTTP_400_BAD_REQUEST)
 
-	expected_state = request.session.get(f'oauth_state_{provider}')
-	if (not expected_state) or (not state.startswith(f'{provider}:')) or (not secrets.compare_digest(state, expected_state)):
-		logger.warning('OAuth state validation failed for provider=%s', provider)
+	session_key = f'oauth_state_{provider}'
+	expected_state = request.session.get(session_key)
+	if not expected_state or expected_state != state:
+		logger.warning('OAuth state mismatch for provider=%s', provider)
 		return Response({'error': 'Invalid OAuth state'}, status=status.HTTP_400_BAD_REQUEST)
-
-	# one-time use state to prevent replay in the same browser session
-	request.session.pop(f'oauth_state_{provider}', None)
+	del request.session[session_key]
+	request.session.modified = True
 
 	if provider == 'github':
 		try:
@@ -195,8 +299,8 @@ def oauth_login(request):
 			token_res = requests.post(
 				'https://github.com/login/oauth/access_token',
 				data={
-					'client_id': settings.GITHUB_CLIENT_ID,
-					'client_secret': settings.GITHUB_CLIENT_SECRET,
+					'client_id': settings.GITHUB_CLIENT_ID_IP if 'localhost' not in redirect_uri else settings.GITHUB_CLIENT_ID,
+					'client_secret': settings.GITHUB_CLIENT_SECRET_IP if 'localhost' not in redirect_uri else settings.GITHUB_CLIENT_SECRET,
 					'code': code, # one-time code
 					'redirect_uri': redirect_uri,
 				},
@@ -243,20 +347,27 @@ def oauth_login(request):
 		user, created = User.objects.get_or_create(email=email)
 		if created or not user.oauth_avatar:
 			user.oauth_avatar = avatar_url
+		user.email_verified = True  # email verified by GitHub
 		user.is_online = True
 		user.save()
 		token, _ = Token.objects.get_or_create(user=user)
 		return Response({'token': token.key})
-		
+
 	if provider == '42':
+		if not settings.FORTY_TWO_CLIENT_ID or not settings.FORTY_TWO_CLIENT_SECRET:
+			logger.warning('42 OAuth credentials are not configured in backend/.env')
+			return Response(
+				{'error': '42 OAuth credentials are missing or invalid on the backend. Check backend/.env.'},
+				status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			)
 		try:
 			# change code to access_token
 			token_res = requests.post(
 				'https://api.intra.42.fr/oauth/token',
 				data={
 					'grant_type': 'authorization_code',
-					'client_id': settings.FORTY_TWO_CLIENT_ID,
-					'client_secret': settings.FORTY_TWO_CLIENT_SECRET,
+					'client_id': settings.FORTY_TWO_CLIENT_ID_IP if 'localhost' not in redirect_uri else settings.FORTY_TWO_CLIENT_ID,
+					'client_secret': settings.FORTY_TWO_CLIENT_SECRET_IP if 'localhost' not in redirect_uri else settings.FORTY_TWO_CLIENT_SECRET,
 					'code': code,
 					'redirect_uri': redirect_uri,
 				},
@@ -298,6 +409,7 @@ def oauth_login(request):
 		user, created = User.objects.get_or_create(email=email)
 		if created or not user.oauth_avatar:
 			user.oauth_avatar = avatar_url
+		user.email_verified = True  # email verified by 42
 		user.is_online = True
 		user.save()
 		token, _ = Token.objects.get_or_create(user=user)

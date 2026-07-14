@@ -5,11 +5,6 @@ User = get_user_model()
 
 class Game(models.Model):
 	"""Represents a chess game between two players"""
-	DIFFICULTY_CHOICES = [
-		('easy', 'Easy'),
-		('medium', 'Medium'),
-		('hard', 'Hard'),
-	]
 	STATUS_CHOICES = [
 		('pending', 'Pending'),
 		('ongoing', 'Ongoing'),
@@ -24,22 +19,40 @@ class Game(models.Model):
 		('ongoing', 'Ongoing'),
 	]
 
-	white_player = models.ForeignKey(User, related_name='games_as_white', on_delete=models.CASCADE)
-	black_player = models.ForeignKey(User, related_name='games_as_black', on_delete=models.CASCADE)
-	difficulty = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, default='medium')
+	white_player = models.ForeignKey(User, related_name='games_as_white', on_delete=models.CASCADE, null=True, blank=True)
+	black_player = models.ForeignKey(User, related_name='games_as_black', on_delete=models.CASCADE, null=True, blank=True)
 	
 	status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
 	result = models.CharField(max_length=20, choices=RESULT_CHOICES, default='ongoing')
 	
+	TIMER_CHOICES = [
+		('none', 'No Timer'),
+		('3', '3 min'),
+		('5', '5+3'),
+		('10', '10+5'),
+	]
+
+	timer = models.CharField(max_length=10, choices=TIMER_CHOICES, default='none')
 	current_fen = models.TextField(default='rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
-	
+
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)
 	started_at = models.DateTimeField(null=True, blank=True)
 	ended_at = models.DateTimeField(null=True, blank=True)
 	
 	def __str__(self):
-		return f"{self.white_player.username or self.white_player.email} vs {self.black_player.username or self.black_player.email}"
+		if self.white_player:
+			white = self.white_player.username or self.white_player.email
+
+		else:
+			white = "Waiting for opponent"
+
+		if self.black_player:
+			black = self.black_player.username or self.black_player.email
+		else:
+			black = "Waiting for opponent"
+
+		return f"{white} vs {black}"
 
 
 class Move(models.Model):

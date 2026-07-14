@@ -6,18 +6,22 @@ import { useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { getUserStats, getMatchHistory } from "../api/game"
 import type { UserStats, MatchRecord } from "../api/game"
+import { useToast } from "../context/ToastContext"
 
 function HomePage() {
 	const { user } = useAuth()
 	const navigate = useNavigate()
 	const { t } = useTranslation()
+	const { showToast } = useToast()
 	const [stats, setStats] = useState<UserStats | null>(null)
 	const [matches, setMatches] = useState<MatchRecord[]>([])
 
 	useEffect(() => {
 		if (!user) return
-		getUserStats(user.id).then(setStats).catch(() => {})
-		getMatchHistory(user.id).then(setMatches).catch(() => {})
+		const controller = new AbortController()
+		getUserStats(user.id, controller.signal).then(setStats).catch((err) => { if (err.name !== 'AbortError') showToast(t('toast.loadFailed'), 'error') })
+		getMatchHistory(user.id, 1, controller.signal).then((data) => setMatches(data.slice(0, 5))).catch((err) => { if (err.name !== 'AbortError') showToast(t('toast.loadFailed'), 'error') })
+		return () => controller.abort()
 	}, [user])
 
 	return (
@@ -25,15 +29,7 @@ function HomePage() {
 			<Navbar />
 			<div className="flex flex-col items-center flex-1 text-[#f0eeff] pt-12 px-4 pb-12">
 				{user?.avatarUrl ? (
-					<img 
-						src={`${user.avatarUrl}?t=${Date.now()}`} 
-						alt="avatar" 
-						className="w-20 h-20 rounded-full object-cover mb-4"
-						onError={(e) => {
-							// If avatar fails to load, hide it and show initials
-							e.currentTarget.style.display = 'none'
-						}}
-					/>
+					<img src={user.avatarUrl} alt="avatar" className="w-20 h-20 rounded-full object-cover mb-4" />
 				) : (
 					<div className="w-20 h-20 rounded-full bg-[#e2b96f] flex items-center justify-center text-[#0f0f13] text-3xl font-bold mb-4">
 						{(user?.username || user?.email || '?')[0].toUpperCase()}
@@ -54,17 +50,18 @@ function HomePage() {
 						<div className="text-xs text-[#8892a4] mt-1">{t('home.losses')}</div>
 					</div>
 					<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl px-8 py-6 text-center">
+						<div className="text-2xl font-semibold text-[#8892a4]">{stats?.draws ?? 0}</div>
+						<div className="text-xs text-[#8892a4] mt-1">{t('home.draws')}</div>
+					</div>
+					<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl px-8 py-6 text-center">
 						<div className="text-2xl font-semibold text-[#e2b96f]">#{stats?.rank ?? '-'}</div>
 						<div className="text-xs text-[#8892a4] mt-1">{t('home.rank')}</div>
 					</div>
 				</div>
 
 				<div className="w-full max-w-2xl mb-8">
-					<h2 className="text-lg font-semibold mb-4 text-[#f0eeff]">
-						{t('profile.matchHistory')}
-						<span className="text-sm text-[#8892a4] ml-3">{matches.length} matches</span>
-					</h2>
-				<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl overflow-hidden max-h-[500px] overflow-y-auto">
+					<h2 className="text-lg font-semibold mb-4 text-[#f0eeff]">{t('profile.matchHistory')}</h2>
+					<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl overflow-hidden">
 						{matches.length === 0 ? (
 							<p className="text-[#8892a4] text-sm px-6 py-4">{t('profile.noMatches')}</p>
 						) : (

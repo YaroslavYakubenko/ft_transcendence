@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useAuth } from "../context/AuthContext"
 import { buildOAuthUrl, getOAuthState, login as apiLogin, type OAuthProvider } from "../api/auth"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
@@ -15,6 +15,8 @@ function LoginPage() {
 	const { login } = useAuth()
 	const navigate = useNavigate()
 	const { t } = useTranslation()
+	const [searchParams] = useSearchParams()
+	const justVerified = searchParams.get('verified') === 'true'
 
 	async function handleLogin() {
 		setError('')
@@ -36,7 +38,9 @@ function LoginPage() {
 			login(token, user)
 			navigate('/home')
 		} catch (err) {
-			if (err instanceof Error && err.message) {
+			if (err instanceof Error && err.message === 'EMAIL_NOT_VERIFIED') {
+				setError(t('login.emailNotVerified'))
+			} else if (err instanceof Error && err.message) {
 				setError(err.message)
 			} else {
 				setError(t('login.invalidCredentials'))
@@ -55,7 +59,7 @@ function LoginPage() {
 			if (err instanceof Error && err.message) {
 				setError(err.message)
 			} else {
-				setError('Failed to start OAuth flow. Please try again.')
+				setError(t('login.oauthFailed'))
 			}
 		}
 	}
@@ -121,6 +125,11 @@ function LoginPage() {
 							>
 								{isLoading ? t('common.loading') : t('login.submit')}
 							</button>
+							{justVerified && !error && (
+								<p className="text-green-400 text-xs mt-2">
+									{t('login.emailVerified')}
+								</p>
+							)}
 							{error && (
 								<p className="text-[#e25f5f] text-xs mt-2">
 									{error}

@@ -3,6 +3,7 @@
 export interface UserStats {
 	wins: number
 	losses: number
+	draws: number
 	rank: number
 	elo: number
 }
@@ -22,9 +23,10 @@ export interface Achievement {
 	unlocked: boolean
 }
 
-const API_BASE_URL = 'http://localhost:8000/api'
+const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/$/, '')
+const GAME_BASE_URL = window.location.origin
 
-export async function getUserStats(userId: number): Promise<UserStats> {
+export async function getUserStats(userId: number, signal?: AbortSignal): Promise<UserStats> {
 	try {
 		const response = await fetch(`${API_BASE_URL}/users/${userId}/stats/`, {
 			method: 'GET',
@@ -32,67 +34,56 @@ export async function getUserStats(userId: number): Promise<UserStats> {
 				'Authorization': `Token ${localStorage.getItem('token')}`,
 				'Content-Type': 'application/json',
 			},
+			signal,
 		})
-		
+
 		if (!response.ok) {
 			throw new Error(`Failed to fetch user stats: ${response.statusText}`)
 		}
-		
+
 		const data = await response.json()
 		return {
 			wins: data.wins || 0,
 			losses: data.losses || 0,
+			draws: data.draws || 0,
 			rank: data.rank || 0,
 			elo: data.elo || 1200,
 		}
 	} catch (error) {
+		if (error instanceof Error && error.name === 'AbortError') throw error
 		console.error('Error fetching user stats:', error)
-		// Return default stats on error
-		return { wins: 0, losses: 0, rank: 0, elo: 1200 }
+		return { wins: 0, losses: 0, draws: 0, rank: 0, elo: 1200 }
 	}
 }
 
-export async function getMatchHistory(userId: number, page: number = 1): Promise<MatchRecord[]> {
+export async function getMatchHistory(userId: number, page: number = 1, signal?: AbortSignal): Promise<MatchRecord[]> {
 	try {
-		let allMatches: MatchRecord[] = []
-		let currentPage = 1
-		let hasMore = true
-
-		while (hasMore) {
-			const response = await fetch(
-				`${API_BASE_URL}/users/${userId}/matches/?page=${currentPage}`,
-				{
-					method: 'GET',
-					headers: {
-						'Authorization': `Token ${localStorage.getItem('token')}`,
-						'Content-Type': 'application/json',
-					},
-				}
-			)
-			
-			if (!response.ok) {
-				throw new Error(`Failed to fetch match history: ${response.statusText}`)
+		const response = await fetch(
+			`${API_BASE_URL}/users/${userId}/matches/?page=${page}`,
+			{
+				method: 'GET',
+				headers: {
+					'Authorization': `Token ${localStorage.getItem('token')}`,
+					'Content-Type': 'application/json',
+				},
+				signal,
 			}
-			
-			const data = await response.json()
-			const pageMatches = (data.matches || []).map((match: any) => ({
-				id: match.id,
-				opponent_name: match.opponent_name,
-				result: match.result,
-				date: match.date,
-				duration: match.duration,
-			}))
+		)
 
-			if (pageMatches.length === 0) {
-				hasMore = false
-			} else {
-				allMatches = [...allMatches, ...pageMatches]
-				currentPage++
-			}
+		if (!response.ok) {
+			throw new Error(`Failed to fetch match history: ${response.statusText}`)
 		}
 
-		return allMatches
+		const data = await response.json()
+		return (data.matches || []).map((match: any) => ({
+			id: match.id,
+			opponent_name: match.opponent_name,
+			result: match.result,
+			date: match.date,
+			duration: match.duration,
+		}))
 	} catch (error) {
+		if (error instanceof Error && error.name === 'AbortError') throw error
 		console.error('Error fetching match history:', error)
 		return []
 	}
@@ -100,16 +91,57 @@ export async function getMatchHistory(userId: number, page: number = 1): Promise
 
 export async function getAchievements(_userId: number): Promise<Achievement[]> {
 	// TODO: Implement achievements in backend
-	return [
-		{ id: 1, name: "First Win",     description: "Win your first game",       unlocked: true },
-		{ id: 2, name: "On a Roll",     description: "Win 3 games in a row",       unlocked: true },
-		{ id: 3, name: "Veteran",       description: "Play 10 games",             unlocked: true },
-		{ id: 4, name: "Grandmaster",   description: "Reach 2000 elo",            unlocked: false },
-		{ id: 5, name: "Untouchable",   description: "Win 5 games without a loss", unlocked: false },
+
+	try {
+		const response = await fetch(`${API_BASE_URL}/users/${_userId}/stats/`, {
+			method: 'GET',
+			headers: {
+				'Authorization': `Token ${localStorage.getItem('token')}`,
+				'Content-Type': 'application/json',
+			},
+
+		})
+
+		if (!response.ok) {
+			throw new Error(`Failed to fetch user stats: ${response.statusText}`)
+		}
+
+		const data = await response.json()
+		let bools: boolean[] = new Array(5).fill(false);
+
+		console.debug('getAch: data: ', data)
+		if (data.wins >= 1)
+			bools[0] = true;
+		if (data.highest_win_streak >= 3)
+			bools[1] = true;
+		if (data.wins + data.losses >= 10)
+			bools[2] = true;
+		if (data.elo >= 2000)
+			bools[3] = true;
+		if (data.highest_win_streak >= 5)
+			bools[4] = true;
+
+		return [
+		{ id: 1, name: "First Win",     description: "Win your first game",			unlocked: bools[0]},
+		{ id: 2, name: "On a Roll",     description: "Win 3 games in a row",		unlocked: bools[1] },
+		{ id: 3, name: "Veteran",       description: "Play 10 games",				unlocked: bools[2]},
+		{ id: 4, name: "Grandmaster",   description: "Reach 2000 elo",				unlocked: bools[3]},
+		{ id: 5, name: "Untouchable",   description: "Win 5 games without a loss",	unlocked: bools[4] },
 	]
+	} catch (error) {
+		if (error instanceof Error && error.name === 'AbortError') throw error
+		console.error('Error fetching user stats:', error)
+		return [
+		{ id: 1, name: "First Win",     description: "Win your first game",			unlocked: false},
+		{ id: 2, name: "On a Roll",     description: "Win 3 games in a row",		unlocked: false},
+		{ id: 3, name: "Veteran",       description: "Play 10 games",				unlocked: false},
+		{ id: 4, name: "Grandmaster",   description: "Reach 2000 elo",				unlocked: false},
+		{ id: 5, name: "Untouchable",   description: "Win 5 games without a loss",	unlocked: false},
+	]
+	}
 }
 
-export async function getLeaderboard(limit: number = 50): Promise<{ id: number; username: string; wins: number; losses: number; elo: number; rank: number }[]> {
+export async function getLeaderboard(limit: number = 50, signal?: AbortSignal): Promise<{ id: number; username: string; email: string; wins: number; losses: number; elo: number; rank: number }[]> {
 	try {
 		const response = await fetch(
 			`${API_BASE_URL}/leaderboard/?limit=${limit}`,
@@ -119,25 +151,18 @@ export async function getLeaderboard(limit: number = 50): Promise<{ id: number; 
 					'Authorization': `Token ${localStorage.getItem('token')}`,
 					'Content-Type': 'application/json',
 				},
+				signal,
 			}
 		)
-		
+
 		if (!response.ok) {
 			throw new Error(`Failed to fetch leaderboard: ${response.statusText}`)
 		}
-		
+
 		const data = await response.json()
-		const list = data.leaderboard || []
-		return list.map((p: any) => ({
-			id: p.id,
-			username: p.username,
-			wins: p.wins ?? 0,
-			losses: p.losses ?? 0,
-			draws: p.draws ?? 0,
-			elo: p.elo ?? 0,
-			rank: p.rank ?? 0,
-		}))
+		return data.leaderboard || []
 	} catch (error) {
+		if (error instanceof Error && error.name === 'AbortError') throw error
 		console.error('Error fetching leaderboard:', error)
 		return []
 	}
@@ -146,18 +171,28 @@ export async function getLeaderboard(limit: number = 50): Promise<{ id: number; 
 
 // tabading add
 
-export async function createGame(opponent: 'bot' | 'live', token: string | null) {
+// only create game being used now 
+export async function createGame(
+	opponent: 'bot' | 'live',
+	pieceColor: 'white' | 'black' | 'random',
+	token: string | null,
+	timer: 'none' | '3' | '5' | '10' = 'none'
+) {
 	if (!token) {
 		return null
 	}
 
-	const response = await fetch(`http://localhost:8000/create-game/`, {
+	const response = await fetch(`${GAME_BASE_URL}/create-game/`, {
 		method: "POST",
 		headers: {
 			"Authorization": `Token ${token}`,
 			"Content-Type": "application/json",
 		},
-		body: JSON.stringify({ opponent }),
+		body: JSON.stringify({
+			opponent,
+			pieceColor,
+			timer,
+		}),
 	})
 
 	const data = await response.json()
@@ -171,7 +206,7 @@ export async function createGame(opponent: 'bot' | 'live', token: string | null)
 
 // make move 
 export async function make_move(fen: string, from: string, to: string, gameId?: number | null) {
-	const res = await fetch("http://localhost:8000/make-move/", {
+	const res = await fetch(`${GAME_BASE_URL}/make-move/`, {
 	method: "POST",
 	headers: {
 		"Content-Type": "application/json",
@@ -200,7 +235,7 @@ export async function make_move(fen: string, from: string, to: string, gameId?: 
 
 // promote pawn
 export async function do_promotion(fen: string, move: string, key: string, gameId?: number | null) {
-	const res = await fetch("http://localhost:8000/do-promotion/", {
+	const res = await fetch(`${GAME_BASE_URL}/do-promotion/`, {
 	method: "POST",
 	headers: {
 		"Content-Type": "application/json",
@@ -231,7 +266,7 @@ export async function do_promotion(fen: string, move: string, key: string, gameI
 
 // get legal moves to empty and occupied spaces
 export async function legal_moves(fen: string) {
-	const res = await fetch("http://localhost:8000/legal-moves/", {
+	const res = await fetch(`${GAME_BASE_URL}/legal-moves/`, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
@@ -252,13 +287,16 @@ export async function legal_moves(fen: string) {
 	return data;
 }
 
-export async function resign_game(gameId: number | null, token: string | null) {
+export async function resign_game(
+	gameId: number | null, 
+	token: string | null
+) {
 	if (!gameId || !token) {
 		console.error("Game ID or token missing");
 		return null;
 	}
 
-	const res = await fetch("http://localhost:8000/resign/", {
+	const res = await fetch(`${GAME_BASE_URL}/resign/`, {
 		method: "POST",
 		headers: {
 			"Authorization": `Token ${token}`,
@@ -266,6 +304,7 @@ export async function resign_game(gameId: number | null, token: string | null) {
 		},
 		body: JSON.stringify({
 			game_id: gameId,
+
 		}),
 	});
 
@@ -274,6 +313,65 @@ export async function resign_game(gameId: number | null, token: string | null) {
 	if (data.error) {
 		console.error(data.error);
 		return null;
+	}
+
+	return data;
+}
+
+export async function check_color(gameId: Number | null, token: string | null, result: string)
+{
+	if (!gameId || !token) {
+		console.error("Game ID or token missing");
+		return null;
+	}
+
+	const response = await fetch(`${GAME_BASE_URL}/check-color/`, {
+		method: "POST",
+		headers: {
+			"Authorization": `Token ${token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			gameId,
+			result,
+		}),
+	})
+
+
+	const data = await response.json();
+
+	if (data.error) {
+		console.error(data.error);
+		return null; // fallback: no update
+	}
+
+	return data;
+}
+
+export async function check_game_status(gameId: Number | null, token: string | null)
+{
+	if (!gameId || !token) {
+		console.error("Game ID or token missing");
+		return null;
+	}
+
+	const response = await fetch(`${GAME_BASE_URL}/check-game-status/`, {
+		method: "POST",
+		headers: {
+			"Authorization": `Token ${token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			gameId,
+		}),
+	})
+
+
+	const data = await response.json();
+
+	if (data.error) {
+		console.error(data.error);
+		return data; 
 	}
 
 	return data;

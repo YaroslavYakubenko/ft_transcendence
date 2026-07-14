@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import LoginPage from "./pages/LoginPage"
 import HomePage from "./pages/HomePage"
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { ToastProvider } from './context/ToastContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import RegisterPage from './pages/RegisterPage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
@@ -18,6 +19,8 @@ import ChatWidget from './components/ChatWidget'
 import OAuthCallbackPage from './pages/OAuthCallbackPage'
 import PublicOnlyRoute from './components/PublicOnlyRoute'
 
+import PlayerConnectPage from './pages/WaitingRoomPage'
+
 function AuthenticatedWidgets() {
     const { isLoggedIn } = useAuth()
     if (!isLoggedIn) return null
@@ -27,11 +30,24 @@ function AuthenticatedWidgets() {
 function App() {
     return (
         <AuthProvider>
+          <ToastProvider>
             <BrowserRouter>
                 <Routes>
-                    <Route path="/" element={<PublicOnlyRoute><LoginPage/></PublicOnlyRoute>} />
-                    <Route path="/login" element={<PublicOnlyRoute><LoginPage/></PublicOnlyRoute>} />
-                    <Route path="/register" element={<PublicOnlyRoute><RegisterPage/></PublicOnlyRoute>} />
+                    <Route path="/" element={
+                        <PublicOnlyRoute>
+                            <LoginPage/>
+                        </PublicOnlyRoute>
+                    } />
+                    <Route path="/login" element={
+                        <PublicOnlyRoute>
+                            <LoginPage/>
+                        </PublicOnlyRoute>
+                    } />
+                    <Route path="/register" element={
+                        <PublicOnlyRoute>
+                            <RegisterPage/>
+                        </PublicOnlyRoute>
+                    } />
                     <Route path="/oauth/callback" element={<OAuthCallbackPage/>} />
                     <Route path="/privacy-policy" element={<PrivacyPolicyPage/>} />
                     <Route path="/terms-of-service" element={<TermsOfServicePage/>} />
@@ -75,10 +91,18 @@ function App() {
                             <FriendsPage/>
                         </ProtectedRoute>
                     } />
+
+					<Route path="/waiting_room" element={
+                        <ProtectedRoute>
+                            <PlayerConnectPage/>
+                        </ProtectedRoute>
+                    } />
+
                     <Route path="*" element={<NotFoundPage/>} />
                 </Routes>
                 <AuthenticatedWidgets />
             </BrowserRouter>
+          </ToastProvider>
         </AuthProvider>
     )
 }

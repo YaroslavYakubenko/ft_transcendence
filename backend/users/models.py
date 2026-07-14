@@ -2,6 +2,7 @@
 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+import uuid
 
 class UserManager(BaseUserManager):
 	def create_user(self, email, password=None, **extra_fields): # ** means to add extra arguments in vocabluary
@@ -26,6 +27,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 	is_bot = models.BooleanField(default=False)
 	is_online = models.BooleanField(default=False)
 	is_active = models.BooleanField(default=True)
+	email_verified = models.BooleanField(default=False)
 	is_staff = models.BooleanField(default=False)
 	created_at = models.DateTimeField(auto_now_add=True) # time of registration
 	
@@ -35,14 +37,51 @@ class User(AbstractBaseUser, PermissionsMixin):
 	draws = models.IntegerField(default=0)
 	elo = models.IntegerField(default=1200)  # Standard starting ELO rating
 
+	# for achievements 
+	win_counter = models.IntegerField(default=0)
+	highest_win_streak = models.IntegerField(default=0)
+
 	USERNAME_FIELD = 'email' # login via email
 	REQUIRED_FIELDS = []
 
 	objects = UserManager() #our manager connects to the model
 
 class Friendship(models.Model):
+	
 	from_user = models.ForeignKey(User, related_name='friendships_sent', on_delete=models.CASCADE) #related_name means how to approach these friendships
 	to_user = models.ForeignKey(User, related_name='friendships_received', on_delete=models.CASCADE) #on_delete means to delete everything
 
 	class Meta:
 		unique_together = ('from_user', 'to_user') #coulpe has to be unique, you cannot to add the same user twice
+
+# creates a new database model (a database table) called ChatMessage
+# each row will be one message
+# Fields: sender, recipient, message, created_at, is_read
+class ChatMessage(models.Model):
+
+	# ForeignKey = this field points to another database (here: User)
+	# CASCADE = if user is deleted, aslo delete their sent_chat_messages
+	sender = models.ForeignKey(				
+		User,
+		related_name='sent_chat_messages',
+		on_delete=models.CASCADE
+	)
+
+	recipient = models.ForeignKey(
+		User,
+		related_name='received_chat_messages',
+		on_delete=models.CASCADE
+	)
+
+	message = models.TextField()
+	created_at = models.DateTimeField(auto_now_add=True)		# automatically set this once the message is saved
+	is_read = models.BooleanField(default=False)				# boolean is set to false, when a message is created
+
+	#when ChatMessage object is shown as text, show the message text
+	def __str__(self):
+		return self.message
+
+class EmailVerificationToken(models.Model):
+	user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='email_token')
+	token = models.UUIDField(default=uuid.uuid4, unique=True)
+	created_at = models.DateTimeField(auto_now_add=True)

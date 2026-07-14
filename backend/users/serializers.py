@@ -76,7 +76,7 @@ class UserStatsSerializer(serializers.ModelSerializer):
 	
 	class Meta:
 		model = User
-		fields = ('id', 'username', 'wins', 'losses', 'draws', 'elo', 'rank')
+		fields = ('id', 'username', 'wins', 'losses', 'draws', 'elo', 'rank', 'highest_win_streak')
 	
 	def get_rank(self, obj):
 		# Calculate rank based on elo (higher elo = lower rank number)
@@ -103,10 +103,10 @@ class MatchRecordSerializer(serializers.Serializer):
 class LeaderboardSerializer(serializers.ModelSerializer):
 	"""Serializer for leaderboard entries"""
 	rank = serializers.SerializerMethodField()
-	
+
 	class Meta:
 		model = User
-		fields = ('id', 'username', 'wins', 'losses', 'draws', 'elo', 'rank')
+		fields = ('id', 'username', 'email', 'wins', 'losses', 'draws', 'elo', 'rank')
 	
 	def get_rank(self, obj):
 		rank = User.objects.filter(elo__gt=obj.elo).count() + 1

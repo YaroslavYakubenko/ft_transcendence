@@ -6,26 +6,40 @@ import Footer from "../components/Footer"
 import { getUserProfile, addFriend, removeFriend, getFriends, type UserProfile } from "../api/social"
 import { getUserStats, type UserStats } from "../api/game"
 import { useTranslation } from "react-i18next"
+import { useToast } from "../context/ToastContext"
 
 function UserProfilePage() {
 	const { id } = useParams()
 	const [profile, setProfile] = useState<UserProfile | null>(null)
-	const [error, setError] = useState<string | null>(null)
 	const [isFriend, setIsFriend] = useState(false)
 	const [stats, setStats] = useState<UserStats | null>(null)
 	const [notFound, setNotFound] = useState(false)
 	const { t } = useTranslation()
-	const { token, user: currentUser } = useAuth()
+	const { token, user: currentUser, friendRemoved, friendAdded } = useAuth()
+	const { showToast } = useToast()
 
 	useEffect(() => {
-		if (id) {
-			getUserProfile(Number(id), token!).then(setProfile).catch(() => setNotFound(true))
-			getUserStats(Number(id)).then(setStats)
-			getFriends(token!).then(friends => {
-				setIsFriend(friends.some(f => f.id === Number(id)))
-			})
-		}
-	}, [id])
+		if (!friendRemoved || !id) return
+		if (friendRemoved.removed_by_id === Number(id))
+			setIsFriend(false)
+	}, [friendRemoved])
+
+	useEffect(() => {
+		if (!friendAdded || !id) return
+		if (friendAdded.added_by_id === Number(id))
+			setIsFriend(true)
+	}, [friendAdded])
+
+	useEffect(() => {
+		if (!id) return
+		const controller = new AbortController()
+		getUserProfile(Number(id), token!).then(setProfile).catch(() => setNotFound(true))
+		getUserStats(Number(id), controller.signal).then(setStats).catch(() => {})
+		getFriends(token!, controller.signal).then(friends => {
+			setIsFriend(friends.some(f => f.id === Number(id)))
+		}).catch(() => {})
+		return () => controller.abort()
+	}, [id, token])
 
 	if (notFound) return <div className="bg-[#0f0f13] min-h-screen text-[#e25f5f] flex items-center justify-center">{t('common.userNotFound')}</div>
 	if (!profile) return <div className="bg-[#0f0f13] min-h-screen text-[#f0eeff] flex items-center justify-center">{t('common.loading')}</div>
@@ -36,12 +50,14 @@ function UserProfilePage() {
 			if (isFriend) {
 				await removeFriend(profile.id, token!)
 				setIsFriend(false)
+				showToast(t('toast.friendRemoved'))
 			} else {
 				await addFriend(profile.id, token!)
 				setIsFriend(true)
+				showToast(t('toast.friendAdded'))
 			}
 		} catch {
-			setError(isFriend ? t('friends.removeFailed') : t('friends.addFailed'))
+			showToast(isFriend ? t('toast.friendRemoveFailed') : t('toast.friendAddFailed'), 'error')
 		}
 	}
 
@@ -49,7 +65,6 @@ function UserProfilePage() {
 		<div className="bg-[#0f0f13] min-h-screen flex flex-col">
 			<Navbar />
 			<div className="flex flex-col items-center justify-center flex-1 text-[#f0eeff]">
-				{error && <p className="text-[#e25f5f] mb-4">{error}</p>}
 				{profile.avatarUrl ? (
 					<img src={profile.avatarUrl} alt="avatar" className="w-20 h-20 rounded-full object-cover mb-4" />
 				) : (

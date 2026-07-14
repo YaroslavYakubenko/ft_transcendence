@@ -23,7 +23,7 @@ function Navbar() {
 		navigate('/login')
 	}
 
-	function handleLaungaugeChange(code: string) {
+	function handleLanguageChange(code: string) {
 		i18n.changeLanguage(code)
 		localStorage.setItem("language", code)
 		document.documentElement.dir = code === "ar" ? "rtl" : "ltr"
@@ -68,7 +68,7 @@ function Navbar() {
 							{LANGUAGES.map((lang) => (
 								<button
 									key={lang.code}
-									onClick={() => { handleLaungaugeChange(lang.code); setLangOpen(false) }}
+									onClick={() => { handleLanguageChange(lang.code); setLangOpen(false) }}
 									className={`px-2 py-1 text-[12px] rounded cursor-pointer border-none bg-transparent ${i18n.language === lang.code ? "text-[#e2b96f]" : "text-[#8892a4]"}`}
 								>
 									{lang.label}

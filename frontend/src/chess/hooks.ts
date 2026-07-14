@@ -1,9 +1,10 @@
 
-import { useEffect } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { useMemo } from "react"
 import { sideChoice } from "../chess/utils"
-
+import { resign_game, createGame } from "../api/game"
+import { START_FEN } from "./constants"
 
 interface UseRematchResetProps {
 	rematchId?: number
@@ -55,16 +56,135 @@ export function usePlayerColor(
 ) {
 	return useMemo(() => {
 		const saved = localStorage.getItem(storageKey)
-
 		if (saved === "white" || saved === "black") {
 			return saved
 		}
-
 		const resolved = sideChoice(pieceColor)
-
 		localStorage.setItem(storageKey, resolved)
-
 		return resolved
 	}, [pieceColor, storageKey])
 }
 
+export function useResignGame(storage_keys: any, token: string | null, gameId: number | null, setFen: any, setMoves: any, setRes: any) {
+	const [resignError, setResignError] = useState("")
+	const [isResigning, setIsResigning] = useState(false)
+
+	const handleResign = async () => {
+		localStorage.removeItem(storage_keys.fen)
+		localStorage.removeItem(storage_keys.move_history)
+
+		if (!token) {
+			setResignError("You must be logged in to resign.")
+			return
+		}
+
+		if (!gameId) {
+			setResignError("No game ID found. Resign is unavailable for this game.")
+			return
+		}
+
+		setIsResigning(true)
+		const data = await resign_game(gameId, token)
+		setIsResigning(false)
+
+		if (!data) {
+			setResignError("Resign request failed.")
+			return
+		}
+
+		const winner = data.result === 'black_win' ? 'Black' : 'White'
+		setFen(START_FEN)
+		setMoves([])
+		setResignError("")
+		setRes({ state: "resign", winner })
+	}
+
+	return { handleResign, resignError, isResigning }
+}
+
+export function useChessTimer(
+	timerSetting: string,
+	fen: string,
+	isGameOver: boolean,
+	effectiveColor: 'white' | 'black' | null,
+	onTimeout: (loser: 'white' | 'black') => void
+) {
+	const initialSeconds = timerSetting === 'none' ? null : parseInt(timerSetting) * 60
+	const [whiteTime, setWhiteTime] = useState<number | null>(initialSeconds)
+	const [blackTime, setBlackTime] = useState<number | null>(initialSeconds)
+	const onTimeoutRef = useRef(onTimeout)
+	useEffect(() => { onTimeoutRef.current = onTimeout })
+
+	// Sync times when timerSetting changes (e.g. P2 receives timer from sync message)
+	const prevTimerRef = useRef(timerSetting)
+	useEffect(() => {
+		if (prevTimerRef.current === timerSetting) return
+		prevTimerRef.current = timerSetting
+		const secs = timerSetting === 'none' ? null : parseInt(timerSetting) * 60
+		setWhiteTime(secs)
+		setBlackTime(secs)
+	}, [timerSetting])
+
+	const fenTurn = fen.split(' ')[1] ?? 'w'
+
+	useEffect(() => {
+		if (initialSeconds === null || isGameOver) return
+
+		const whiteTurn = fenTurn === 'w'
+
+		const id = setInterval(() => {
+			if (whiteTurn) {
+				setWhiteTime(t => {
+					if (t === null || t <= 0) return t
+					if (t === 1) { onTimeoutRef.current('white'); return 0 }
+					return t - 1
+				})
+			} else {
+				setBlackTime(t => {
+					if (t === null || t <= 0) return t
+					if (t === 1) { onTimeoutRef.current('black'); return 0 }
+					return t - 1
+				})
+			}
+		}, 1000)
+
+		return () => clearInterval(id)
+	}, [fenTurn, isGameOver, timerSetting])
+
+	const playerTime = effectiveColor === 'white' ? whiteTime : effectiveColor === 'black' ? blackTime : null
+	const opponentTime = effectiveColor === 'white' ? blackTime : effectiveColor === 'black' ? whiteTime : null
+	return { playerTime, opponentTime }
+}
+
+export function useRestartGame(
+	settings: any,
+	pieceColor: 'white' | 'black' | 'random',
+	token: string | null,
+	timer?: string
+) {
+	const restartGame = async () => {
+		let gameId: number | undefined
+		let user
+		const activeTimer = (timer || settings.timer || 'none') as 'none' | '3' | '5' | '10'
+
+		if (settings.opponent === "bot" && token) {
+			const game = await createGame(settings.opponent, pieceColor, token, activeTimer)
+			if (game?.game_id) {
+				gameId = game.game_id
+			}
+			user = game.user
+		} else if (settings.opponent === "live" && token) {
+			const game = await createGame("live", pieceColor, token, activeTimer)
+			if (game?.game_id) {
+				gameId = game.game_id
+				localStorage.removeItem(`result_${game.game_id}`)
+				localStorage.removeItem(`chess_fen_${game.game_id}`)
+				localStorage.removeItem(`move_history_${game.game_id}`)
+				localStorage.removeItem(`piece_color_${game.game_id}`)
+			}
+			user = game?.user
+		}
+		return {gameId, user}
+	}
+	return restartGame
+}

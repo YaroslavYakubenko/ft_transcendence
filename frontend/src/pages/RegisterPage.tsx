@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { useAuth } from "../context/AuthContext"
 import { register as apiRegister } from "../api/auth"
 import { Link } from "react-router-dom"
 import { useTranslation } from "react-i18next"
@@ -14,11 +13,11 @@ function RegisterPage() {
 	const [isLoading, setIsLoading] = useState(false)
 	const [showPassword, setShowPassword] = useState(false)
 	const [showConfirm, setShowConfirm] = useState(false)
+	const [registered, setRegistered] = useState(false)
 	const hasMinLength = password.length >= 8
 	const hasUppercase = /[A-Z]/.test(password)
 	const hasDigit = /[0-9]/.test(password)
 	const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password)
-	const { login } = useAuth()
 	const { t } = useTranslation()
 
 	async function handleRegister() {
@@ -35,20 +34,47 @@ function RegisterPage() {
 			setError(t('register.passwordWeak'))
 			return
 		}
-		if (password.trim() !== confirmPassword.trim()) {
+		if (password !== confirmPassword) {
 			setError(t('register.passwordsDoNotMatch'))
 			return
 		}
 		try {
 			setIsLoading(true)
-			const { token, user } = await apiRegister(email, password)
-			login(token, user)
-		} catch {
-			setError(t('register.registrationFailed'))
+			await apiRegister(email, password)
+			setRegistered(true)
+		} catch (err) {
+			if (err instanceof Error && err.message) {
+				setError(err.message)
+			} else {
+				setError(t('register.registrationFailed'))
+			}
 		} finally {
 			setIsLoading(false)
 		}
 	}
+	if (registered) {
+		return (
+			<div className="min-h-screen bg-[#0f0f13] flex flex-col">
+				<Navbar />
+				<div className="flex-1 flex items-center justify-center">
+					<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl p-6 w-full max-w-sm text-center">
+						<p className="text-[#e2b96f] text-4xl mb-4">✉</p>
+						<h1 className="text-[#f0eeff] text-[22px] font-medium mb-3">{t('register.checkEmail.title')}</h1>
+						<p className="text-[#8892a4] text-sm mb-4">
+							{t('register.checkEmail.sentTo')} <strong className="text-[#f0eeff]">{email}</strong>.{' '}
+							{t('register.checkEmail.clickLink')}
+						</p>
+						<p className="text-[#8892a4] text-xs">
+							{t('register.checkEmail.alreadyVerified')}{' '}
+							<Link to="/login" className="text-[#e2b96f] no-underline">{t('register.checkEmail.logIn')}</Link>
+						</p>
+					</div>
+				</div>
+				<Footer />
+			</div>
+		)
+	}
+
 	return (
 		<div className="min-h-screen bg-[#0f0f13] flex flex-col">
 			<Navbar />
