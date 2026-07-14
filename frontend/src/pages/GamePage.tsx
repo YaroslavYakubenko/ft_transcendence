@@ -79,7 +79,6 @@ function GamePage() {
 		return loadResult(storage_keys.result)
 	})
 	const [promotion, setPro] = useState({ move: "", x: -1, y: -1, pre: "" })
-	const [opponentConnected, setOpponentConnected] = useState(false);
 	const [liveColor, setLiveColor] = useState<'white' | 'black' | null>(null)
 	const [activeTimer, setActiveTimer] = useState(settings.timer)
 	const liveColorRef = useRef<'white' | 'black' | null>(null)
@@ -219,7 +218,6 @@ function GamePage() {
 				}
 
 				else if (data.msg_type === 'player_connected') {
-					setOpponentConnected(true)
 					// Cancel any pending disconnect timeout (opponent reconnected in time)
 					if (disconnectTimerRef.current) {
 						clearTimeout(disconnectTimerRef.current)
