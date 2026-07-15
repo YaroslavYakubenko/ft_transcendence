@@ -35,10 +35,6 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-    # Expose DB port (optional, mainly for local debugging)
-    ports:
-      - "5432:5432"
-    
     # health check
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
@@ -46,21 +42,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-
-  adminer:
-    image: adminer:4
-    container_name: transcendence_adminer
-    restart: unless-stopped
-
-    environment:
-      ADMINER_DEFAULT_SERVER: db
-
-    ports:
-      - "127.0.0.1:8082:8080"
-
-    depends_on:
-      db:
-        condition: service_healthy
 
   backend:
     build:
@@ -78,10 +59,6 @@ services:
 
       # Persist uploaded media (avatars, etc.)
       - media_data:/app/media
-
-    # Expose Django app
-    ports:
-      - "8000:8000"
 
     # Ensure DB container starts first (entrypoint still waits for readiness)
     depends_on:
@@ -118,7 +95,7 @@ services:
         condition: service_healthy
 
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/nginx_status | grep -q 'Active connections' || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- --no-check-certificate https://127.0.0.1/api/health/ | grep -q '\"status\":\"ok\"' || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -215,7 +192,7 @@ services:
     command:
     - '--path.rootfs=/host'
     volumes:
-    - /:/host:ro
+    - /:/host:ro,rslave
     ports:
     - "9100:9100"
     healthcheck:

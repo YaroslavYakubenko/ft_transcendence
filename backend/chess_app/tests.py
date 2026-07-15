@@ -2,11 +2,9 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from django.utils import timezone
 from datetime import timedelta
-import chess
 
 from users.models import User
 from .models import Game
-from .game_results import get_game_result
 
 
 class CreateGameTests(APITestCase):
@@ -37,9 +35,6 @@ class CreateGameTests(APITestCase):
 		self.assertEqual(game.white_player, self.user)
 		self.assertEqual(game.black_player.email, "chess-bot@transcendence.local")
 		self.assertEqual(game.status, "pending")
-		self.assertTrue(game.black_player.is_bot)
-		self.assertEqual(game.black_player.username, "Chess Bot")
-		self.assertEqual(game.black_player.oauth_avatar, "/imgs/bk.png")
 
 	def test_create_live_game_requires_opponent_id(self):
 		response = self.client.post(
@@ -59,34 +54,6 @@ class CreateGameTests(APITestCase):
 		)
 
 		self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-	def test_make_move_returns_and_saves_bot_reply(self):
-		create_response = self.client.post(
-			"/create-game/",
-			{"opponent": "bot", "difficulty": "medium"},
-			format="json",
-		)
-		self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
-		game = Game.objects.get(id=create_response.data["game_id"])
-
-		move_response = self.client.post(
-			"/make-move/",
-			{
-				"fen": game.current_fen,
-				"from": "e2",
-				"to": "e4",
-				"game_id": game.id,
-			},
-			format="json",
-		)
-
-		self.assertEqual(move_response.status_code, status.HTTP_200_OK)
-		self.assertIn("bot_move", move_response.data)
-		self.assertNotEqual(move_response.data["bot_move"], "")
-
-		game.refresh_from_db()
-		self.assertEqual(game.moves.count(), 2)
-		self.assertEqual(game.moves.last().from_square, move_response.data["bot_move"][:2])
 
 
 class ResignGameTests(APITestCase):
@@ -125,10 +92,7 @@ class ResignGameTests(APITestCase):
 		)
 		
 		self.assertEqual(response.status_code, status.HTTP_200_OK)
-		self.assertTrue(response.data["game_over"])
-		self.assertEqual(response.data["result"]["winner"], "black")
-		self.assertEqual(response.data["result"]["termination"], "resignation")
-		self.assertEqual(response.data["result"]["pgn_result"], "0-1")
+		self.assertEqual(response.data["result"], "black_win")
 		
 		# Verify game status
 		self.game.refresh_from_db()
@@ -140,53 +104,6 @@ class ResignGameTests(APITestCase):
 		self.black_player.refresh_from_db()
 		self.assertEqual(self.white_player.losses, 1)
 		self.assertEqual(self.black_player.wins, 1)
-
-
-class PromotionGameTests(APITestCase):
-	def setUp(self):
-		self.password = "StrongPass123!"
-		self.white_player = User.objects.create_user(
-			email="white@example.com", password=self.password, username="white"
-		)
-		self.black_player = User.objects.create_user(
-			email="black@example.com", password=self.password, username="black"
-		)
-		self.game = Game.objects.create(
-			white_player=self.white_player,
-			black_player=self.black_player,
-			status="ongoing",
-			result="ongoing",
-		)
-		login_response = self.client.post(
-			"/api/auth/login/",
-			{"email": self.white_player.email, "password": self.password},
-			format="json",
-		)
-		self.token = login_response.data["token"]
-		self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token}")
-
-	def test_do_promotion_saves_move_for_game(self):
-		response = self.client.post(
-			"/do-promotion/",
-			{
-				"fen": "4k3/4P3/8/8/8/8/8/4K3 w - - 0 1",
-				"move": "e7e8",
-				"from": "e7",
-				"to": "e8",
-				"key": "q",
-				"game_id": self.game.id,
-			},
-			format="json",
-		)
-
-		self.assertEqual(response.status_code, status.HTTP_200_OK)
-		self.assertIn("fen", response.data)
-
-		move = self.game.moves.get()
-		self.assertEqual(move.game_id, self.game.id)
-		self.assertEqual(move.from_square, "e7")
-		self.assertEqual(move.to_square, "e8")
-		self.assertEqual(move.promotion_piece, "Q")
 
 	def test_black_player_resigns(self):
 		"""Test that black player can resign and white wins"""
@@ -206,10 +123,7 @@ class PromotionGameTests(APITestCase):
 		)
 		
 		self.assertEqual(response.status_code, status.HTTP_200_OK)
-		self.assertTrue(response.data["game_over"])
-		self.assertEqual(response.data["result"]["winner"], "white")
-		self.assertEqual(response.data["result"]["termination"], "resignation")
-		self.assertEqual(response.data["result"]["pgn_result"], "1-0")
+		self.assertEqual(response.data["result"], "white_win")
 		
 		# Verify game status
 		self.game.refresh_from_db()
@@ -298,14 +212,3 @@ class PromotionGameTests(APITestCase):
 		# Black (lower rated) won, should gain more ELO
 		self.assertLess(self.white_player.elo, initial_white_elo)
 		self.assertGreater(self.black_player.elo, initial_black_elo)
-
-
-class GameResultHelperTests(APITestCase):
-	def test_get_game_result_detects_stalemate(self):
-		board = chess.Board("7k/5K2/6Q1/8/8/8/8/8 b - - 0 1")
-		result = get_game_result(board)
-
-		self.assertIsNotNone(result)
-		self.assertEqual(result["winner"], None)
-		self.assertEqual(result["termination"], "stalemate")
-		self.assertEqual(result["pgn_result"], "1/2-1/2")

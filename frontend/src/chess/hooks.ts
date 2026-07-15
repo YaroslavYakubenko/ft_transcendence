@@ -107,11 +107,33 @@ export function useChessTimer(
 	fen: string,
 	isGameOver: boolean,
 	effectiveColor: 'white' | 'black' | null,
-	onTimeout: (loser: 'white' | 'black') => void
+	onTimeout: (loser: 'white' | 'black') => void,
+	gameId?: number | null
 ) {
 	const initialSeconds = timerSetting === 'none' ? null : parseInt(timerSetting) * 60
-	const [whiteTime, setWhiteTime] = useState<number | null>(initialSeconds)
-	const [blackTime, setBlackTime] = useState<number | null>(initialSeconds)
+
+	const [whiteTime, setWhiteTime] = useState<number | null>(() => {
+		if (!gameId || initialSeconds === null) return initialSeconds
+		try {
+			const saved = localStorage.getItem(`timer_${gameId}`)
+			if (!saved) return initialSeconds
+			const { white, ts, turn } = JSON.parse(saved)
+			const elapsed = Math.floor((Date.now() - ts) / 1000)
+			return turn === 'w' ? Math.max(0, white - elapsed) : white
+		} catch { return initialSeconds }
+	})
+
+	const [blackTime, setBlackTime] = useState<number | null>(() => {
+		if (!gameId || initialSeconds === null) return initialSeconds
+		try {
+			const raw = localStorage.getItem(`timer_${gameId}`)
+			if (!raw) return initialSeconds
+			const { black, ts, turn } = JSON.parse(raw)
+			const elapsed = Math.floor((Date.now() - ts) / 1000)
+			return turn === 'b' ? Math.max(0, black - elapsed) : black
+		} catch { return initialSeconds }
+	})
+
 	const onTimeoutRef = useRef(onTimeout)
 	useEffect(() => { onTimeoutRef.current = onTimeout })
 
@@ -123,9 +145,26 @@ export function useChessTimer(
 		const secs = timerSetting === 'none' ? null : parseInt(timerSetting) * 60
 		setWhiteTime(secs)
 		setBlackTime(secs)
+		if (gameId) localStorage.removeItem(`timer_${gameId}`)
 	}, [timerSetting])
 
 	const fenTurn = fen.split(' ')[1] ?? 'w'
+
+	// Save timer to localStorage on every tick
+	useEffect(() => {
+		if (!gameId || isGameOver || whiteTime === null || blackTime === null) return
+		localStorage.setItem(`timer_${gameId}`, JSON.stringify({
+			white: whiteTime,
+			black: blackTime,
+			ts: Date.now(),
+			turn: fenTurn,
+		}))
+	}, [whiteTime, blackTime])
+
+	// Clear timer from localStorage when game ends
+	useEffect(() => {
+		if (isGameOver && gameId) localStorage.removeItem(`timer_${gameId}`)
+	}, [isGameOver])
 
 	useEffect(() => {
 		if (initialSeconds === null || isGameOver) return

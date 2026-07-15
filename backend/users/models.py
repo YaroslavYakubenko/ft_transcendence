@@ -24,7 +24,6 @@ class User(AbstractBaseUser, PermissionsMixin):
 	username = models.CharField(max_length=50, blank=True) # blank=True means to not nesessary to fill out
 	avatar = models.ImageField(upload_to='avatars/', blank=True)
 	oauth_avatar = models.URLField(blank=True, default='')
-	is_bot = models.BooleanField(default=False)
 	is_online = models.BooleanField(default=False)
 	is_active = models.BooleanField(default=True)
 	email_verified = models.BooleanField(default=False)

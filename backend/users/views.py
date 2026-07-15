@@ -119,15 +119,7 @@ def update_me(request):
 		serializer.save()
 		# Handle avatar file upload separately (SerializerMethodField is read-only)
 		if 'avatar' in request.FILES:
-			avatar_file = request.FILES['avatar']
-			request.user.avatar = avatar_file
-			try:
-				request.user.save(update_fields=['avatar'])
-				print(f"✓ Avatar saved for user {request.user.id}: {request.user.avatar.url}")
-			except Exception as e:
-				print(f"✗ Error saving avatar: {e}")
-				return Response({'error': f'Failed to save avatar: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
-		
+			request.user.avatar = request.FILES['avatar']
 		# Handle password update
 		password = request.data.get('password')
 		if password:
@@ -136,10 +128,8 @@ def update_me(request):
 			except ValidationError as e:
 				return Response({'error': list(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
 			request.user.set_password(password)
-			request.user.save(update_fields=['password'])
-		
-		# Refresh from database to ensure latest state
-		request.user.refresh_from_db()
+		# Save all changes
+		request.user.save()
 		# Return fresh user data
 		fresh = UserSerializer(request.user, context={'request': request})
 		return Response(fresh.data)
@@ -166,24 +156,6 @@ def get_user(request, user_id): # view someone else's profile
 def get_friends(request): # view who added whom
 	friendships = Friendship.objects.filter(from_user=request.user)
 	serializer = FriendSerializer(friendships, many=True, context={'request': request})
-	return Response(serializer.data)
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def search_users(request):
-	query = (request.query_params.get('q') or '').strip()
-	if not query:
-		return Response([])
-
-	existing_friend_ids = Friendship.objects.filter(from_user=request.user).values_list('to_user_id', flat=True)
-	users = (
-		User.objects
-		.filter(models.Q(username__contains=query) | models.Q(email__contains=query))
-		.exclude(id=request.user.id)
-		.exclude(id__in=existing_friend_ids)
-		.order_by('username', 'email')[:20]
-	)
-	serializer = UserSerializer(users, many=True, context={'request': request})
 	return Response(serializer.data)
 
 @api_view(['POST'])

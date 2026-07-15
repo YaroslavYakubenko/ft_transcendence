@@ -7,7 +7,9 @@ from chess_app.models import Game, Move
 from chess_app.views import update_player_stats
 from django.utils import timezone
 from users.models import ChatMessage
-from users.elo_utils import calculate_elo_change, calculate_draw_elo
+import redis.asyncio as aioredis
+
+_redis = aioredis.from_url("redis://redis:6379", decode_responses=True)
 
 # self is the consumer instance
 # Django Channels creates an object (self) for each WebSocket connection
@@ -43,12 +45,13 @@ class OnlineStatusConsumer(AsyncWebsocketConsumer):
 		self.inbox = 'inbox_' + str(self.user.id)
 		await self.channel_layer.group_add(self.inbox, self.channel_name)
 		await self.channel_layer.group_add('presence', self.channel_name)
+		await _redis.incr(f"ws_conn_{self.user.id}")
 		await database_sync_to_async(self.setOnline)(True)
 		await self.accept()
 
 		print("PRESENCE ONLINE:", self.user.id, self.user.email, flush=True)
 
-	
+
 		await self.channel_layer.group_send('presence', {
 			'type': 'presence_msg',
 			'user_id': self.user.id,
@@ -66,14 +69,16 @@ class OnlineStatusConsumer(AsyncWebsocketConsumer):
 		if self.user is not None:
 			await self.channel_layer.group_discard(self.inbox, self.channel_name)
 			await self.channel_layer.group_discard('presence', self.channel_name)
-			await database_sync_to_async(self.setOnline)(False)
-
-			print("PRESENCE OFFLINE:", self.user.id, self.user.email)
-			await self.channel_layer.group_send('presence', {
-				'type': 'presence_msg',
-				'user_id': self.user.id,
-				'is_online': False,
-		})
+			count = await _redis.decr(f"ws_conn_{self.user.id}")
+			if count <= 0:
+				await _redis.delete(f"ws_conn_{self.user.id}")
+				await database_sync_to_async(self.setOnline)(False)
+				print("PRESENCE OFFLINE:", self.user.id, self.user.email)
+				await self.channel_layer.group_send('presence', {
+					'type': 'presence_msg',
+					'user_id': self.user.id,
+					'is_online': False,
+				})
 
 	def setOnline(self, status):
 		if self.user is not None:
@@ -102,7 +107,7 @@ class OnlineStatusConsumer(AsyncWebsocketConsumer):
 				'message': 'Invalid message format',
 			}))
 			return
-		
+
 		to_user_id = content.get('to_user_id')
 		message = content.get('message', '')
 
@@ -196,7 +201,7 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 		self.game_group_name = 'game_' + str(self.game_id)
 
 		# row from the Game table in the database; returns a python object
-		game = await self.get_game()										
+		game = await self.get_game()
 		if game is None:
 			await self.close()
 			return
@@ -205,7 +210,6 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 		await self.accept()
 
 		# game taken from database through get_game function
-
 		is_white = self.user == game.white_player
 		opponent = game.black_player if is_white else game.white_player
 
@@ -216,10 +220,9 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 		black_name = None
 		if game.black_player:
 			black_name = game.black_player.username or game.black_player.email
-		
+
 		opponent_id = None
 		opponent_name = None
-
 		if opponent:
 			opponent_id = opponent.id
 			opponent_name = opponent.username or opponent.email
@@ -235,10 +238,11 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 			'your_color': 'white' if is_white else 'black',
 			'opponent_id': opponent_id,
 			'opponent_name': opponent_name,
+			'waiting_for_opponent': opponent is None,
 			'timer': game.timer,
 		})
 
-		#broadcast to game_group_name 
+		#broadcast to game_group_name
 		# GamePage.tsx listens for data.msg_type === 'player_connected'
 		await self.channel_layer.group_send(self.game_group_name, {
 			'type': 'game_message',
@@ -248,13 +252,14 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 
 	async def disconnect(self, close_code):
 		if hasattr(self, 'game_group_name'):
-			await self.channel_layer.group_discard(self.game_group_name, self.channel_name)				# client just left game_group_name
-			await self.channel_layer.group_send(self.game_group_name, 									# notifies everybody remaining in game_group_name about the disconnect
-			{
-				'type': 'game_message',
-				'msg_type': 'player_disconnected',
-				'username': self.user.username or self.user.email,
-			})
+			await self.channel_layer.group_discard(self.game_group_name, self.channel_name)
+			game = await self.get_game()
+			if game and game.status != 'pending':
+				await self.channel_layer.group_send(self.game_group_name, {
+					'type': 'game_message',
+					'msg_type': 'player_disconnected',
+					'username': self.user.username or self.user.email,
+				})
 
 	async def receive_json(self, content):
 		msg_type = content.get('type')
@@ -270,7 +275,7 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 
 	# called on each connection in the group when group_send fires
 	async def game_message(self, event):
-		event.pop('type')
+		event.pop('type', None)
 		await self.send_json(event)
 
 	@database_sync_to_async
@@ -282,11 +287,12 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 			if self.user == game.white_player or self.user == game.black_player:
 				return game
 
+			# If a slot is still empty, claim it for this user.
 			if game.white_player is None:
 				game.white_player = self.user
 				game.save(update_fields=['white_player'])
 				return game
-		
+
 			elif game.black_player is None:
 				game.black_player = self.user
 				game.save(update_fields=['black_player'])
@@ -299,9 +305,7 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 			print("GAME DOES NOT EXIST")
 			return None
 
-	# data from frontend
 	async def _handle_move(self, data):
-		# read move data 
 		frm = data.get('from')
 		to = data.get('to')
 		promotion = data.get('promotion', '')   # e.g. 'q', 'r', 'b', 'n'
@@ -309,8 +313,7 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 		if not frm or not to:
 			await self.send_json({'type': 'error', 'message': 'missing from/to'})
 			return
-		
-		# fetches game row from the database
+
 		game = await self.get_game()
 		if game is None or game.status == 'completed':
 			await self.send_json({'type': 'error', 'message': 'game not found or already over'})
@@ -320,10 +323,8 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 			await self.send_json({'type': 'error', 'message': 'waiting for opponent'})
 			return
 
-		# create a temporary chess board object in Python  from the FEN string saved in the database 
-		board = chess.Board(game.current_fen)
-
 		# enforce turn order — white_player moves on white's turn, black_player on black's
+		board = chess.Board(game.current_fen)
 		is_white_turn = board.turn == chess.WHITE
 		if is_white_turn and self.user != game.white_player:
 			await self.send_json({'type': 'error', 'message': 'not your turn'})
@@ -332,54 +333,37 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 			await self.send_json({'type': 'error', 'message': 'not your turn'})
 			return
 
-		# UCI format is how chess moves are written for python chess
 		uci = frm + to + (promotion.lower() if promotion else '')
-
-		# convert string into a chess move object 
 		try:
 			move = chess.Move.from_uci(uci)
 		except ValueError:
 			await self.send_json({'type': 'error', 'message': 'invalid move format'})
 			return
 
-		# check if move is legal (format can be valid but move still illegal -> pawn cannot move three squares)
 		if move not in board.legal_moves:
 			await self.send_json({'type': 'error', 'message': 'illegal move'})
 			return
 
-		# save current board before move 
 		fen_before = game.current_fen
-
-		# change the python object "board" in memory
 		board.push(move)
 		new_fen = board.fen()
 
-		# prepare result values
+		# determine game result
 		result = 'ongoing'
 		winner = ''
 		king_in_check = ''
-
-		# after board.push(move), board.turn has already changed to the next player
 		if board.is_checkmate():
 			result = 'checkmate'
 			winner = 'Black' if board.turn == chess.WHITE else 'White'
-		
-		# player has no legal moves, but is not in check
 		elif board.is_stalemate():
 			result = 'stalemate'
-
-		# check automatic draw conditions (king vs king; 75-move rule; fivefold repetition)
 		elif board.is_insufficient_material() or board.is_seventyfive_moves() or board.is_fivefold_repetition():
 			result = 'draw'
-
-		# if move gives check, find the checked king's square
 		elif board.is_check():
 			king_in_check = chess.square_name(board.king(board.turn))
 
-		# save move to database
 		await self._save_move(game, frm, to, promotion, fen_before, new_fen, result)
 
-		# broadcast move to both players
 		await self.channel_layer.group_send(self.game_group_name, {
 			'type': 'game_message',
 			'msg_type': 'move',
@@ -444,31 +428,17 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 		game.status = 'completed'
 		game.ended_at = timezone.now()
 		game.save(update_fields=['result', 'status', 'ended_at'])
-
 		# update player stats / ELO
 		game.white_player.refresh_from_db()
 		game.black_player.refresh_from_db()
-
 		if result == 'white_win':
-			winner = game.white_player
-			loser = game.black_player
-			winner.wins += 1
-			loser.losses += 1
-
+			game.white_player.wins += 1
+			game.black_player.losses += 1
 		else:
-			winner = game.black_player
-			loser = game.white_player
-			winner.wins += 1
-			loser.losses += 1
-
-		elo_change_winner, elo_change_loser = calculate_elo_change(
-			winner.elo, 
-			loser.elo
-		)
-
+			game.white_player.losses += 1
+			game.black_player.wins += 1
 		game.white_player.save()
 		game.black_player.save()
-		game.save(update_field=['result', 'status', 'ended_at'])
 
 	async def _handle_draw_offer(self):
 		game = await self.get_game()

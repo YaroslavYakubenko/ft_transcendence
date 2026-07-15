@@ -2,14 +2,7 @@
 const API = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '')
 
 function getRedirectUri(): string {
-	const envRedirectUri = import.meta.env.VITE_REDIRECT_URI?.trim()
-	if (envRedirectUri) {
-		return envRedirectUri
-	}
-	if (typeof window !== 'undefined') {
-		return `${window.location.origin}/oauth/callback`
-	}
-	return 'http://localhost:5173/oauth/callback'
+	return `${window.location.origin}/oauth/callback`
 }
 
 export type OAuthProvider = 'github' | '42'

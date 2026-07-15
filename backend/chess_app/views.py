@@ -25,41 +25,6 @@ def check_gameover(board):
 		result = "ongoing"
 	return result
 
-
-def _get_bot_user():
-	"""Return or create the canonical chess bot user used by the app/tests."""
-	try:
-		from users.models import User
-	except Exception:
-		# fallback import path
-		from django.contrib.auth import get_user_model
-		User = get_user_model()
-
-	email = 'chess-bot@transcendence.local'
-	username = 'Chess Bot'
-	bot_user, created = User.objects.get_or_create(
-		email=email,
-		defaults={
-			'username': username,
-			'is_active': True,
-			'is_bot': True,
-			'oauth_avatar': '/imgs/bk.png',
-		},
-	)
-	if not bot_user.username:
-		bot_user.username = username
-	if not bot_user.is_bot:
-		bot_user.is_bot = True
-	if not bot_user.oauth_avatar:
-		bot_user.oauth_avatar = '/imgs/bk.png'
-	# ensure a password isn't usable
-	try:
-		bot_user.set_unusable_password()
-	except Exception:
-		pass
-	bot_user.save()
-	return bot_user
-
 def check_promotion(board, _s, _t):
 
 	piece = board.piece_at(chess.parse_square(_s))
@@ -174,8 +139,6 @@ def make_move(request):
 	elif res != "ongoing" :
 		win = "Black" if board.turn else "White"
 
-	bot_move_uci = ''
-
 	# Save move to database if game_id is provided
 	if game_id:
 		try:
@@ -189,85 +152,24 @@ def make_move(request):
 				fen_after=board.fen(),
 				move_number=move_count
 			)
-			# Update game FEN and status for player's move
-			game.current_fen = board.fen()
+			# Update game FEN and status
+			game.current_fen = board.fen()		
 			if res != "ongoing":
 				# Game is over, update stats
 				update_player_stats(game, res)
+			elif game.status == 'pending':
+				game.status = 'ongoing'
+				game.started_at = timezone.now()
 				game.save()
-			else:
-				if game.status == 'pending':
-					game.status = 'ongoing'
-					game.started_at = timezone.now()
-					game.save()
-
-				# If the opponent is a bot and it's now the bot's turn, generate a reply
-				bot_user = None
-				if game.white_player and game.white_player.is_bot:
-					bot_user = game.white_player
-				if game.black_player and game.black_player.is_bot:
-					bot_user = game.black_player
-
-				# Only attempt to compute bot move if a bot opponent exists and game still ongoing
-				if bot_user and res == 'ongoing':
-					try:
-						# Lazy import to avoid startup dependency issues
-						from chess_app.ai_bot.minimax import find_best_move, get_depth
-						import chess as _chess
-
-						board_for_bot = _chess.Board(game.current_fen)
-						# Determine difficulty (field exists in model/migrations)
-						difficulty = getattr(game, 'difficulty', 'medium')
-						depth = get_depth(difficulty)
-
-						# Only run minimax when it's the bot's turn
-						if board_for_bot.turn == (True if bot_user == game.white_player else False):
-							best = find_best_move(board_for_bot, depth, difficulty)
-							if best:
-								# Apply bot move to board
-								board_for_bot.push(best)
-								bot_move_uci = best.uci()
-
-								# Save bot move to DB
-								move_count = game.moves.count() + 1
-								promo = None
-								if best.promotion:
-									try:
-										promo = _chess.piece_symbol(best.promotion).upper()
-									except Exception:
-										promo = None
-
-								Move.objects.create(
-									game=game,
-									from_square=_chess.square_name(best.from_square),
-									to_square=_chess.square_name(best.to_square),
-									promotion_piece=promo,
-									fen_before=game.current_fen,
-									fen_after=board_for_bot.fen(),
-									move_number=move_count,
-								)
-
-								# Update game FEN and status after bot move
-								game.current_fen = board_for_bot.fen()
-								g_res = check_gameover(board_for_bot)
-								if g_res != 'ongoing':
-									update_player_stats(game, g_res)
-								game.save()
-
-					except Exception:
-						# If AI backend isn't available or errors, skip bot reply
-						bot_move_uci = ''
-
 		except Game.DoesNotExist:
 			pass  # Continue without saving if game doesn't exist
 
 	return Response({
-		"fen": board.fen() if not bot_move_uci else board_for_bot.fen(),
+		"fen": board.fen(),
 		"result": res,
 		"winner" : win,
 		"promotion": '',
 		"kingpos" : king,
-		"bot_move": bot_move_uci,
 		})
 
 @api_view(['POST'])
@@ -355,12 +257,14 @@ def create_game(request):
 	"""Create a new game and return game ID for move/resign tracking."""
 	opponent_type = request.data.get('opponent', 'bot')
 	piece_color = request.data.get('pieceColor', 'random')
-	# difficulty for bot games
-	difficulty = request.data.get('difficulty', 'medium')
 	timer = request.data.get('timer', 'none')
 
 	if opponent_type == 'bot':
-		opponent = _get_bot_user()
+		bot_user, _ = User.objects.get_or_create(
+			email='chess-bot@transcendence.local',
+			defaults={'username': 'ChessBot', 'is_active': True},
+		)
+		opponent = bot_user
 
 	elif opponent_type == 'live':
 		opponent_id = request.data.get('opponent_id')
@@ -392,53 +296,8 @@ def create_game(request):
 		black_player=black_player,
 		status='pending',
 		result='ongoing',
-		difficulty=difficulty,
 		timer=timer,
 	)
-
-	# If opponent is a bot, start the game immediately and possibly let the bot play the first move
-	if (game.white_player and getattr(game.white_player, 'is_bot', False)) or (game.black_player and getattr(game.black_player, 'is_bot', False)):
-		game.status = 'ongoing'
-		game.started_at = timezone.now()
-		game.save()
-
-		# If the bot is white, make an opening move on its behalf
-		bot_user = game.white_player if getattr(game.white_player, 'is_bot', False) else (game.black_player if getattr(game.black_player, 'is_bot', False) else None)
-		if bot_user and getattr(game.white_player, 'is_bot', False):
-			try:
-				from chess_app.ai_bot.minimax import find_best_move, get_depth
-				import chess as _chess
-
-				board = _chess.Board(game.current_fen)
-				difficulty = getattr(game, 'difficulty', 'medium')
-				depth = get_depth(difficulty)
-				best = find_best_move(board, depth, difficulty)
-				if best:
-					board.push(best)
-					promo = None
-					if best.promotion:
-						try:
-							promo = _chess.piece_symbol(best.promotion).upper()
-						except Exception:
-							promo = None
-					Move.objects.create(
-						game=game,
-						from_square=_chess.square_name(best.from_square),
-						to_square=_chess.square_name(best.to_square),
-						promotion_piece=promo,
-						fen_before=game.current_fen,
-						fen_after=board.fen(),
-						move_number=1,
-					)
-					game.current_fen = board.fen()
-					# If game ended by bot move, update stats
-					g_res = check_gameover(board)
-					if g_res != 'ongoing':
-						update_player_stats(game, g_res)
-					game.save()
-			except Exception:
-				# If AI unavailable, leave game as started without a bot move
-				pass
 
 	if piece_color == 'white':
 		return Response({
@@ -584,7 +443,8 @@ def check_game_status(request):
 	if game.status == 'completed':
 		return Response({"error": "Game is already completed"}, status=400)
 
-	if game.white_player.email != "pending@transcendence.de" and game.black_player.email != "pending@transcendence.de" and game.white_player != request.user and game.black_player != request.user:
+	if (game.white_player is not None and game.black_player is not None
+			and game.white_player != request.user and game.black_player != request.user):
 		return Response({"error": "You are not a player in this game"}, status=403)
 
 	return Response({

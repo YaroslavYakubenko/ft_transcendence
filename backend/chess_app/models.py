@@ -32,12 +32,6 @@ class Game(models.Model):
 		('10', '10+5'),
 	]
 
-	difficulty = models.CharField(
-		max_length=20,
-		choices=[('easy', 'Easy'), ('medium', 'Medium'), ('hard', 'Hard')],
-		default='medium',
-	)
-
 	timer = models.CharField(max_length=10, choices=TIMER_CHOICES, default='none')
 	current_fen = models.TextField(default='rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
 

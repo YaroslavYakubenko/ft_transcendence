@@ -1,7 +1,7 @@
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { useTranslation } from "react-i18next"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import i18n from "../i18n"
 
 const LANGUAGES = [
@@ -17,6 +17,17 @@ function Navbar() {
 	const location = useLocation()
 	const { t } = useTranslation()
 	const [langOpen, setLangOpen] = useState(false)
+	const [hasActiveGame, setHasActiveGame] = useState(false)
+
+	useEffect(() => {
+		const check = () => {
+			const saved = localStorage.getItem('game_session')
+			setHasActiveGame(!!saved)
+		}
+		check()
+		window.addEventListener('storage', check)
+		return () => window.removeEventListener('storage', check)
+	}, [location.pathname])
 
 	function handleLogout() {
 		logout()
@@ -43,6 +54,11 @@ function Navbar() {
 						<NavLink to="/lobby" className={({ isActive }) => isActive || location.pathname === '/game' ? "text-[#e2b96f] text-[13px] no-underline" : "text-[#8892a4] text-[13px] no-underline"}>
 							{t("nav.game")}
 						</NavLink>
+						{hasActiveGame && location.pathname !== '/game' && (
+							<NavLink to="/game" className="text-[#6ee27a] text-[13px] no-underline animate-pulse">
+								↩ Resume
+							</NavLink>
+						)}
 						<NavLink to="/profile" className={({ isActive }) => isActive ? "text-[#e2b96f] text-[13px] no-underline" : "text-[#8892a4] text-[13px] no-underline"}>
 							{t("nav.profile")}
 						</NavLink>

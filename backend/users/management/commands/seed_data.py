@@ -40,11 +40,11 @@ class Command(BaseCommand):
 
         # Create sample users
         users_data = [
-            {'email': 'alice@example.com', 'username': 'alice_player', 'wins': 15, 'losses': 5, 'draws': 2, 'elo': 1450},
-            {'email': 'bob@example.com', 'username': 'bob_player', 'wins': 10, 'losses': 8, 'draws': 3, 'elo': 1300},
-            {'email': 'charlie@example.com', 'username': 'charlie_player', 'wins': 8, 'losses': 12, 'draws': 1, 'elo': 1150},
-            {'email': 'diana@example.com', 'username': 'diana_player', 'wins': 20, 'losses': 3, 'draws': 5, 'elo': 1550},
-            {'email': 'eve@example.com', 'username': 'eve_player', 'wins': 5, 'losses': 15, 'draws': 0, 'elo': 950},
+            {'email': 'alice@example.com', 'username': 'alice_player', 'wins': 15, 'losses': 5, 'draws': 2, 'rating': 1450},
+            {'email': 'bob@example.com', 'username': 'bob_player', 'wins': 10, 'losses': 8, 'draws': 3, 'rating': 1300},
+            {'email': 'charlie@example.com', 'username': 'charlie_player', 'wins': 8, 'losses': 12, 'draws': 1, 'rating': 1150},
+            {'email': 'diana@example.com', 'username': 'diana_player', 'wins': 20, 'losses': 3, 'draws': 5, 'rating': 1550},
+            {'email': 'eve@example.com', 'username': 'eve_player', 'wins': 5, 'losses': 15, 'draws': 0, 'rating': 950},
         ]
 
         users = []
@@ -56,7 +56,7 @@ class Command(BaseCommand):
                     'wins': user_data['wins'],
                     'losses': user_data['losses'],
                     'draws': user_data['draws'],
-                    'elo': user_data['elo'],
+                    'rating': user_data['rating'],
                 }
             )
             users.append(user)

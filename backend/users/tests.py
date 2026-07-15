@@ -5,7 +5,6 @@ from datetime import timedelta
 
 from .models import User, Friendship
 from chess_app.models import Game
-from chess_app.views import _get_bot_user
 
 
 class HealthCheckTests(APITestCase):
@@ -58,34 +57,6 @@ class AuthFlowTests(APITestCase):
 		)
 		self.assertEqual(response.status_code, status.HTTP_200_OK)
 		self.assertIn("token", response.data)
-
-
-class BotProfileTests(APITestCase):
-	def setUp(self):
-		self.password = "StrongPass123!"
-		self.user = User.objects.create_user(
-			email="viewer@example.com", password=self.password, username="viewer"
-		)
-		login_response = self.client.post(
-			"/api/auth/login/",
-			{"email": self.user.email, "password": self.password},
-			format="json",
-		)
-		token = login_response.data["token"]
-		self.client.credentials(HTTP_AUTHORIZATION=f"Token {token}")
-
-	def test_bot_profile_is_always_online(self):
-		bot = _get_bot_user()
-		bot.is_online = False
-		bot.save(update_fields=["is_online"])
-
-		response = self.client.get(f"/api/users/{bot.id}/")
-		self.assertEqual(response.status_code, status.HTTP_200_OK)
-		self.assertTrue(response.data["is_bot"])
-		self.assertTrue(response.data["is_online"])
-
-		friend_response = self.client.get("/api/friends/")
-		self.assertEqual(friend_response.status_code, status.HTTP_200_OK)
 
 
 class FriendshipTests(APITestCase):

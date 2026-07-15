@@ -54,11 +54,11 @@ function FriendsPage() {
 									<img src={friend.avatarUrl} alt="avatar" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
 								) : (
 									<div className="w-10 h-10 rounded-full bg-[#e2b96f] flex items-center justify-center text-[#0f0f13] font-bold flex-shrink-0">
-										{(friend.username || friend.email)[0].toUpperCase()}
+										{(friend.username || friend.email.split('@')[0])[0].toUpperCase()}
 									</div>
 								)}
 								<div className="min-w-0">
-									<p className="font-semibold truncate">{friend.username || friend.email}</p>
+									<p className="font-semibold truncate">{friend.username || friend.email.split('@')[0]}</p>
 									<p className="text-xs text-[#8892a4]">{friend.isOnline ? "🟢 " + t('friends.online') : "⚫ " + t('friends.offline')}</p>
 								</div>
 							</div>

@@ -55,15 +55,15 @@ def _elo_expected(rating: int, opponent_rating: int) -> float:
 
 
 def _apply_stats(user: User, score: float, opponent_rating: int) -> None:
-	expected = _elo_expected(user.elo, opponent_rating)
-	user.elo = max(0, round(user.elo + ELO_K_FACTOR * (score - expected)))
+	expected = _elo_expected(user.rating, opponent_rating)
+	user.rating = max(0, round(user.rating + ELO_K_FACTOR * (score - expected)))
 	if score == 1:
 		user.wins += 1
 	elif score == 0:
 		user.losses += 1
 	else:
 		user.draws += 1
-	user.save(update_fields=['wins', 'losses', 'draws', 'elo'])
+	user.save(update_fields=['wins', 'losses', 'draws', 'rating'])
 
 
 def _result_scores(result: str) -> tuple[float, float]:
@@ -106,15 +106,15 @@ def finalize_match(match: Match, result: str, *, pgn_notation: str | None = None
 	locked_match.save()
 
 	white_score, black_score = _result_scores(result)
-	white_rating = locked_match.white_player.elo
-	black_rating = locked_match.black_player.elo
+	white_rating = locked_match.white_player.rating
+	black_rating = locked_match.black_player.rating
 	_apply_stats(locked_match.white_player, white_score, black_rating)
 	_apply_stats(locked_match.black_player, black_score, white_rating)
 	return locked_match
 
 
 def get_ranking_queryset():
-	return User.objects.exclude(email=BOT_EMAIL).order_by('-elo', '-wins', 'username', 'id')
+	return User.objects.exclude(email=BOT_EMAIL).order_by('-rating', '-wins', 'username', 'id')
 
 
 def get_user_rank(user: User) -> int:
@@ -130,7 +130,7 @@ def get_user_stats(user: User) -> dict[str, int]:
 		'wins': user.wins,
 		'losses': user.losses,
 		'rank': get_user_rank(user),
-		'elo': user.elo,
+		'elo': user.rating,
 	}
 
 
@@ -142,7 +142,7 @@ def build_leaderboard() -> list[dict[str, int | str]]:
 			'username': user.username or user.email,
 			'wins': user.wins,
 			'losses': user.losses,
-			'elo': user.elo,
+			'elo': user.rating,
 			'rank': index,
 		})
 	return rows
