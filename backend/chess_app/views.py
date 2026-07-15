@@ -25,6 +25,102 @@ def check_gameover(board):
 		result = "ongoing"
 	return result
 
+
+BOT_EMAIL = 'chess-bot@transcendence.local'
+
+
+def _get_bot_player(game):
+	if game.white_player and game.white_player.email == BOT_EMAIL:
+		return game.white_player
+	if game.black_player and game.black_player.email == BOT_EMAIL:
+		return game.black_player
+	return None
+
+
+def _play_bot_move(game):
+	bot_player = _get_bot_player(game)
+	if not bot_player:
+		return {
+			'fen': game.current_fen,
+			'bot_move': '',
+			'result': 'ongoing',
+			'winner': '',
+			'kingpos': '',
+		}
+
+	board = chess.Board(game.current_fen)
+	bot_is_white = bot_player == game.white_player
+	if board.turn != bot_is_white:
+		return {
+			'fen': game.current_fen,
+			'bot_move': '',
+			'result': 'ongoing',
+			'winner': '',
+			'kingpos': '',
+		}
+
+	try:
+		from chess_app.ai_bot.minimax import find_best_move, get_depth
+		difficulty = getattr(game, 'difficulty', 'medium')
+		depth = get_depth(difficulty)
+		best = find_best_move(board, depth, difficulty)
+		if not best:
+			return {
+				'fen': game.current_fen,
+				'bot_move': '',
+				'result': 'ongoing',
+				'winner': '',
+				'kingpos': '',
+			}
+
+		board.push(best)
+		move_count = game.moves.count() + 1
+		promo = None
+		if best.promotion:
+			try:
+				promo = chess.piece_symbol(best.promotion).upper()
+			except Exception:
+				promo = None
+
+		Move.objects.create(
+			game=game,
+			from_square=chess.square_name(best.from_square),
+			to_square=chess.square_name(best.to_square),
+			promotion_piece=promo,
+			fen_before=game.current_fen,
+			fen_after=board.fen(),
+			move_number=move_count,
+		)
+
+		game.current_fen = board.fen()
+		bot_result = check_gameover(board)
+		bot_winner = ''
+		bot_king = ''
+		if bot_result == 'check':
+			bot_king = chess.square_name(board.king(board.turn))
+			bot_result = 'ongoing'
+		elif bot_result != 'ongoing':
+			bot_winner = 'Black' if board.turn == chess.WHITE else 'White'
+			update_player_stats(game, bot_result)
+		else:
+			game.save(update_fields=['current_fen'])
+
+		return {
+			'fen': board.fen(),
+			'bot_move': best.uci(),
+			'result': bot_result,
+			'winner': bot_winner,
+			'kingpos': bot_king,
+		}
+	except Exception:
+		return {
+			'fen': game.current_fen,
+			'bot_move': '',
+			'result': 'ongoing',
+			'winner': '',
+			'kingpos': '',
+		}
+
 def check_promotion(board, _s, _t):
 
 	piece = board.piece_at(chess.parse_square(_s))
@@ -133,6 +229,8 @@ def make_move(request):
 	res = check_gameover(board)
 	win = ""
 	king = ""
+	bot_move_uci = ''
+	response_fen = board.fen()
 	if res == "check":
 		king = chess.square_name(board.king(board.turn))
 		res = "ongoing"
@@ -154,22 +252,31 @@ def make_move(request):
 			)
 			# Update game FEN and status
 			game.current_fen = board.fen()		
+			if game.status == 'pending':
+				game.status = 'ongoing'
+				game.started_at = timezone.now()
+			game.save()
 			if res != "ongoing":
 				# Game is over, update stats
 				update_player_stats(game, res)
-			elif game.status == 'pending':
-				game.status = 'ongoing'
-				game.started_at = timezone.now()
-				game.save()
+			else:
+				bot_state = _play_bot_move(game)
+				if bot_state['bot_move']:
+					bot_move_uci = bot_state['bot_move']
+					response_fen = bot_state['fen']
+					res = bot_state['result']
+					win = bot_state['winner']
+					king = bot_state['kingpos']
 		except Game.DoesNotExist:
 			pass  # Continue without saving if game doesn't exist
 
 	return Response({
-		"fen": board.fen(),
+		"fen": response_fen,
 		"result": res,
 		"winner" : win,
 		"promotion": '',
 		"kingpos" : king,
+		"bot_move": bot_move_uci,
 		})
 
 @api_view(['POST'])
@@ -257,13 +364,24 @@ def create_game(request):
 	"""Create a new game and return game ID for move/resign tracking."""
 	opponent_type = request.data.get('opponent', 'bot')
 	piece_color = request.data.get('pieceColor', 'random')
+	difficulty = request.data.get('difficulty', 'medium')
 	timer = request.data.get('timer', 'none')
 
 	if opponent_type == 'bot':
 		bot_user, _ = User.objects.get_or_create(
-			email='chess-bot@transcendence.local',
-			defaults={'username': 'ChessBot', 'is_active': True},
+			email=BOT_EMAIL,
+			defaults={
+				'username': 'Chess Bot',
+				'is_active': True,
+				'oauth_avatar': '/imgs/bk.png',
+			},
 		)
+		if not bot_user.username:
+			bot_user.username = 'Chess Bot'
+		if not bot_user.oauth_avatar:
+			bot_user.oauth_avatar = '/imgs/bk.png'
+		bot_user.set_unusable_password()
+		bot_user.save()
 		opponent = bot_user
 
 	elif opponent_type == 'live':
@@ -299,6 +417,15 @@ def create_game(request):
 		timer=timer,
 	)
 
+	if (game.white_player and game.white_player.email == BOT_EMAIL) or (game.black_player and game.black_player.email == BOT_EMAIL):
+		game.status = 'ongoing'
+		game.started_at = timezone.now()
+		game.save()
+
+		bot_state = _play_bot_move(game)
+		if bot_state['bot_move']:
+			game.refresh_from_db()
+
 	if piece_color == 'white':
 		return Response({
 			'game_id': game.id,
@@ -307,6 +434,7 @@ def create_game(request):
 			'status': game.status,
 			'result': game.result,
 			'current_fen': game.current_fen,
+			'bot_move': bot_state['bot_move'] if 'bot_state' in locals() else '',
 		}, status=201)
 
 	return Response({
@@ -316,6 +444,7 @@ def create_game(request):
 		'status': game.status,
 		'result': game.result,
 		'current_fen': game.current_fen,
+		'bot_move': bot_state['bot_move'] if 'bot_state' in locals() else '',
 	}, status=201)
 	
 

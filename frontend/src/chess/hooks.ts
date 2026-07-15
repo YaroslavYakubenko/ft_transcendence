@@ -207,13 +207,13 @@ export function useRestartGame(
 		const activeTimer = (timer || settings.timer || 'none') as 'none' | '3' | '5' | '10'
 
 		if (settings.opponent === "bot" && token) {
-			const game = await createGame(settings.opponent, pieceColor, token, activeTimer)
+				const game = await createGame(settings.opponent, pieceColor, token, activeTimer, settings.difficulty)
 			if (game?.game_id) {
 				gameId = game.game_id
 			}
 			user = game.user
 		} else if (settings.opponent === "live" && token) {
-			const game = await createGame("live", pieceColor, token, activeTimer)
+			const game = await createGame("live", pieceColor, token, activeTimer, settings.difficulty)
 			if (game?.game_id) {
 				gameId = game.game_id
 				localStorage.removeItem(`result_${game.game_id}`)
