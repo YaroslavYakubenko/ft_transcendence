@@ -64,6 +64,7 @@ function LobbyPage() {
 
         if (opponent === 'bot' && token) {
             const game = await createGame(opponent, pieceColor, token, timer)
+            const initialFen = game?.current_fen
 
             if (game?.game_id) {
                 gameId = game.game_id
@@ -87,6 +88,7 @@ function LobbyPage() {
 					boardTheme,
 					pieceTheme,
 					game_id: gameId,
+                    fen: initialFen,
 				},
 	        })
         }

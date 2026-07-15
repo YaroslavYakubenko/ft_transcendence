@@ -19,6 +19,7 @@ export interface GameSettings {
 	boardTheme: 'default' | 'green' | 'blue' | 'brown'
 	pieceTheme: 'default' | 'simple'
 	game_id?: number
+	fen?: string
 }
 
 export const DEFAULT_SETTINGS: GameSettings = {
@@ -30,6 +31,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
 	boardTheme: 'default',
 	pieceTheme: 'default',
 	game_id: undefined,
+	fen: undefined,
 }
 
 // diffrent keys each game so on repeat there shouldn't be anything repeated? ig

@@ -306,6 +306,7 @@ def create_game(request):
 			'opp': 'black',
 			'status': game.status,
 			'result': game.result,
+			'current_fen': game.current_fen,
 		}, status=201)
 
 	return Response({
@@ -314,6 +315,7 @@ def create_game(request):
 		'opp': 'white',
 		'status': game.status,
 		'result': game.result,
+		'current_fen': game.current_fen,
 	}, status=201)
 	
 
