@@ -176,7 +176,8 @@ export async function createGame(
 	opponent: 'bot' | 'live',
 	pieceColor: 'white' | 'black' | 'random',
 	token: string | null,
-	timer: 'none' | '3' | '5' | '10' = 'none'
+	timer: 'none' | '3' | '5' | '10' = 'none',
+	difficulty: 'easy' | 'medium' | 'hard' = 'medium'
 ) {
 	if (!token) {
 		return null
@@ -192,6 +193,7 @@ export async function createGame(
 			opponent,
 			pieceColor,
 			timer,
+			difficulty,
 		}),
 	})
 
