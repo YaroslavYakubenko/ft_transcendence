@@ -234,7 +234,7 @@ def make_move(request):
 	if res == "check":
 		king = chess.square_name(board.king(board.turn))
 		res = "ongoing"
-	elif res != "ongoing" :
+	elif res != "ongoing" and res != "draw":
 		win = "Black" if board.turn else "White"
 
 	# Save move to database if game_id is provided

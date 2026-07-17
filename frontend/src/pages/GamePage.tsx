@@ -214,8 +214,21 @@ function GamePage() {
 					}
 
 					// Override any stale localStorage result — DB is the source of truth
-					if (data.status !== 'completed')
+					// DB is the source of truth
+					if (data.status === 'completed') {
+						if (data.result === 'draw') {
+							setRes({ state: 'draw', winner: '' })
+						}
+						else {
+							setRes({ 
+								state: data.result, 
+								winner: data.winner || '' 
+							})
+						}
+					}
+					else {
 						setRes({ state: 'ongoing', winner: '' })
+					}
 				}
 
 				else if (data.msg_type === 'player_connected') {
@@ -255,6 +268,12 @@ function GamePage() {
 					setRes({ state: 'resign', winner: data.winner })
 
 				else if (data.msg_type === 'draw_offer')
+				{
+					if (data.from_player == user?.username || data.from_player == user?.email)
+					{
+						console.log("Ignoring own draw offer")
+						return
+					}
 					setDrawState(prev => {
 						if (prev === 'offer_sent') {
 							// Both players offered simultaneously — auto-accept
@@ -266,6 +285,7 @@ function GamePage() {
 						showToast(t('toast.drawOffered'))
 						return 'offer_received'
 					})
+				}
 
 				else if (data.msg_type === 'draw_accepted')
 				{
@@ -349,6 +369,7 @@ function GamePage() {
 			socket.send(JSON.stringify({ type: 'draw_response', accepted: true }))
 			setDrawState('idle')
 		}
+		setRes({ state: 'draw', winner: '' })
 	}
 
 	const handleDrawDecline = () => {
