@@ -71,7 +71,7 @@ function GamePage() {
 
 	// game vars ----------------------------------------
 	const [fen, setFen] = useState(() => {
-		return loadFen(storage_keys.fen, location.state?.rematchId)
+		return location.state?.fen || loadFen(storage_keys.fen, location.state?.rematchId)
 	});
 
 	// stores moves history

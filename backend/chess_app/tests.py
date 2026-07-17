@@ -2,6 +2,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from django.utils import timezone
 from datetime import timedelta
+import chess
 
 from users.models import User
 from .models import Game
@@ -13,6 +14,8 @@ class CreateGameTests(APITestCase):
 		self.user = User.objects.create_user(
 			email="player@example.com", password=self.password, username="player"
 		)
+		self.user.email_verified = True
+		self.user.save()
 		login_response = self.client.post(
 			"/api/auth/login/",
 			{"email": self.user.email, "password": self.password},
@@ -24,7 +27,7 @@ class CreateGameTests(APITestCase):
 	def test_create_bot_game_returns_game_id(self):
 		response = self.client.post(
 			"/create-game/",
-			{"opponent": "bot"},
+			{"opponent": "bot", "pieceColor": "white"},
 			format="json",
 		)
 
@@ -34,7 +37,23 @@ class CreateGameTests(APITestCase):
 		game = Game.objects.get(id=response.data["game_id"])
 		self.assertEqual(game.white_player, self.user)
 		self.assertEqual(game.black_player.email, "chess-bot@transcendence.local")
-		self.assertEqual(game.status, "pending")
+		self.assertEqual(game.status, "ongoing")
+		self.assertEqual(game.current_fen, chess.Board().fen())
+
+	def test_bot_white_opens_immediately(self):
+		response = self.client.post(
+			"/create-game/",
+			{"opponent": "bot", "pieceColor": "black"},
+			format="json",
+		)
+
+		self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+		self.assertIn("current_fen", response.data)
+		self.assertNotEqual(response.data["current_fen"], chess.STARTING_FEN)
+
+		game = Game.objects.get(id=response.data["game_id"])
+		self.assertEqual(game.moves.count(), 1)
+		self.assertEqual(game.status, "ongoing")
 
 	def test_create_live_game_requires_opponent_id(self):
 		response = self.client.post(
@@ -55,6 +74,32 @@ class CreateGameTests(APITestCase):
 
 		self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+	def test_make_move_returns_bot_reply(self):
+		create_response = self.client.post(
+			"/create-game/",
+			{"opponent": "bot", "pieceColor": "white"},
+			format="json",
+		)
+		self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+		game = Game.objects.get(id=create_response.data["game_id"])
+
+		move_response = self.client.post(
+			"/make-move/",
+			{
+				"fen": game.current_fen,
+				"from": "e2",
+				"to": "e4",
+				"game_id": game.id,
+			},
+			format="json",
+		)
+
+		self.assertEqual(move_response.status_code, status.HTTP_200_OK)
+		self.assertIn("bot_move", move_response.data)
+		self.assertNotEqual(move_response.data["bot_move"], "")
+		game.refresh_from_db()
+		self.assertEqual(game.moves.count(), 2)
+
 
 class ResignGameTests(APITestCase):
 	def setUp(self):
@@ -62,9 +107,13 @@ class ResignGameTests(APITestCase):
 		self.white_player = User.objects.create_user(
 			email="white@example.com", password=self.password, username="white"
 		)
+		self.white_player.email_verified = True
+		self.white_player.save()
 		self.black_player = User.objects.create_user(
 			email="black@example.com", password=self.password, username="black"
 		)
+		self.black_player.email_verified = True
+		self.black_player.save()
 		
 		# Create a game
 		self.game = Game.objects.create(
