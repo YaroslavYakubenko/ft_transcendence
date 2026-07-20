@@ -123,14 +123,16 @@ export async function getMessages(withUserId: number, token: string, signal?: Ab
 		throw new Error('Failed to load messages')
 
 	const data = await res.json()
-	console.log("FIRST RAW MESSAGE:", data[0])
 
 	return data.map((msg: any) => ({
 		id: msg.id,
-		fromId: msg.fromId,
-		toId: msg.toId,
-		text: msg.text,
-		timestamp: msg.timestamp,
+		fromId: msg.from_user_id,
+		toId: msg.to_user_id,
+		text: msg.message,
+		timestamp: new Date(msg.created_at).toLocaleTimeString([], {
+			hour: '2-digit',
+			minute: '2-digit',
+		}),
 	}))
 }
 

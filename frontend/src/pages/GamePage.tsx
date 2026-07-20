@@ -216,6 +216,13 @@ function GamePage() {
 					// Override any stale localStorage result — DB is the source of truth
 					if (data.status !== 'completed')
 						setRes({ state: 'ongoing', winner: '' })
+					else {
+						// Reconnected into an already-finished game (e.g. WS dropped right as it ended) —
+						// sync doesn't carry the end reason, so fall back to a generic label per outcome.
+						const winner = data.result === 'white_win' ? 'White' : data.result === 'black_win' ? 'Black' : ''
+						const state = data.result === 'stalemate' ? 'stalemate' : winner ? 'resign' : 'draw'
+						setRes({ state, winner })
+					}
 				}
 
 				else if (data.msg_type === 'player_connected') {

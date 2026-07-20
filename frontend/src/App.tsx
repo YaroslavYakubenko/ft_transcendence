@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import LoginPage from "./pages/LoginPage"
 import HomePage from "./pages/HomePage"
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -25,6 +25,14 @@ function AuthenticatedWidgets() {
     const { isLoggedIn } = useAuth()
     if (!isLoggedIn) return null
     return <ChatWidget />
+}
+
+// GamePage reads settings/gameId only once on mount. Navigating "/game" -> "/game" again
+// (rematch) doesn't remount it by default, so it'd keep using the old, already-finished
+// game's id. location.key is unique per navigation entry, forcing a fresh mount each time.
+function GameRoute() {
+    const location = useLocation()
+    return <GamePage key={location.key} />
 }
 
 function App() {
@@ -73,7 +81,7 @@ function App() {
                     } />
                     <Route path="/game" element={
                         <ProtectedRoute>
-                            <GamePage/>
+                            <GameRoute/>
                         </ProtectedRoute>
                     } />
                     <Route path="/lobby" element={

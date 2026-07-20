@@ -7,11 +7,12 @@ import { useTranslation } from "react-i18next"
 import { getUserStats, getMatchHistory } from "../api/game"
 import type { UserStats, MatchRecord } from "../api/game"
 import { useToast } from "../context/ToastContext"
+import { formatMatchDate } from "../utils/date"
 
 function HomePage() {
 	const { user } = useAuth()
 	const navigate = useNavigate()
-	const { t } = useTranslation()
+	const { t, i18n } = useTranslation()
 	const { showToast } = useToast()
 	const [stats, setStats] = useState<UserStats | null>(null)
 	const [matches, setMatches] = useState<MatchRecord[]>([])
@@ -88,7 +89,7 @@ function HomePage() {
 											</td>
 											<td className="px-6 py-3">{match.opponent_name}</td>
 											<td className="px-6 py-3 text-[#8892a4]">{match.duration}</td>
-											<td className="px-6 py-3 text-[#8892a4]">{match.date}</td>
+											<td className="px-6 py-3 text-[#8892a4]">{formatMatchDate(match.date, i18n.language)}</td>
 										</tr>
 									))}
 								</tbody>

@@ -15,9 +15,9 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, re_path, include
 from django.conf import settings # access to settings (MEDIA_URL, MEDIA_ROOT)
-from django.conf.urls.static import static #function for distributing media files
+from django.views.static import serve #serves media regardless of DEBUG (static() only works when DEBUG=True)
 from chess_app.views import make_move, do_promotion, legal_moves, check_color, check_game_status
 from chess_app.views import resign_game
 from chess_app.views import create_game
@@ -33,7 +33,8 @@ urlpatterns = [
     path('check-color/', check_color, name='check_color'),
     path('check-game-status/', check_game_status, name='check_game_status'),
 
-	
+
     path('', include('django_prometheus.urls')),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) # dustribute downloaded files by URL
+    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+]
 
