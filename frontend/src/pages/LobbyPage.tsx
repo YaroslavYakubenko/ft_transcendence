@@ -63,7 +63,8 @@ function LobbyPage() {
         let userColor = pieceColor
 
         if (opponent === 'bot' && token) {
-            const game = await createGame(opponent, pieceColor, token, timer)
+            const game = await createGame(opponent, pieceColor, token, timer, difficulty)
+            const initialFen = game?.current_fen
 
             if (game?.game_id) {
                 gameId = game.game_id
@@ -87,12 +88,14 @@ function LobbyPage() {
 					boardTheme,
 					pieceTheme,
 					game_id: gameId,
+                    fen: initialFen,
+					bot_move: game.bot_move,
 				},
 	        })
         }
 
         if (opponent === 'live' && token) {
-            const game = await createGame("live", pieceColor, token, timer)
+            const game = await createGame("live", pieceColor, token, timer, difficulty)
 
             if (game?.game_id) {
                 gameId = game.game_id

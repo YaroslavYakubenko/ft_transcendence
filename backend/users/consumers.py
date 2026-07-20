@@ -455,11 +455,11 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 			game = await self.get_game()
 			if game is None or game.status == 'completed':
 				return
-			await database_sync_to_async(self._finish_draw)(game)
 			await self.channel_layer.group_send(self.game_group_name, {
 				'type': 'game_message',
 				'msg_type': 'draw_accepted',
 			})
+			await database_sync_to_async(self._finish_draw)(game)
 		else:
 			await self.channel_layer.group_send(self.game_group_name, {
 				'type': 'game_message',

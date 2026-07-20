@@ -76,7 +76,7 @@ export default function OpponentPanel({ settings, opponent, time }: Props) {
 		: settings.opponent === 'bot' ? 'AI' : '?'
 
 	return (
-		<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl px-4 py-3 flex mt-2 items-center justify-between w-[500px]">
+		<div className="bg-[#1a1a24] border border-[#2e2e40] rounded-xl px-4 py-3 flex items-center justify-between w-[500px]">
 			<div className="flex items-center gap-3">
 				<div className="w-8 h-8 rounded-full bg-[#3d3d55] border border-[#5a5a7a] flex items-center justify-center text-[#f0eeff] text-xs font-bold">
 					{initial}

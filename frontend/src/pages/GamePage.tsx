@@ -71,13 +71,27 @@ function GamePage() {
 
 	// game vars ----------------------------------------
 	const [fen, setFen] = useState(() => {
-		return loadFen(storage_keys.fen, location.state?.rematchId)
+		return location.state?.fen || loadFen(storage_keys.fen, location.state?.rematchId)
 	});
 
 	// stores moves history
 	const [moves, setMoves] = useState<{ white: string; black?: string }[]>(() => {
 		return loadMoves(storage_keys.move_history)
 	});
+
+	const hasInitialized = useRef(false);
+
+	useEffect(() => {
+		if (hasInitialized.current) return;
+
+		if (location.state?.bot_move && moves.length === 0) {
+			hasInitialized.current = true;
+
+			setMoves((prevMoves) =>
+				appendMove(prevMoves, location.state.bot_move, true)
+			);
+		}
+	}, [location.state?.bot_move, moves.length]);
 
 	const [result, setRes] = useState(() => {
 		return loadResult(storage_keys.result)
@@ -214,14 +228,19 @@ function GamePage() {
 					}
 
 					// Override any stale localStorage result — DB is the source of truth
-					if (data.status !== 'completed')
-						setRes({ state: 'ongoing', winner: '' })
+					if (data.status === 'completed') {
+						if (data.result === 'draw' || data.result === 'stalemate') {
+							setRes({ state: data.result, winner: '' })
+						}
+						else {
+							// sync doesn't carry the end reason (mate/resign/timeout), only who won —
+							// fall back to a generic label since the exact reason isn't available here.
+							const winner = data.result === 'white_win' ? 'White' : data.result === 'black_win' ? 'Black' : ''
+							setRes({ state: 'resign', winner })
+						}
+					}
 					else {
-						// Reconnected into an already-finished game (e.g. WS dropped right as it ended) —
-						// sync doesn't carry the end reason, so fall back to a generic label per outcome.
-						const winner = data.result === 'white_win' ? 'White' : data.result === 'black_win' ? 'Black' : ''
-						const state = data.result === 'stalemate' ? 'stalemate' : winner ? 'resign' : 'draw'
-						setRes({ state, winner })
+						setRes({ state: 'ongoing', winner: '' })
 					}
 				}
 
@@ -262,6 +281,12 @@ function GamePage() {
 					setRes({ state: 'resign', winner: data.winner })
 
 				else if (data.msg_type === 'draw_offer')
+				{
+					if (data.from_player == user?.username || data.from_player == user?.email)
+					{
+						console.log("Ignoring own draw offer")
+						return
+					}
 					setDrawState(prev => {
 						if (prev === 'offer_sent') {
 							// Both players offered simultaneously — auto-accept
@@ -273,6 +298,7 @@ function GamePage() {
 						showToast(t('toast.drawOffered'))
 						return 'offer_received'
 					})
+				}
 
 				else if (data.msg_type === 'draw_accepted')
 				{
@@ -356,6 +382,7 @@ function GamePage() {
 			socket.send(JSON.stringify({ type: 'draw_response', accepted: true }))
 			setDrawState('idle')
 		}
+		setRes({ state: 'draw', winner: '' })
 	}
 
 	const handleDrawDecline = () => {
@@ -412,7 +439,7 @@ function GamePage() {
 						/>
 
 						{/* Board */}
-						<div className="relative w-[500px]">
+						<div className="relative w-[500px] mt-2">
 							<Chessboard 
 								options={{
 									...chessboardOptions,
