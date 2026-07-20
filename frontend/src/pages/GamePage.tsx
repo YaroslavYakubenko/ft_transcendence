@@ -79,6 +79,20 @@ function GamePage() {
 		return loadMoves(storage_keys.move_history)
 	});
 
+	const hasInitialized = useRef(false);
+
+	useEffect(() => {
+		if (hasInitialized.current) return;
+
+		if (location.state?.bot_move && moves.length === 0) {
+			hasInitialized.current = true;
+
+			setMoves((prevMoves) =>
+				appendMove(prevMoves, location.state.bot_move, true)
+			);
+		}
+	}, [location.state?.bot_move, moves.length]);
+
 	const [result, setRes] = useState(() => {
 		return loadResult(storage_keys.result)
 	})

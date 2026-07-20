@@ -89,6 +89,7 @@ function LobbyPage() {
 					pieceTheme,
 					game_id: gameId,
                     fen: initialFen,
+					bot_move: game.bot_move,
 				},
 	        })
         }

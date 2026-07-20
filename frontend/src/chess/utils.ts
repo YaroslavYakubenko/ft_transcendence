@@ -145,6 +145,7 @@ export function createOnPieceDrop({
 	setHighlightSquares,
 	setHighlightSquares2,
 }: any) {
+
 	return ({ sourceSquare, targetSquare }: PieceDropHandlerArgs) => {
 		if (!sourceSquare || !targetSquare)
 			return false;
@@ -160,11 +161,26 @@ export function createOnPieceDrop({
 			}
 
 			// Add move to history
-			const moveNotation = `${sourceSquare}${targetSquare}`;
-			const isWhiteMove = fen.split(" ")[1] === "w";
-			setMoves((prevMoves: any) =>
-				appendMove(prevMoves, moveNotation, isWhiteMove)
-			);
+			// const moveNotation = `${sourceSquare}${targetSquare}`;
+			// const isWhiteMove = fen.split(" ")[1] === "w";
+
+			setMoves((prevMoves: any) => {
+				let updated = prevMoves
+
+				// player move
+				const playerMove = `${sourceSquare}${targetSquare}`
+				const playerWasWhite = data.fen.split(" ")[1] === "w"
+
+				updated = appendMove(updated, playerMove, playerWasWhite)
+				// bot move
+				if (data.bot_move) {
+					const botMove = data.bot_move
+
+					updated = appendMove(updated, botMove, !playerWasWhite)
+				}
+
+				return updated
+			})
 
 			// update variables
 			setFen(data.fen);
