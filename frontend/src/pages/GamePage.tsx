@@ -440,7 +440,7 @@ function GamePage() {
 						/>
 
 						{/* Board */}
-						<div className="relative w-[500px]">
+						<div className="relative w-[500px] mt-2">
 							<Chessboard 
 								options={{
 									...chessboardOptions,
