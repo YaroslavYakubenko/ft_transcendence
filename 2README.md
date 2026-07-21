@@ -91,14 +91,14 @@ For each team member mentioned at the top of the README.md, you must provide:
 | Monitoring System              | Major (2)  |                 |
 | Additional Browser support     | Minor (1)  |                 |
 | Multiple language support      | Minor (1)  |                 |
-| RTL (Arabic)                   | Minor (1)
-| Frontend framework (SPA)       | Minor (1)
-| Health check & status page     | Minor (1)
-| Remote OAuth 2.0               | Minor (1)
-| ORM databse                    | Minor (1)
-| Game stats & Match history     | Minor (1)
-| Game customization             | Minor (1)
-| Achievements                   | Minor (1)
+| RTL (Arabic)                   | Minor (1)  |                 |
+| Frontend framework (SPA)       | Minor (1)  |                 |
+| Health check & status page     | Minor (1)  |                 |
+| Remote OAuth 2.0               | Minor (1)  |                 |
+| ORM databse                    | Minor (1)  |                 |
+| Game stats & Match history     | Minor (1)  |                 |
+| Game customization             | Minor (1)  |                 |
+| Achievements                   | Minor (1)  |                 |
 
 
 
