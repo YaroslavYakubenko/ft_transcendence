@@ -83,9 +83,9 @@ export default {
     	default: "Стандарт",
     	simple: "Простой",
 
-		joinOptionMsg: "add",
-		enterIdMsg: "Spiel-ID eingeben",
-		join: "Beitreten",
+		joinOptionMsg: "добавлять",
+		enterIdMsg: "Введите ID игры",
+		join: "присоединиться",
 
     	startGame: "Начать игру",
 		couldNotCreateTracked: "Не удалось создать отслеживаемую игру. Запускаем локально без статистики.",
@@ -93,9 +93,9 @@ export default {
     },
 	waitingroom: {
 		// check
-		gameId: "Game ID",
-		waitingMsg: "Waiting for opponent...",
-		cancel: "cancel",
+		gameId: "ID игры",
+		waitingMsg: "Ожидание соперника...",
+		cancel: "отмена",
 	},
     game: {
     	resign: "Сдаться",
@@ -109,13 +109,13 @@ export default {
 		gameOver: "Игра окончена",
 		rematch: "Реванш",
 		// add
-		stalemate: "Stalemate",
-		friend: "Freund",
-		White: "White",
-		Black: "Black",
+		stalemate: "мат",
+		friend: "друг",
+		White: "Белый",
+		Black: "Чёрный",
 		Won: "победил!",
-    	resigned: "Aufgegeben",
-		home: "Startseite",
+    	resigned: "слагать",
+		home: "дом",
     },
     profile: {
     	editProfile: "Редактировать профиль",
