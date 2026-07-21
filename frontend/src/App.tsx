@@ -22,8 +22,8 @@ import PublicOnlyRoute from './components/PublicOnlyRoute'
 import PlayerConnectPage from './pages/WaitingRoomPage'
 
 function AuthenticatedWidgets() {
-    const { isLoggedIn } = useAuth()
-    if (!isLoggedIn) return null
+    const { user } = useAuth()
+    if (!user) return null
     return <ChatWidget />
 }
 
