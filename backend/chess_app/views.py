@@ -61,7 +61,8 @@ def _play_bot_move(game):
 
 	try:
 		from chess_app.ai_bot.minimax import find_best_move, get_depth
-		difficulty = getattr(game, 'difficulty', 'medium')
+		# difficulty = getattr(game, 'difficulty', 'medium')
+		difficulty = game.difficulty
 		depth = get_depth(difficulty)
 		best = find_best_move(board, depth, difficulty)
 		if not best:
@@ -365,6 +366,8 @@ def create_game(request):
 	opponent_type = request.data.get('opponent', 'bot')
 	piece_color = request.data.get('pieceColor', 'random')
 	difficulty = request.data.get('difficulty', 'medium')
+	if difficulty not in ('easy', 'medium', 'hard'):
+		difficulty = 'medium'
 	timer = request.data.get('timer', 'none')
 
 	if opponent_type == 'bot':
@@ -373,9 +376,12 @@ def create_game(request):
 			defaults={
 				'username': 'Chess Bot',
 				'is_active': True,
+				'is_online': True,
 				'oauth_avatar': '/imgs/bk.png',
 			},
 		)
+		if not bot_user.is_online:
+			bot_user.is_online = True
 		if not bot_user.username:
 			bot_user.username = 'Chess Bot'
 		if not bot_user.oauth_avatar:
@@ -415,6 +421,7 @@ def create_game(request):
 		status='pending',
 		result='ongoing',
 		timer=timer,
+		difficulty=difficulty,
 	)
 
 	if (game.white_player and game.white_player.email == BOT_EMAIL) or (game.black_player and game.black_player.email == BOT_EMAIL):

@@ -33,6 +33,14 @@ class Game(models.Model):
 	]
 
 	timer = models.CharField(max_length=10, choices=TIMER_CHOICES, default='none')
+
+	DIFFICULTY_CHOICES = [
+    	('easy', 'Easy'),
+    	('medium', 'Medium'),
+    	('hard', 'Hard'),
+	]
+	difficulty = models.CharField(max_length=10, choices=DIFFICULTY_CHOICES, default='medium')
+	
 	current_fen = models.TextField(default='rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
 
 	created_at = models.DateTimeField(auto_now_add=True)

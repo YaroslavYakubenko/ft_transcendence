@@ -19,7 +19,7 @@ def ensure_bot_user() -> User:
 		defaults={
 			'username': BOT_USERNAME,
 			'is_active': False,
-			'is_online': False,
+			'is_online': True,
 		},
 	)
 	if created:
