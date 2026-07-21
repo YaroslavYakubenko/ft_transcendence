@@ -79,6 +79,29 @@ For each team member mentioned at the top of the README.md, you must provide:
 ◦ How each module was implemented.
 ◦ Which team member(s) worked on each module.
 
+| Module                         | Type (Points)  | Contributor(s)  |
+|--------------------------------|----------------|-----------------|
+| Frontend & Backend framework   | Major (2)      |                 |
+| Real-time features Websocket   | Major (2)      |                 |
+| User Interaction               | Major (2)      |                 |
+| User Management & Auth         | Major (2)      |                 |
+| Web based Game (Chess)         | Major (2)      |                 |
+| AI Oppoenent                   | Major (2)      |                 |
+| Remote Players                 | Major (2)      |                 |
+| Monitoring System              | Major (2)      |                 |
+| Additional Browser support     | Minor (1)      |                 |
+| Multiple language support      | Minor (1)      |                 |
+| RTL (Arabic)                   | Minor (1)
+| Frontend framework (SPA)       | Minor (1)
+| Health check & status page     | Minor (1)
+| Remote OAuth 2.0               | Minor (1)
+| ORM databse                    | Minor (1)
+| Game stats & Match history     | Minor (1)
+| Game customization             | Minor (1)
+| Achievements                   | Minor (1)
+
+
+
 ## Individual Contributions
 ◦ Detailed breakdown of what each team member contributed.
 ◦ Specific features, modules, or components implemented by each person.
