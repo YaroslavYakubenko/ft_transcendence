@@ -182,36 +182,48 @@ export default {
 		send: "Senden",
 	},
 	privacy: {
-		title: "Datenschutzrichtlinie",
-        lastUpdated: "Zuletzt aktualisiert: Juni 2026",
-        section1Title: "Welche Daten wir erheben",
-        section1Text: "Wir erheben Ihre E-Mail-Adresse und Ihr Passwort bei der Registrierung. Wir speichern außerdem Ihre Spielstatistiken wie Siege, Niederlagen und Rang.",
-        section2Title: "Wie wir Ihre Daten verwenden",
-        section2Text: "Ihre Daten werden ausschließlich zur Authentifizierung und Anzeige Ihrer Spielstatistiken verwendet. Wir geben Ihre Daten nicht an Dritte weiter.",
-        section3Title: "Datenspeicherung",
-        section3Text: "Ihre Daten werden sicher auf unseren Servern gespeichert. Wir ergreifen angemessene Maßnahmen, um Ihre Informationen vor unbefugtem Zugriff zu schützen.",
-        section4Title: "Kontakt",
-        section4Text: "Wenn Sie Fragen zu dieser Datenschutzrichtlinie haben, kontaktieren Sie uns bitte über die Plattform.",
+		title: "Datenschutzerklärung",
+		lastUpdated: "Zuletzt aktualisiert: Juli 2026",
+
+		section1Title: "Welche Daten wir erfassen",
+		section1Text: "Wenn Sie ein Konto erstellen, erfassen wir Ihre E-Mail-Adresse. Ihr Passwort wird vor der Speicherung sicher gehasht und niemals im Klartext gespeichert. Außerdem speichern wir Spielinformationen wie Siege, Niederlagen, Rang und weitere mit Ihrem Konto verknüpfte Spielstatistiken.",
+
+		section2Title: "Wie wir Ihre Daten verwenden",
+		section2Text: "Wir verwenden Ihre Daten, um Ihr Konto zu erstellen und zu verwalten, Sie bei der Anmeldung zu authentifizieren, Ihre Spielstatistiken und Ranglisten anzuzeigen, das Spiel zu verbessern und Supportanfragen zu beantworten. Wir verkaufen Ihre personenbezogenen Daten nicht und geben sie nicht zu Werbezwecken an Dritte weiter.",
+
+		section3Title: "Datenspeicherung und Sicherheit",
+		section3Text: "Ihre Daten werden auf sicheren Servern gespeichert. Wir treffen angemessene technische und organisatorische Maßnahmen, um Ihre Daten vor unbefugtem Zugriff, Veränderung, Offenlegung oder Zerstörung zu schützen. Dennoch ist keine Methode der elektronischen Speicherung oder Übertragung vollständig sicher.",
+
+		section4Title: "Kontakt",
+		section4Text: "Wenn Sie Fragen zu dieser Datenschutzerklärung haben oder Ihre Datenschutzrechte ausüben möchten, kontaktieren Sie uns bitte über die Plattform.",
+
 		section5Title: "Cookies und lokaler Speicher",
-		section5Text: "Wir verwenden den lokalen Speicher Ihres Browsers, um Ihr Sitzungstoken und Ihre Spracheinstellung zu speichern. Diese Daten verbleiben auf Ihrem Gerät und werden nicht an Dritte weitergegeben.",
+		section5Text: "Wir verwenden den lokalen Speicher Ihres Browsers, um Informationen wie Ihr Sitzungstoken und Ihre Spracheinstellung zu speichern. Diese Informationen verbleiben auf Ihrem Gerät und dienen dazu, Ihre Nutzung des Spiels zu verbessern.",
+
 		section6Title: "Ihre Rechte",
-		section6Text: "Sie haben das Recht, jederzeit die Löschung Ihres Kontos und aller zugehörigen Daten zu beantragen, indem Sie uns über die Plattform kontaktieren.",
+		section6Text: "Sie können jederzeit über die Plattform Auskunft über Ihre personenbezogenen Daten verlangen, diese berichtigen oder löschen lassen. Soweit gesetzlich vorgesehen, können Sie außerdem eine Kopie Ihrer personenbezogenen Daten anfordern.",
 	},
 	terms: {
 		title: "Nutzungsbedingungen",
-        lastUpdated: "Zuletzt aktualisiert: Juni 2026",
-        section1Title: "Zustimmung zu den Bedingungen",
-        section1Text: "Durch die Erstellung eines Kontos und die Nutzung von ft_transcendence stimmen Sie diesen Nutzungsbedingungen zu. Wenn Sie nicht zustimmen, nutzen Sie die Plattform bitte nicht.",
-        section2Title: "Benutzerkonten",
-        section2Text: "Sie sind für die Vertraulichkeit Ihrer Zugangsdaten verantwortlich. Sie müssen eine gültige E-Mail-Adresse zur Registrierung angeben.",
-        section3Title: "Zulässige Nutzung",
-        section3Text: "Sie erklären sich damit einverstanden, die Plattform nicht zu missbrauchen, nicht zu versuchen, den Dienst zu hacken oder zu stören, und ihn nicht für rechtswidrige Zwecke zu nutzen.",
-        section4Title: "Kündigung",
-        section4Text: "Wir behalten uns das Recht vor, Ihr Konto zu sperren oder zu löschen, wenn Sie gegen diese Bedingungen verstoßen.",
+		lastUpdated: "Zuletzt aktualisiert: Juli 2026",
+
+		section1Title: "Akzeptanz der Nutzungsbedingungen",
+		section1Text: "Mit der Erstellung eines Kontos und der Nutzung von ft_transcendence stimmen Sie diesen Nutzungsbedingungen zu. Wenn Sie diesen Bedingungen nicht zustimmen, dürfen Sie die Plattform nicht nutzen.",
+
+		section2Title: "Benutzerkonten",
+		section2Text: "Sie sind dafür verantwortlich, die Vertraulichkeit Ihrer Zugangsdaten zu wahren, sowie für sämtliche Aktivitäten, die über Ihr Konto erfolgen. Für die Registrierung ist eine gültige E-Mail-Adresse erforderlich.",
+
+		section3Title: "Zulässige Nutzung",
+		section3Text: "Sie verpflichten sich, die Plattform nicht zu missbrauchen, keinen unbefugten Zugriff zu versuchen, den Betrieb der Plattform nicht zu beeinträchtigen und sie nicht für rechtswidrige Zwecke zu nutzen.",
+
+		section4Title: "Kündigung",
+		section4Text: "Wir behalten uns das Recht vor, Ihr Konto zu sperren oder zu löschen, wenn Sie gegen diese Nutzungsbedingungen verstoßen oder der Plattform oder ihren Nutzern Schaden zufügen.",
+
 		section5Title: "Geistiges Eigentum",
-		section5Text: "Alle Inhalte und der Code von ft_transcendence sind Teil eines akademischen Projekts. Sie dürfen diese ohne Genehmigung nicht kopieren oder weiterverbreiten.",
-		section6Title: "Änderungen der Bedingungen",
-		section6Text: "Wir behalten uns das Recht vor, diese Nutzungsbedingungen jederzeit zu aktualisieren. Die weitere Nutzung der Plattform nach Änderungen gilt als Zustimmung zu den neuen Bedingungen.",
+		section5Text: "Alle Inhalte, die Software und der Quellcode von ft_transcendence sind Teil eines akademischen Projekts und bleiben Eigentum ihrer jeweiligen Rechteinhaber. Sie dürfen diese ohne Genehmigung weder kopieren, verändern noch weiterverbreiten.",
+
+		section6Title: "Änderungen der Nutzungsbedingungen",
+		section6Text: "Wir können diese Nutzungsbedingungen von Zeit zu Zeit aktualisieren. Wenn Sie die Plattform nach Inkrafttreten der Änderungen weiterhin nutzen, gilt dies als Zustimmung zu den überarbeiteten Bedingungen.",
 	},
 	toast: {
 		profileUpdated: "Profil erfolgreich aktualisiert",

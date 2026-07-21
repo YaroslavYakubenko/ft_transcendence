@@ -183,35 +183,47 @@ export default {
 	},
 	privacy: {
 		title: "Privacy Policy",
-        lastUpdated: "Last updated: June 2026",
-        section1Title: "Information We Collect",
-        section1Text: "We collect your email address and password when you register. We also store your game statistics such as wins, losses, and rank.",
-        section2Title: "How We Use Your Information",
-        section2Text: "Your information is used solely to authenticate you and display your game statistics. We do not share your data with third parties.",
-        section3Title: "Data Storage",
-        section3Text: "Your data is stored securely on our servers. We take reasonable measures to protect your information from unauthorized access.",
-        section4Title: "Contact",
-        section4Text: "If you have any questions about this Privacy Policy, please contact us through the platform.",
+		lastUpdated: "Last updated: July 2026",
+
+		section1Title: "Information We Collect",
+		section1Text: "When you create an account, we collect your email address. Your password is securely hashed before it is stored and is never stored in plain text. We also store gameplay information such as your wins, losses, ranking, and other game statistics associated with your account.",
+
+		section2Title: "How We Use Your Information",
+		section2Text: "We use your information to create and manage your account, authenticate you when you sign in, display your game statistics and rankings, improve the game, and respond to support requests. We do not sell your personal information or share it with third parties for advertising purposes.",
+
+		section3Title: "Data Storage and Security",
+		section3Text: "Your data is stored on secure servers. We use reasonable technical and organizational measures to help protect your information from unauthorized access, alteration, disclosure, or destruction. However, no method of electronic storage or transmission is completely secure.",
+
+		section4Title: "Contact",
+		section4Text: "If you have any questions about this Privacy Policy or wish to exercise your privacy rights, please contact us through the platform.",
+
 		section5Title: "Cookies and Local Storage",
-        section5Text: "We use your browser's local storage to store your session token and language preference. This data stays on your device and is not sent to third parties.",
-        section6Title: "Your Rights",
-        section6Text: "You have the right to request deletion of your account and all associated data at any time by contacting us through the platform.",
+		section5Text: "We use your browser's local storage to save information such as your session token and language preference. This information remains on your device and is used to improve your experience while using the game.",
+
+		section6Title: "Your Rights",
+		section6Text: "You may request access to, correction of, or deletion of your personal information at any time by contacting us through the platform. Where applicable, you may also request a copy of your personal data.",
 	},
 	terms: {
 		title: "Terms of Service",
-        lastUpdated: "Last updated: June 2026",
-        section1Title: "Acceptance of Terms",
-        section1Text: "By creating an account and using ft_transcendence, you agree to these Terms of Service. If you do not agree, please do not use the platform.",
-        section2Title: "User Accounts",
-        section2Text: "You are responsible for maintaining the confidentiality of your account credentials. You must provide a valid email address to register.",
-        section3Title: "Acceptable Use",
-        section3Text: "You agree not to abuse the platform, attempt to hack or disrupt the service, or use it for any unlawful purpose.",
-        section4Title: "Termination",
-        section4Text: "We reserve the right to suspend or terminate your account if you violate these terms.",
+		lastUpdated: "Last updated: July 2026",
+
+		section1Title: "Acceptance of Terms",
+		section1Text: "By creating an account and using ft_transcendence, you agree to these Terms of Service. If you do not agree to these terms, please do not use the platform.",
+
+		section2Title: "User Accounts",
+		section2Text: "You are responsible for maintaining the confidentiality of your account credentials and for all activity that occurs under your account. You must provide a valid email address when registering.",
+
+		section3Title: "Acceptable Use",
+		section3Text: "You agree not to misuse the platform, attempt to gain unauthorized access, interfere with its operation, or use it for any unlawful purpose.",
+
+		section4Title: "Termination",
+		section4Text: "We reserve the right to suspend or terminate your account if you violate these Terms of Service or engage in conduct that harms the platform or its users.",
+
 		section5Title: "Intellectual Property",
-        section5Text: "All content and code within ft_transcendence is part of an academic project. You may not copy or redistribute it without permission.",
-        section6Title: "Changes to Terms",
-        section6Text: "We reserve the right to update these Terms of Service at any time. Continued use of the platform after changes constitutes your acceptance of the new terms.",
+		section5Text: "All content, software, and source code within ft_transcendence are part of an academic project and remain the intellectual property of their respective owners. You may not copy, modify, or redistribute them without permission.",
+
+		section6Title: "Changes to Terms",
+		section6Text: "We may update these Terms of Service from time to time. Continued use of the platform after any changes become effective constitutes your acceptance of the revised terms.",
 	},
 	toast: {
 		profileUpdated: "Profile updated successfully",
