@@ -12,3 +12,6 @@ DISCUSSION.md
 MODULES_STATUS.md
 test.txt
 node_modules
+
+nginx/certs/local.crt
+nginx/certs/local.key
