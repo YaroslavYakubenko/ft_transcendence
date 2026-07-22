@@ -142,8 +142,10 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 
 	// if user logs in, token appears -> WebSocket opens
 	// if user logs out, token becomes null -> WebSocket closes
+	// waits for getMe() to confirm the token is still valid before opening,
+	// otherwise a stale token in localStorage causes a doomed connect attempt
 	useEffect(() => {
-		if (!token)
+		if (!token || !user)
 		{
 			wsRef.current?.close()
 			wsRef.current = null
@@ -224,7 +226,7 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 			wsRef.current?.close()
 			wsRef.current = null
 		}
-	}, [token])
+	}, [token, !!user])
 
 	function sendChat(to_user_id: number, message: string)
 	{
