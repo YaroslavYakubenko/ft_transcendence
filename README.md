@@ -200,6 +200,8 @@ See [Additional Information](#additional-information) for the full service URL l
 - [Prometheus documentation](https://prometheus.io/docs/)
 - [Grafana documentation](https://grafana.com/docs/)
 - [Nginx documentation](https://nginx.org/en/docs/)
+- [python-chess documentation](https://python-chess.readthedocs.io/en/latest/)
+- [react-chessboard documentation](https://react-chessboard.vercel.app/?path=/docs/get-started--docs)
 - [PLACEHOLDER: add any specific tutorials/articles the team actually followed, e.g. for the minimax chess AI, Django Channels + Redis presence tracking, or the OAuth flow]
 
 ### How AI Was Used
@@ -336,7 +338,6 @@ Important: the redirect URI configured in the GitHub/42 developer consoles must 
 
 - Never commit production secrets; `.env` files are git-ignored, only `.env.example` templates are tracked.
 - The provided TLS certificates are only suitable for local development.
-- [PLACEHOLDER / TODO: `backend/db.sqlite3` should not be committed — it currently contains real user rows (passwords are properly hashed, but real emails/PII shouldn't be in the repo). Remove it from tracking and purge from history.]
 
 ## Database Backup and Restore
 
