@@ -32,7 +32,7 @@ build:
 fclean: downv
 	docker system prune -af
 
-key:
+key: $(KEY_DIR)
 	@if [ ! -f $(KEY_DIR)/local.key ]; then \
 		openssl req -x509 -nodes -days 365 \
 		-newkey rsa:4096 \
@@ -40,3 +40,7 @@ key:
 		-out $(KEY_DIR)/local.crt \
 		-subj "/CN=$(URL_DOMAIN_NAME)"; \
 	fi
+
+$(KEY_DIR):
+	mkdir -p $(KEY_DIR)
+	echo "\033[0;36m[secrets dir created]\033[0m"
