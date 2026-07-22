@@ -234,6 +234,15 @@ services:
     - "1025:1025"
     - "8025:8025"
 
+  adminer:
+    image: adminer
+    container_name: transcendence_adminer
+    restart: unless-stopped
+    ports:
+      - "8082:8080"
+    depends_on:
+     - db
+
 # Named volumes for persistence
 volumes:
   postgres_data:
