@@ -171,7 +171,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "https://10.11.11.2:8443",
     "https://10.11.11.2:8025",
-    "https://10.12.12.6:8443"
+    "https://10.12.12.6:8443",
+    "https://10.12.13.7:8443",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
