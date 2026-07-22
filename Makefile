@@ -14,6 +14,7 @@ up:
 down:
 	docker compose down
 
+# remove Volumes
 downv:
 	docker compose down -v
 
@@ -29,7 +30,8 @@ status:
 build:
 	docker compose build
 
-fclean: downv
+# remove stopped containers, unused networks, unused images, build cache
+ffclean: downv
 	docker system prune -af
 
 key: $(KEY_DIR)
