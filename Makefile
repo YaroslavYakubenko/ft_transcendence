@@ -9,7 +9,7 @@ all: key build up
 
 # docker commands 
 up:
-	docker compose up -d
+	docker compose up
 
 down:
 	docker compose down
