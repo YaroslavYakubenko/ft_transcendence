@@ -83,11 +83,11 @@ User ──< Friendship >── User        User ──< ChatMessage >── Use
 
 | Feature | Owner(s) | Description |
 |---|---|---|
-| Account creation, modification, deletion | yyakuben | Register, update profile, delete account |
-| Profile & statistics | yyakuben | Profile page with avatar, wins/losses/draws/ELO/streak |
+| Account creation, modification, deletion | yyakuben | Register, update, delete Account |
+| Profile & statistics | yyakuben, tabading | Profile page with avatar, wins/losses/draws/ELO/streak, Achievements |
 | Friend system | jfischer | Add/remove friends, live online-status |
-| Chess vs. other users (remote/live) | tabading | Real-time WebSocket-driven 1v1 chess between two devices |
-| Chess vs. AI bot, 3 difficulties | jastomme | Minimax-based bot with difficulty-scaled randomness (easy/medium/hard) |
+| Chess vs. other users (remote/live) | jfischer, tabading | Real-time WebSocket-driven 1v1 chess between two devices |
+| Chess vs. AI bot, 3 difficulties | jastomme, tabading | Minimax-based bot with difficulty-scaled randomness (easy/medium/hard) |
 | Basic chat feature | jfischer | Real-time 1:1 chat over WebSocket |
 | Leaderboard | yyakuben | Ranking based on ELO/wins |
 | 4 languages (en/de/ru/ar) | yyakuben | Full i18n with RTL support for Arabic |
@@ -114,9 +114,9 @@ User ──< Friendship >── User        User ──< ChatMessage >── Use
 | Multi-language support (en/de/ru/ar) | Minor | 1 | yyakuben | 4 languages, above the 3-language minimum |
 | RTL support (Arabic) | Minor | 1 | yyakuben | Working `dir=rtl` + Tailwind `rtl:` variants; verify *every* page mirrors, not just Navbar/chat, since the subject requires "complete layout mirroring" |
 | Health check/status page + backups | Minor | 1 | jastomme | `/api/health/`, `/api/status/`, working backup/restore scripts |
-| Game stats & match history | Minor | 1 | yyakuben | Wins/losses/draws/ELO/streak, match history, leaderboard |
-| Game customization | Minor | 1 | tabading | Board theme, piece theme, timer mode, color, each with defaults |
-| Gamification System | Minor | 1 | tabading | Achievements, leaderboard, ELO rating |
+| Game stats & match history | Minor | 1 | yyakuben | Wins/losses/draws/ELO/streak, match history |
+| Game customization | Minor | 1 | tabading, yyakuben | Board theme, piece theme, timer mode, color, each with defaults |
+| Gamification System | Minor | 1 | tabading, yyakuben | Achievements, leaderboard, ELO rating |
 | **Total** | | **24** | | 8 Majors (16) + 8 Minors (8) — comfortably clears the 14-point minimum |
 
 
@@ -135,8 +135,8 @@ User ──< Friendship >── User        User ──< ChatMessage >── Use
 - Challenges faced: [PLACEHOLDER]
 
 ### tabading
-- Contributions: Chess game implementation (rules, legal moves, promotion/castling/en passant via `python-chess`); game customization (board/piece themes); gamification-adjacent features.
-- Challenges faced: [PLACEHOLDER]
+- Contributions: Chess game implementation in frontend and backend (rules, legal moves, promotion/castling/en passant via `python-chess`); game customization (piece themes); gamification-adjacent features.
+- Challenges faced: learning how to use the diffrent languages, establishing the connection between front and back over Django 
 
 # Instructions
 
@@ -205,7 +205,7 @@ AI assistance (an LLM-based coding assistant) was used during this project for t
 
 - **Code review / security auditing:** reviewing the codebase against the evaluation rubric and the subject PDF, and identifying specific issues such as: the WebSocket token being passed as a URL query parameter, missing `@permission_classes` on several chess API endpoints, a race condition risk in bot move handling, and a bug where the bot-difficulty setting was read from the request but never persisted to the database.
 - **Debugging guidance:** step-by-step help diagnosing why bot difficulty wasn't affecting gameplay (tracing it to a migration that added, then removed, the `Game.difficulty` field without updating the code that depended on it), and why a console error appeared on logout (a race between token invalidation and an in-flight request).
-- **Implementation guidance:** suggesting specific code changes (e.g., the migration and view changes to fix bot difficulty, where to place a "thinking delay" for the AI opponent so it doesn't leak information via database state, and how to expose the app to another device on the same network).
+- **Implementation guidance:** suggesting specific code changes (e.g., the migration and view changes to fix bot difficulty and how to expose the app to another device on the same network).
 - **Documentation:** drafting/restructuring this `README.md` against the evaluation rubric, and writing a separate `devops.md` explaining the Docker/monitoring setup in plain language.
 - **Module/rubric cross-checking:** comparing the team's claimed module list against the subject's actual module definitions, which surfaced two modules that don't hold up as claimed (see the note under [Modules](#modules)).
 
@@ -334,7 +334,6 @@ Important: the redirect URI configured in the GitHub/42 developer consoles must 
 - Never commit production secrets; `.env` files are git-ignored, only `.env.example` templates are tracked.
 - The provided TLS certificates are only suitable for local development.
 - [PLACEHOLDER / TODO: `backend/db.sqlite3` should not be committed — it currently contains real user rows (passwords are properly hashed, but real emails/PII shouldn't be in the repo). Remove it from tracking and purge from history.]
-- [PLACEHOLDER / TODO: `node_modules/` and `.venv/` appear to be tracked in git despite being listed in `.gitignore` — likely committed before the ignore rule was added. Untrack them.]
 
 ## Database Backup and Restore
 
