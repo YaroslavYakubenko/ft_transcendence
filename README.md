@@ -352,5 +352,6 @@ Prometheus scrapes backend metrics, Nginx exporter metrics, Node Exporter host/s
 - Grafana: `http://localhost:3000` (loopback only) — fresh volumes start with `admin`/`admin`
 - Node Exporter: `http://localhost:9100`
 - cAdvisor: `http://localhost:8081`
+- adminer (dbGUI) `http://localhost:8082`
 
 Grafana is auto-provisioned with a Prometheus data source and a starter dashboard (CPU, memory, disk, uptime). Config lives in `prometheus/prometheus.yml` (scrape targets) and `prometheus/alerts.yml` (alert rules).
