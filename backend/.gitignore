@@ -1,4 +1,9 @@
 .env
+node_modules/
+backend/staticfiles/
+backend/media/
+backups/
+.vscode/
 __pycache__
 db.sqlite3
 media/
