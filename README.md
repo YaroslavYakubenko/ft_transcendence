@@ -111,13 +111,16 @@ User ──< Friendship >── User        User ──< ChatMessage >── Use
 | Monitoring (Prometheus + Grafana) | Major | 2 | jastomme | Real scrape configs, alert rules, provisioned dashboard, multiple exporters |
 | ORM (Django ORM) | Minor | 1 | jfischer | Used throughout, no raw SQL |
 | Remote OAuth 2.0 (GitHub + 42) | Minor | 1 | yyakuben | CSRF-safe state validation, verified-email requirement |
+| Aditional browser support | Minor | 1 | yyakuben | Firefox and Google  |
+| Complete notification system | Minor | 1 | yyakuben | Creation, update and deletion actions |
 | Multi-language support (en/de/ru/ar) | Minor | 1 | yyakuben | 4 languages, above the 3-language minimum |
 | RTL support (Arabic) | Minor | 1 | yyakuben | Working `dir=rtl` + Tailwind `rtl:` variants; verify *every* page mirrors, not just Navbar/chat, since the subject requires "complete layout mirroring" |
 | Health check/status page + backups | Minor | 1 | jastomme | `/api/health/`, `/api/status/`, working backup/restore scripts |
 | Game stats & match history | Minor | 1 | yyakuben | Wins/losses/draws/ELO/streak, match history |
 | Game customization | Minor | 1 | tabading, yyakuben | Board theme, piece theme, timer mode, color, each with defaults |
 | Gamification System | Minor | 1 | tabading, yyakuben | Achievements, leaderboard, ELO rating |
-| **Total** | | **24** | | 8 Majors (16) + 8 Minors (8) — comfortably clears the 14-point minimum |
+
+| **Total** | | **26** | | 8 Majors (16) + 10 Minors (10) — comfortably clears the 14-point minimum |
 
 
 ## Individual Contributions
