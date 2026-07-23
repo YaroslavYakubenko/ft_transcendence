@@ -109,7 +109,6 @@ export async function getAchievements(_userId: number): Promise<Achievement[]> {
 		const data = await response.json()
 		let bools: boolean[] = new Array(5).fill(false);
 
-		console.debug('getAch: data: ', data)
 		if (data.wins >= 1)
 			bools[0] = true;
 		if (data.highest_win_streak >= 3)
