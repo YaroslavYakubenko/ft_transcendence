@@ -232,6 +232,9 @@ export default {
 	toast: {
 		profileUpdated: "تم تحديث الملف الشخصي",
 		profileUpdateFailed: "فشل تحديث الملف الشخصي",
+		avatarTooLarge: "يجب أن يكون حجم الصورة الرمزية أقل من 5 ميغابايت",
+		avatarInvalidType: "يجب أن تكون الصورة الرمزية ملف صورة",
+		noChanges: "لا توجد تغييرات لحفظها",
 		friendAdded: "تمت إضافة الصديق",
 		friendRemoved: "تمت إزالة الصديق",
 		friendAddFailed: "فشل إضافة الصديق",

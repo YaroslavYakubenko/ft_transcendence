@@ -18,6 +18,9 @@ from django.core.mail import send_mail
 from django.db import connection
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from PIL import Image, UnidentifiedImageError
+
+MAX_AVATAR_SIZE = 5 * 1024 * 1024 # 5MB
 from django.db import models
 
 
@@ -109,6 +112,17 @@ def logout(request):
 @api_view(['PATCH']) # partial update
 @permission_classes([IsAuthenticated])
 def update_me(request):
+	# Validate avatar BEFORE touching the DB, so a bad file can't leave a half-applied update
+	avatar_file = request.FILES.get('avatar')
+	if avatar_file:
+		if avatar_file.size > MAX_AVATAR_SIZE:
+			return Response({'error': 'Avatar must be smaller than 5MB'}, status=status.HTTP_400_BAD_REQUEST)
+		try:
+			Image.open(avatar_file).verify() # raises if it's not a real image (also rejects SVG, Pillow can't parse it)
+		except (UnidentifiedImageError, OSError, SyntaxError):
+			return Response({'error': 'Avatar must be a valid image file'}, status=status.HTTP_400_BAD_REQUEST)
+		avatar_file.seek(0) # verify() reads the file, rewind before it gets saved
+
 	# Prepare data for serializer (exclude avatar file, handle separately)
 	data = {
 		'username': request.data.get('username', request.user.username),
@@ -118,8 +132,8 @@ def update_me(request):
 	if serializer.is_valid():
 		serializer.save()
 		# Handle avatar file upload separately (SerializerMethodField is read-only)
-		if 'avatar' in request.FILES:
-			request.user.avatar = request.FILES['avatar']
+		if avatar_file:
+			request.user.avatar = avatar_file
 		# Handle password update
 		password = request.data.get('password')
 		if password:

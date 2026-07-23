@@ -232,6 +232,9 @@ export default {
 	toast: {
 		profileUpdated: "Профиль обновлён",
 		profileUpdateFailed: "Не удалось обновить профиль",
+		avatarTooLarge: "Аватар должен быть меньше 5MB",
+		avatarInvalidType: "Аватар должен быть файлом изображения",
+		noChanges: "Нет изменений для сохранения",
 		friendAdded: "Друг добавлен",
 		friendRemoved: "Друг удалён",
 		friendAddFailed: "Не удалось добавить друга",

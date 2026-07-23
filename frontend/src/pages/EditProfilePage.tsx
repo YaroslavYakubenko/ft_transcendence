@@ -7,6 +7,8 @@ import Footer from "../components/Footer"
 import { useTranslation } from "react-i18next"
 import { useToast } from "../context/ToastContext"
 
+const MAX_AVATAR_SIZE = 5 * 1024 * 1024 // 5MB, must match backend MAX_AVATAR_SIZE
+
 function EditProfilePage() {
 	const { user, token, updateUser, deleteAccount } = useAuth()
 	const navigate = useNavigate()
@@ -50,6 +52,12 @@ function EditProfilePage() {
 			setError(t('register.passwordsDoNotMatch'))
 			return
 		}
+		const hasChanges = username !== (user?.username || '') || email !== (user?.email || '') || avatar !== null || password.trim().length > 0
+		if (!hasChanges) {
+			showToast(t('toast.noChanges'))
+			navigate('/profile')
+			return
+		}
 		setError('')
 		setIsSubmitting(true)
 		try {
@@ -86,6 +94,18 @@ function EditProfilePage() {
 						accept="image/*"
 						onChange={(e) => {
 							const file = e.target.files?.[0] || null
+							if (file) {
+								if (!file.type.startsWith('image/')) {
+									showToast(t('toast.avatarInvalidType'), 'error')
+									e.target.value = ''
+									return
+								}
+								if (file.size > MAX_AVATAR_SIZE) {
+									showToast(t('toast.avatarTooLarge'), 'error')
+									e.target.value = ''
+									return
+								}
+							}
 							setAvatar(file)
 							if (file) {
 								if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
