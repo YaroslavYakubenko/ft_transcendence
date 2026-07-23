@@ -139,6 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 			})
 			.catch(function(error){
 				if (error.name === 'AbortError') return
+				if (error.message !== 'Unauthorized') return // transient/network error — keep the session, don't log out
 				localStorage.removeItem('token')
 				setToken(null)
 				setUser(null)

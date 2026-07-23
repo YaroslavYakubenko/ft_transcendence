@@ -173,6 +173,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://10.11.11.2:8025",
     "https://10.12.12.6:8443",
     "https://10.12.13.7:8443",
+	"https://10.12.13.7:8025",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
@@ -219,4 +220,4 @@ EMAIL_HOST_USER = ''
 EMAIL_HOST_PASSWORD = ''
 EMAIL_USE_TLS = False
 DEFAULT_FROM_EMAIL = 'noreply@transcendence.local'
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://10.11.11.2:8443')
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://10.12.13.7:8443')
