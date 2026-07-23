@@ -209,10 +209,12 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 				else if (data.type === 'friend_removed')
 				{
 					setFriendRemoved({ removed_by_id: data.removed_by_id })
+					window.dispatchEvent(new Event('friendsChanged'))
 				}
 				else if (data.type === 'friend_added')
 				{
 					setFriendAdded({ added_by_id: data.added_by_id })
+					window.dispatchEvent(new Event('friendsChanged'))
 				}
 			}
 
