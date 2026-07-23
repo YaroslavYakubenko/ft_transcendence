@@ -56,7 +56,8 @@ export async function getMe(_token: string, signal?: AbortSignal): Promise<User>
 		headers: { 'Authorization': `Token ${_token}` },
 		signal,
 	})
-	if (!res.ok) throw new Error('Unauthorized')
+	if (res.status === 401) throw new Error('Unauthorized')
+	if (!res.ok) throw new Error('NetworkError')
 	const data = await res.json()
 	return { ...data, avatarUrl: data.avatar || null }
 }
