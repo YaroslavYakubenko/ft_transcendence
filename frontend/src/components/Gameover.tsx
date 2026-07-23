@@ -36,7 +36,7 @@ export default function Gameover({
 	const { t } = useTranslation()
 
 	useEffect(() => {
-		if (result.state === "ongoing")
+		if (result.state === "ongoing" || result.state === "check")
 			return ;
 		if (user)
 		{
@@ -49,7 +49,7 @@ export default function Gameover({
 	}, [user, token, result.winner, result.state]);
 
 
-	if (result.state === "ongoing")
+	if (result.state === "ongoing" || result.state === "check")
 		return null;
 	
 

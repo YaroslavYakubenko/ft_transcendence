@@ -458,6 +458,7 @@ function GamePage() {
 								setRes={setRes}
 								setPro={setPro}
 								token={token}
+								game_id={gameId}
 								do_promotion={do_promotion}
 								onWsPromotion={multiplayer ? handleWsPromotion : undefined}
 							/>

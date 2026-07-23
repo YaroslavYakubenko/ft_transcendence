@@ -300,9 +300,15 @@ def do_promotion(request):
 	board.push(move)
 	res = check_gameover(board)
 	win = ""
-	if res != "ongoing":
+	king = ""
+	if res == "check":
+		king = chess.square_name(board.king(board.turn))
+		res = "ongoing"
+	elif res != "ongoing" and res != "draw":
 		win = "Black" if board.turn else "White"
 	
+	response_fen = board.fen()
+	bot_move_uci = ""
 	# Save promotion move to database if game_id is provided
 	if game_id:
 		try:
@@ -310,27 +316,39 @@ def do_promotion(request):
 			move_count = game.moves.count() + 1
 			Move.objects.create(
 				game=game,
-				from_square=_move,
-				to_square=promo_to,
-				promotion_piece=None,  # Could extract from move if needed
+				from_square=_move[:2],
+    			to_square=_move[2:4],
+				promotion_piece=promo_to,  # Could extract from move if needed
 				fen_before=fen,
 				fen_after=board.fen(),
 				move_number=move_count
 			)
 			# Update game FEN and status
-			game.current_fen = board.fen()	
+			game.current_fen = board.fen()		
+			if game.status == 'pending':
+				game.status = 'ongoing'
+				game.started_at = timezone.now()
+			game.save()
 			if res != "ongoing":
 				# Game is over, update stats
 				update_player_stats(game, res)
-			game.save()
+			else:
+				bot_state = _play_bot_move(game)
+				if bot_state['bot_move']:
+					bot_move_uci = bot_state['bot_move']
+					response_fen = bot_state['fen']
+					res = bot_state['result']
+					win = bot_state['winner']
+					king = bot_state['kingpos']
 		except Game.DoesNotExist:
 			pass  # Continue without saving if game doesn't exist
 	
 	return Response({
-		"fen": board.fen(),
+		"fen": response_fen,
 		"result": res,
 		"winner" : win,
-		"promotion": ''
+		"promotion": '',
+		"bot_move": bot_move_uci,
 		})
 
 
@@ -573,7 +591,6 @@ def check_color(request):
 def check_game_status(request):
 	game_id = request.data.get('gameId')
 	
-	print("here")
 	if not game_id:
 		return Response({"error": "game_id is required"}, status=400)
 
