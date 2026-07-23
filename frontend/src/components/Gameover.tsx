@@ -40,8 +40,8 @@ export default function Gameover({
 			return ;
 		if (user)
 		{
-			console.debug("user id", user.id)
-			console.debug("game id", gameId)
+			// console.debug("user id", user.id)
+			// console.debug("game id", gameId)
 
 			check_color(gameId, token, result.winner)
 

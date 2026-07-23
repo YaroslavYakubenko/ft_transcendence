@@ -90,6 +90,7 @@ function GamePage() {
 			setMoves((prevMoves) =>
 				appendMove(prevMoves, location.state.bot_move, true)
 			);
+			setFen(location.state.fen)
 		}
 	}, [location.state?.bot_move, moves.length]);
 

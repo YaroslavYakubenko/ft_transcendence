@@ -570,6 +570,7 @@ def check_color(request):
 def check_game_status(request):
 	game_id = request.data.get('gameId')
 	
+	print("here")
 	if not game_id:
 		return Response({"error": "game_id is required"}, status=400)
 
@@ -580,6 +581,9 @@ def check_game_status(request):
 
 	if game.status == 'completed':
 		return Response({"error": "Game is already completed"}, status=400)
+
+	if (game.white_player == request.user or game.black_player == request.user):
+		return Response({"error": "same"}, status=403)
 
 	if (game.white_player is not None and game.black_player is not None
 			and game.white_player != request.user and game.black_player != request.user):

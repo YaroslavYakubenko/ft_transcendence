@@ -24,6 +24,7 @@ function LobbyPage() {
     // Player 2 — join an existing game by ID
     function handleJoinGame() {
         if (!joinGameId.trim()) return
+		console.debug("join")
         const id = parseInt(joinGameId)
         // Clear stale cached game state so we start fresh
         localStorage.removeItem(`result_${id}`)
@@ -35,6 +36,7 @@ function LobbyPage() {
 		check_game_status(id, token).then((data: any) => {
 			if (!data || data.error || data.status != "valid")
 			{
+				console.debug("err")
 				if (data.error)
 					setJoinError(data.error)
 				return 
@@ -58,6 +60,8 @@ function LobbyPage() {
     const handleStartGame = async () => {
 		setStartError("")
         setIsStarting(true)
+
+		console.debug("start")
 
         let gameId: number | undefined
         let userColor = pieceColor
