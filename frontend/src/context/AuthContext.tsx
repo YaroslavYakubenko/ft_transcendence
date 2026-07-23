@@ -97,7 +97,17 @@ export function AuthProvider({ children }: { children: React.ReactNode })
 		}
 	}
 
+	useEffect(() => {
+		const handleStorage = (event: StorageEvent) => {
+			if (event.key === 'token') {
+				window.location.reload();
+				}
+			};
 
+			window.addEventListener('storage', handleStorage);
+
+			return () => window.removeEventListener('storage', handleStorage);
+		}, []);
 	
 	const updateUser = (updates: Partial<User>) => {									// just partially update the User object, instead of passing the whole user again
 		setUser(prev => prev ? { ...prev, ...updates } : prev)							// creates a new object merging old user with new updates

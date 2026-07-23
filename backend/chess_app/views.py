@@ -199,6 +199,7 @@ def update_player_stats(game, result):
 
 # Django API endpoint - wraps your logic
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def make_move(request):
 	fen = request.data.get('fen')
 	_s = request.data.get('from')
@@ -281,6 +282,7 @@ def make_move(request):
 		})
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def do_promotion(request):
 	fen = request.data.get('fen')
 	_move = request.data.get('move')
@@ -334,6 +336,7 @@ def do_promotion(request):
 
 # return legal moves to free & occupied spaces
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def legal_moves(request):
 	fen = request.data.get("fen")
 
