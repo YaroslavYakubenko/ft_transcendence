@@ -354,7 +354,7 @@ function GamePage() {
 		}
 
 		// non-multiplayer games
-		return make_move(currentFen, from, to, gameId)
+		return make_move(currentFen, from, to, token, gameId)
 	}
 
 	const handleWsPromotion = (promo: string) => {
@@ -401,9 +401,10 @@ function GamePage() {
 		setHighlightSquares, setHighlightSquares2,
 		legal_moves,
 		effectiveColor,
+		token: token,
 	});
 	const onPieceDrop = createOnPieceDrop({
-		fen, gameId, playerColor: effectiveColor,
+		fen, gameId, playerColor: effectiveColor, token: token,
 		make_move: sendMove,
 		getBoardCoordinates,
 		appendMove,
@@ -456,6 +457,7 @@ function GamePage() {
 								setFen={setFen}
 								setRes={setRes}
 								setPro={setPro}
+								token={token}
 								do_promotion={do_promotion}
 								onWsPromotion={multiplayer ? handleWsPromotion : undefined}
 							/>

@@ -206,10 +206,11 @@ export async function createGame(
 }
 
 // make move 
-export async function make_move(fen: string, from: string, to: string, gameId?: number | null) {
+export async function make_move(fen: string, from: string, to: string, token: string | null, gameId?: number | null) {
 	const res = await fetch(`${GAME_BASE_URL}/make-move/`, {
 	method: "POST",
 	headers: {
+		"Authorization": `Token ${token}`,
 		"Content-Type": "application/json",
 	},
 	body: JSON.stringify({
@@ -235,10 +236,11 @@ export async function make_move(fen: string, from: string, to: string, gameId?: 
 }
 
 // promote pawn
-export async function do_promotion(fen: string, move: string, key: string, gameId?: number | null) {
+export async function do_promotion(fen: string, move: string, key: string, token: string | null, gameId?: number | null) {
 	const res = await fetch(`${GAME_BASE_URL}/do-promotion/`, {
 	method: "POST",
 	headers: {
+		"Authorization": `Token ${token}`,
 		"Content-Type": "application/json",
 	},
 	body: JSON.stringify({
@@ -266,10 +268,11 @@ export async function do_promotion(fen: string, move: string, key: string, gameI
 }
 
 // get legal moves to empty and occupied spaces
-export async function legal_moves(fen: string) {
+export async function legal_moves(fen: string, token: string | null) {
 	const res = await fetch(`${GAME_BASE_URL}/legal-moves/`, {
 		method: "POST",
 		headers: {
+			"Authorization": `Token ${token}`,
 			"Content-Type": "application/json",
 		},
 		body: JSON.stringify({

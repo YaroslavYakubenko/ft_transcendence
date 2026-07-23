@@ -102,6 +102,7 @@ export function createOnPieceDrag({
 	setHighlightSquares2,
 	legal_moves,
 	effectiveColor,
+	token,
 }: any) {
 	return ({ isSparePiece, piece, square }: PieceHandlerArgs) => {
 		if (!square || !piece) {
@@ -121,7 +122,7 @@ export function createOnPieceDrag({
 			return;
 		}
 
-		legal_moves(fen).then((data: any) => {
+		legal_moves(fen, token).then((data: any) => {
 			const newhigh = data.moves[square] || [];
 			setHighlightSquares(newhigh);
 			const newhigh2 = data.moves2[square] || [];
@@ -134,6 +135,7 @@ export function createOnPieceDrop({
 	fen,
 	gameId,
 	playerColor,
+	token,
 	make_move,
 	getBoardCoordinates,
 	appendMove,
@@ -149,7 +151,7 @@ export function createOnPieceDrop({
 		if (!sourceSquare || !targetSquare)
 			return false;
 
-		make_move(fen, sourceSquare, targetSquare, gameId).then((data: any) => {
+		make_move(fen, sourceSquare, targetSquare, token, gameId).then((data: any) => {
 			if (!data) return;
 
 			// get position of the promotion menue 

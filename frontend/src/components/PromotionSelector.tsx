@@ -14,7 +14,8 @@ type Props = {
 	setFen: React.Dispatch<React.SetStateAction<string>>
 	setRes: React.Dispatch<React.SetStateAction<{ state: string; winner: string }>>
 	setPro: React.Dispatch<React.SetStateAction<{ move: string; x: number; y: number; pre: string }>>
-	do_promotion: (fen: string, move: string, promo: string) => Promise<PromotionResponse | null>
+	token: string | null
+	do_promotion: (fen: string, move: string, key: string, token: string | null, gameId?: number | null) => Promise<PromotionResponse | null>
 	onWsPromotion?: (promo: string) => void
 }
 
@@ -33,6 +34,7 @@ export default function PromotionSelector({
 	setFen,
 	setRes,
 	setPro,
+	token,
 	do_promotion,
 	onWsPromotion,
 }: Props) {
@@ -46,7 +48,7 @@ export default function PromotionSelector({
 			return
 		}
 
-		do_promotion( fen, promotion.move, promo).then((data) => {
+		do_promotion( fen, promotion.move, promo, token).then((data) => {
 			if (!data) return
 
 			// Add promotion move to history
