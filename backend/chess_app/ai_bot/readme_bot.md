@@ -98,10 +98,6 @@ None of this is custom-built — it's all delegated to the `python-chess` librar
 
 This is why the bot is described as playing "only legal moves" with confidence — legality isn't something this project reimplements, it's inherited for free from a well-tested chess library.
 
-## Human-like pacing
-
-By default the bot resolves a move in milliseconds, which reads as obviously robotic even with the blunder injection in place. The intended fix is a short randomized delay (e.g. 0.3–2.5s, scaled by difficulty so "hard" appears to "think" longer) inserted **after** the best move is computed but **before** it's pushed to the board / written to the database — so nothing is discoverable in the DB during the pause, and the delay doesn't affect what move is actually chosen, only when the response is returned.
-
 ## Result handling
 
 Whatever happens after the bot's move — ongoing, check, checkmate, stalemate — is fed back through the same `check_gameover`/`update_player_stats` logic used for human games, so bot games contribute to stats, match history, and the leaderboard identically to a human-vs-human game, with no separate code path to keep in sync.
