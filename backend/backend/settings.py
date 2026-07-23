@@ -219,4 +219,4 @@ EMAIL_HOST_USER = ''
 EMAIL_HOST_PASSWORD = ''
 EMAIL_USE_TLS = False
 DEFAULT_FROM_EMAIL = 'noreply@transcendence.local'
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://10.11.11.2:8443')
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://10.12.13.7:8443')
